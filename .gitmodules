@@ -1,0 +1,3 @@
+[submodule "vendor/us-core"]
+	path = vendor/us-core
+	url = https://github.com/HL7/US-Core.git

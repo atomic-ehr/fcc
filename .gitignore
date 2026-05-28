@@ -36,6 +36,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # fcc internal cache
 .fcc
 
+# Claude Code session state
+.claude
+
 # fsh-sushi runtime: package + tx caches
 .tx-cache
 .fhir/

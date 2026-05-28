@@ -1,0 +1,16 @@
+{
+  "name": "us-core-ig",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "fcc": "workspace:*",
+    "@fcc/plugin-json": "workspace:*",
+    "@fcc/plugin-snapshot": "workspace:*",
+    "@fcc/plugin-narrative": "workspace:*",
+    "@fcc/plugin-validate": "workspace:*",
+    "@fcc/plugin-ig-resource": "workspace:*",
+    "@fcc/plugin-npm": "workspace:*",
+    "@fcc/plugin-site": "workspace:*"
+  }
+}
