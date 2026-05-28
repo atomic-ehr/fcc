@@ -35,6 +35,7 @@ declare global {
             layout: typeof import("./layout").default;
             linkCanonical: typeof import("./linkCanonical").default;
             loadIntroNotes: typeof import("./loadIntroNotes").default;
+            loadPagecontent: typeof import("./loadPagecontent").default;
             metaDl: typeof import("./metaDl").default;
             notesBlock: typeof import("./notesBlock").default;
             notesFor: typeof import("./notesFor").default;
@@ -47,6 +48,7 @@ declare global {
             renderBreadcrumb: typeof import("./renderBreadcrumb").default;
             renderIndex: typeof import("./renderIndex").default;
             renderLanding: typeof import("./renderLanding").default;
+            renderPage: typeof import("./renderPage").default;
             renderResource: typeof import("./renderResource").default;
             renderSidebarGroup: typeof import("./renderSidebarGroup").default;
             sectionHeader: typeof import("./sectionHeader").default;

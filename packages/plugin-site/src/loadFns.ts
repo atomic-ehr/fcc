@@ -49,6 +49,8 @@ import treeIndent from "./treeIndent.ts";
 import sectionHeader from "./sectionHeader.ts";
 import examplesForProfile from "./examplesForProfile.ts";
 import formatChips from "./formatChips.ts";
+import renderPage from "./renderPage.ts";
+import loadPagecontent from "./loadPagecontent.ts";
 
 export default function loadFns(ctx: Context): void {
     (ctx.fns as any).site = {
@@ -62,6 +64,6 @@ export default function loadFns(ctx: Context): void {
         $render_StructureDefinition, $render_ValueSet, $render_CodeSystem, $render_default,
         writeBundle, handleHotUpdate, watchPaths,
         buildInfoBanner, urlVersionStrip, profileTabs, flagsCell, treeIndent, sectionHeader,
-        examplesForProfile, formatChips,
+        examplesForProfile, formatChips, renderPage, loadPagecontent,
     };
 }

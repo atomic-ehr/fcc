@@ -13,6 +13,7 @@ export default function layout(
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(opts.title)} — ${esc(ctx.cfg.title ?? ctx.cfg.id)}</title>
 <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.0-beta.11/bundles/datastar.js"></script>
 <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-slate-50 text-slate-900 antialiased">

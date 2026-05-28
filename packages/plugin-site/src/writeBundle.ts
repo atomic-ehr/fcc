@@ -39,6 +39,15 @@ export default async function writeBundle(
     await writeOne(outDir, "artifacts.html", artifactsHtml);
     await writeOne(outDir, "style.css", css);
 
+    // Render every pagecontent/*.md (except index.md) as <slug>.html so the
+    // IG-author menu links resolve. Done on every pass — these aren't tied
+    // to per-resource changedIds.
+    const pages = await ctx.fns.site.loadPagecontent(ctx, { projectRoot: pctx.config.projectRoot, dir: pagecontent });
+    for (const p of pages) {
+        const html = ctx.fns.site.renderPage(ctx, p);
+        await writeOne(outDir, `${p.slug}.html`, html);
+    }
+
     const changed = pctx.changedIds;
     let pageCount = 0;
     for (const r of pctx.resources.values()) {
