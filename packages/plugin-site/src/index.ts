@@ -1,77 +1,54 @@
-import { mkdir, writeFile, readFile, readdir } from "node:fs/promises";
-import { join, resolve } from "node:path";
-import { marked } from "marked";
+// Plugin entry. Builds a per-build Context, runs loadFns to populate
+// ctx.fns.site, then delegates the fcc Plugin hooks to fns in the registry.
+// This is the *only* place outside loadFns where sibling imports are allowed:
+// here we import loadFns itself.
+
 import type { Plugin } from "fcc";
-import { css } from "./style.ts";
-import {
-  bytes, renderIndex, renderArtifacts, renderResource, pageHref,
-} from "./render.ts";
+import loadFns from "./loadFns.ts";
 
 type Opts = {
-  /** Directory of markdown content used to render index.html. Default: input/pagecontent */
-  pagecontent?: string;
-  /** Output subdirectory relative to target.out. Default: "site" */
-  out?: string;
+    pagecontent?: string;
+    introNotes?: string;
+    out?: string;
 };
 
 export default function site(opts: Opts = {}): Plugin {
-  const pagecontent = opts.pagecontent ?? "input/pagecontent";
-  const outSub = opts.out ?? "site";
+    // One Context shared across hooks for this plugin instance. The fcc
+    // PluginContext gets injected per-hook into ctx via writeBundle/etc.
+    const ctx = makeFreshContext();
+    loadFns(ctx);
+    ctx.state.site = { ...opts };
 
-  return {
-    name: "fcc/site",
-    enforce: "post", // run after npm so we don't fight over the output dir
-    async writeBundle(bundle, ctx) {
-      const outDir = resolve(ctx.config.projectRoot, ctx.target.out, outSub);
-      await mkdir(outDir, { recursive: true });
+    return {
+        name: "fcc/site",
+        enforce: "post",
 
-      // 1. landing — render pagecontent/index.md if present
-      const landingHtml = await renderLanding(ctx.config.projectRoot, pagecontent);
+        watchPaths(cfg) {
+            (ctx as any).cfg = cfg;
+            return ctx.fns.site.watchPaths(ctx);
+        },
 
-      const rctx = { cfg: ctx.config, target: ctx.target, bundle };
+        handleHotUpdate(hot) {
+            return ctx.fns.site.handleHotUpdate(ctx, { hot });
+        },
 
-      // Always rewrite shared chrome:
-      //   - index.html / artifacts.html depend on the full set
-      //   - style.css is static
-      await writeOne(outDir, "index.html", renderIndex(rctx, landingHtml));
-      await writeOne(outDir, "artifacts.html", renderArtifacts(rctx));
-      await writeOne(outDir, "style.css", css);
-
-      // Per-resource pages: full set on initial build, only changed on incremental
-      const changed = ctx.changedIds;
-      let pageCount = 0;
-      for (const r of bundle.resources.values()) {
-        if (r.resourceType === "ImplementationGuide") continue;
-        if (changed && !changed.has(r.id)) continue;
-        await writeOne(outDir, pageHref(r), renderResource(rctx, r));
-        pageCount++;
-      }
-
-      ctx.emitFile({ path: join(outDir, "index.html"), bytes: bytes("") });
-
-      ctx.warn({
-        severity: "info", source: "fcc/site",
-        message: changed
-          ? `site: ${pageCount} page(s) re-rendered + chrome`
-          : `site rendered: ${bundle.resources.size + 1} pages → ${outDir}`,
-      });
-    },
-  };
+        async writeBundle(bundle, pctx) {
+            (ctx as any).cfg    = pctx.config;
+            (ctx as any).target = pctx.target;
+            (ctx as any).bundle = bundle;
+            await ctx.fns.site.writeBundle(ctx, { pluginCtx: pctx });
+        },
+    };
 }
 
-async function writeOne(dir: string, name: string, content: string) {
-  await writeFile(join(dir, name), content, "utf8");
-}
-
-async function renderLanding(projectRoot: string, pagecontent: string): Promise<string> {
-  const dir = resolve(projectRoot, pagecontent);
-  try {
-    const entries = await readdir(dir, { withFileTypes: true });
-    const indexMd = entries.find(e => e.isFile() && e.name === "index.md");
-    if (!indexMd) return "";
-    const md = await readFile(join(dir, "index.md"), "utf8");
-    return marked.parse(md, { async: false }) as string;
-  } catch {
-    return "";
-  }
+function makeFreshContext(): Context {
+    return {
+        cfg:    {} as Context["cfg"],
+        target: {} as Context["target"],
+        bundle: {} as Context["bundle"],
+        notes:  undefined,
+        state:  {},
+        env:    process.env as Record<string, string | undefined>,
+        fns:    {} as FnsRegistry,
+    };
 }
