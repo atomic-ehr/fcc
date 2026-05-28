@@ -7,6 +7,7 @@
     "fcc": "workspace:*",
     "@fcc/plugin-json": "workspace:*",
     "@fcc/plugin-snapshot": "workspace:*",
+    "@fcc/plugin-menu": "workspace:*",
     "@fcc/plugin-narrative": "workspace:*",
     "@fcc/plugin-validate": "workspace:*",
     "@fcc/plugin-ig-resource": "workspace:*",

@@ -27,6 +27,11 @@ export default async function writeBundle(
     // Bind notes into ctx so renderers see them via ctx.notes.
     (ctx as any).notes = notes;
 
+    // Pick up an IG-author menu emitted by @fcc/plugin-menu via pctx.shared.menu.
+    // Stored on ctx.state so topBar can read it without a new opts plumbing.
+    const sharedMenu = (pctx.shared.menu as { html?: string } | undefined);
+    ctx.state.menuHtml = sharedMenu?.html ?? null;
+
     const indexHtml     = ctx.fns.site.renderIndex(ctx, { landingHtml });
     const artifactsHtml = ctx.fns.site.renderArtifacts(ctx);
 

@@ -24,6 +24,14 @@ export type TargetState = {
   bundle?: Bundle;
 
   cycle: number;
+
+  /**
+   * Cross-plugin shared state. Plugins write to `shared.<ns>` in earlier
+   * hooks, later plugins read from there. Persists across incremental
+   * rebuilds; individual plugins are responsible for invalidating their
+   * own keys when needed.
+   */
+  shared: Record<string, unknown>;
 };
 
 export type BuildState = {
@@ -50,6 +58,7 @@ export function freshTargetState(target: Target): TargetState {
     diagnostics: [],
     emitted: [],
     cycle: 0,
+    shared: {},
   };
 }
 

@@ -283,6 +283,7 @@ function makeContext(cfg: ResolvedConfig, ts: TargetState, changedIds: Set<strin
     byCanonical: ts.byCanonical,
     changedIds,
     cycle: ts.cycle,
+    shared: ts.shared,
 
     query(type, where) {
       const out: Resource[] = [];

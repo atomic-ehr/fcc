@@ -32,6 +32,7 @@
       "dependencies": {
         "@fcc/plugin-ig-resource": "workspace:*",
         "@fcc/plugin-json": "workspace:*",
+        "@fcc/plugin-menu": "workspace:*",
         "@fcc/plugin-narrative": "workspace:*",
         "@fcc/plugin-npm": "workspace:*",
         "@fcc/plugin-site": "workspace:*",
@@ -45,6 +46,8 @@
       "version": "0.0.1",
       "bin": {
         "fcc": "./bin/fcc.ts",
+        "fcc-repl": "./bin/repl.ts",
+        "fcc-gentypes": "./bin/gentypes.ts",
       },
     },
     "packages/plugin-fsh": {
@@ -66,6 +69,13 @@
     },
     "packages/plugin-json": {
       "name": "@fcc/plugin-json",
+      "version": "0.0.1",
+      "peerDependencies": {
+        "fcc": "*",
+      },
+    },
+    "packages/plugin-menu": {
+      "name": "@fcc/plugin-menu",
       "version": "0.0.1",
       "peerDependencies": {
         "fcc": "*",
@@ -127,6 +137,8 @@
     "@fcc/plugin-ig-resource": ["@fcc/plugin-ig-resource@workspace:packages/plugin-ig-resource"],
 
     "@fcc/plugin-json": ["@fcc/plugin-json@workspace:packages/plugin-json"],
+
+    "@fcc/plugin-menu": ["@fcc/plugin-menu@workspace:packages/plugin-menu"],
 
     "@fcc/plugin-narrative": ["@fcc/plugin-narrative@workspace:packages/plugin-narrative"],
 

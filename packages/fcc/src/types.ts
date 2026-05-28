@@ -121,6 +121,13 @@ export interface PluginContext {
   byCanonical: Map<string, string>;
 
   /**
+   * Cross-plugin shared state, keyed by plugin namespace.
+   * Use for handoffs that aren't natural fits for the resource graph
+   * (e.g. precomputed HTML chunks, parsed config sections).
+   */
+  shared: Record<string, unknown>;
+
+  /**
    * On incremental rebuilds, the set of resource ids that have been
    * (re)loaded or re-transformed this round. Null on a full build.
    * Emit plugins use this to optimise writes; transformers can ignore it.

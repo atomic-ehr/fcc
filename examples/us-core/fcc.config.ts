@@ -6,6 +6,7 @@ import validate  from "@fcc/plugin-validate";
 import igRes     from "@fcc/plugin-ig-resource";
 import npm       from "@fcc/plugin-npm";
 import site      from "@fcc/plugin-site";
+import menu      from "@fcc/plugin-menu";
 
 // Points at the HL7/US-Core git submodule under vendor/us-core. The folder
 // layout matches the IG Publisher convention (input/resources, input/examples,
@@ -41,6 +42,7 @@ export default defineConfig({
   ],
 
   plugins: [
+    menu({ config: "../../vendor/us-core/sushi-config.yaml" }),
     snapshot(),
     narrative(),
     // us-core has many cross-IG canonical references (smart-app-launch, sdc, ...).
