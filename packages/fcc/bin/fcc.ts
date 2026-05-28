@@ -4,6 +4,7 @@ import { existsSync } from "node:fs";
 import { build, runBuild, runIncremental } from "../src/runner.ts";
 import { createState } from "../src/state.ts";
 import { watchSources } from "../src/watcher.ts";
+import { startRepl } from "../src/repl.ts";
 import type { Config, Diagnostic, ResolvedConfig } from "../src/types.ts";
 
 async function main() {
@@ -61,6 +62,10 @@ async function main() {
         `${[...initial.bundles.values()].map(b => b.resources.size).join("/")} resources`,
       );
 
+      const repl = await startRepl({ state, projectRoot: cwd });
+      console.log(`fcc: REPL on http://localhost:${repl.port}/repl  (port written to .fcc/repl-port)`);
+      console.log(`     try:  bun ../../packages/fcc/bin/repl.ts 'state.byTarget.get("${[...state.byTarget.keys()][0]}").resources.size'`);
+
       console.log("fcc: watching for changes (Ctrl+C to stop)…\n");
 
       const handle = watchSources({
@@ -83,7 +88,12 @@ async function main() {
         },
       });
 
-      const shutdown = () => { handle.close(); console.log("\nfcc: stopped"); process.exit(0); };
+      const shutdown = async () => {
+        handle.close();
+        await repl.close();
+        console.log("\nfcc: stopped");
+        process.exit(0);
+      };
       process.on("SIGINT", shutdown);
       process.on("SIGTERM", shutdown);
       // keep the process alive

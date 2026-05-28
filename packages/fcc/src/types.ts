@@ -166,4 +166,12 @@ export type Plugin = {
    * the file→resources map + reverse-deps closure.
    */
   handleHotUpdate?(hot: HotUpdateContext): void | Promise<void>;
+
+  /**
+   * Dev mode: declare extra paths the watcher should observe (in addition
+   * to source dirs and the config file). Resolved against projectRoot.
+   * Useful for plugins that read non-loader files (markdown, includes,
+   * assets) that should trigger a rebuild when edited.
+   */
+  watchPaths?(cfg: ResolvedConfig): Array<{ path: string; recursive?: boolean }> | Promise<Array<{ path: string; recursive?: boolean }>>;
 };

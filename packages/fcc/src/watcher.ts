@@ -1,4 +1,4 @@
-import { watch, type FSWatcher } from "node:fs";
+import { watch, statSync, type FSWatcher } from "node:fs";
 import { resolve } from "node:path";
 import type { ResolvedConfig } from "./types.ts";
 
@@ -6,8 +6,11 @@ export type WatchOpts = {
   cfg: ResolvedConfig;
   /** Debounce window in ms. Batches rapid edits (e.g. editor save-then-format). */
   debounceMs?: number;
-  /** Extra paths to watch in addition to source dirs (e.g. fcc.config.ts itself). */
+  /** Extra paths to watch in addition to source dirs (e.g. fcc.config.ts itself).
+   *  Auto-detects file vs dir; dirs are watched recursively. */
   extraPaths?: string[];
+  /** Extra dirs to watch recursively (explicit alternative when stat is unreliable). */
+  extraDirs?: string[];
   /** Called once after the debounce window with all unique changed files. */
   onBatch(files: string[]): void | Promise<void>;
 };
@@ -66,9 +69,17 @@ export function watchSources(opts: WatchOpts): WatcherHandle {
   for (const src of cfg.sources) {
     addWatch(resolve(cfg.projectRoot, src.dir), true);
   }
-  // Watch extra single files (config etc.)
+  // Watch extra paths (config file, plugin-declared dirs, etc.)
+  // Detect dir-vs-file via stat so callers don't have to know.
   if (opts.extraPaths) {
-    for (const p of opts.extraPaths) addWatch(p, false);
+    for (const p of opts.extraPaths) {
+      let isDir = false;
+      try { isDir = statSync(p).isDirectory(); } catch { /* missing path */ }
+      addWatch(p, isDir);
+    }
+  }
+  if (opts.extraDirs) {
+    for (const p of opts.extraDirs) addWatch(p, true);
   }
 
   return {

@@ -8,7 +8,9 @@
     ".": "./src/index.ts"
   },
   "bin": {
-    "fcc": "./bin/fcc.ts"
+    "fcc": "./bin/fcc.ts",
+    "fcc-repl": "./bin/repl.ts",
+    "fcc-gentypes": "./bin/gentypes.ts"
   },
   "dependencies": {}
 }
