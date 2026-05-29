@@ -1,7 +1,15 @@
-export default function jsonBlock(ctx: Context, opts: { d: Record<string, unknown> }): string {
+// "Source JSON" block with server-side Shiki highlighting. Shiki emits its own
+// <pre class="shiki">; we strip its margin and add padding + a scroll cap via
+// Tailwind arbitrary variants so it sits in our bordered, height-capped frame.
+export default async function jsonBlock(ctx: Context, opts: { d: Record<string, unknown>; heading?: boolean }): Promise<string> {
     const clean = { ...opts.d };
     delete (clean as { __wasExample?: boolean }).__wasExample;
-    const safe = ctx.fns.site.htmlEscape(ctx, { s: JSON.stringify(clean, null, 2) });
-    return `<h2 class="mt-8 text-lg font-semibold text-slate-900">Source JSON</h2>
-        <pre class="mt-2 max-h-[60vh] overflow-auto rounded border border-slate-200 bg-slate-900 p-4 text-xs leading-relaxed text-slate-100"><code>${safe}</code></pre>`;
+    const code = JSON.stringify(clean, null, 2);
+    const hl = await ctx.fns.site.highlightCode(ctx, { code, lang: "json" });
+
+    const heading = (opts.heading ?? true)
+        ? `<h2 class="mt-8 text-lg font-semibold text-slate-900">Source JSON</h2>`
+        : "";
+    return `${heading}
+        <div class="mt-2 max-h-[70vh] overflow-auto rounded border border-slate-800 text-xs leading-relaxed [&_pre]:!m-0 [&_pre]:p-4">${hl}</div>`;
 }

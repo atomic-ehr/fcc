@@ -1,4 +1,4 @@
-export default function $render_CodeSystem(ctx: Context, opts: { resource: types.fcc.Resource }): string {
+export default async function $render_CodeSystem(ctx: Context, opts: { resource: types.fcc.Resource }): Promise<string> {
     const r = opts.resource;
     const d = r.data as Record<string, unknown>;
     const esc = (s: string) => ctx.fns.site.htmlEscape(ctx, { s });
@@ -13,6 +13,7 @@ export default function $render_CodeSystem(ctx: Context, opts: { resource: types
         </tr>`).join("");
 
     const title = (d.title as string) ?? (d.id as string);
+    const json = await ctx.fns.site.jsonBlock(ctx, { d });
     const body = `
         ${ctx.fns.site.pageHeader(ctx, { title, kind: "Code System", d })}
         ${ctx.fns.site.introBlock(ctx, { html: intro })}
@@ -31,7 +32,7 @@ export default function $render_CodeSystem(ctx: Context, opts: { resource: types
             </table>
         </div>
         ${ctx.fns.site.notesBlock(ctx, { html: notes })}
-        ${ctx.fns.site.jsonBlock(ctx, { d })}
+        ${json}
     `;
     return ctx.fns.site.layout(ctx, {
         title,

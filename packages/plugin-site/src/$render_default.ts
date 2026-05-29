@@ -1,4 +1,4 @@
-export default function $render_default(ctx: Context, opts: { resource: types.fcc.Resource }): string {
+export default async function $render_default(ctx: Context, opts: { resource: types.fcc.Resource }): Promise<string> {
     const r = opts.resource;
     const d = r.data as Record<string, unknown>;
     const esc = (s: string) => ctx.fns.site.htmlEscape(ctx, { s });
@@ -13,12 +13,13 @@ export default function $render_default(ctx: Context, opts: { resource: types.fc
     rows.push(["Id",            `<code class="text-xs">${esc((d.id as string) ?? "")}</code>`]);
     if (d.url) rows.push(["Canonical", `<code class="text-xs">${esc(d.url as string)}</code>`]);
 
+    const json = await ctx.fns.site.jsonBlock(ctx, { d });
     const body = `
         ${ctx.fns.site.pageHeader(ctx, { title, kind: isExample ? "Example" : r.resourceType, d })}
         ${ctx.fns.site.introBlock(ctx, { html: intro })}
         ${ctx.fns.site.metaDl(ctx, { rows })}
         ${ctx.fns.site.notesBlock(ctx, { html: notes })}
-        ${ctx.fns.site.jsonBlock(ctx, { d })}
+        ${json}
     `;
     return ctx.fns.site.layout(ctx, {
         title,

@@ -19,14 +19,21 @@ declare global {
             $render_StructureDefinition: typeof import("./$render_StructureDefinition").default;
             $render_ValueSet: typeof import("./$render_ValueSet").default;
             artifactTable: typeof import("./artifactTable").default;
+            bindingsTable: typeof import("./bindingsTable").default;
             buildInfoBanner: typeof import("./buildInfoBanner").default;
             bytes: typeof import("./bytes").default;
+            constraintsTable: typeof import("./constraintsTable").default;
+            detailTable: typeof import("./detailTable").default;
+            elementRow: typeof import("./elementRow").default;
+            elementTable: typeof import("./elementTable").default;
             examplesForProfile: typeof import("./examplesForProfile").default;
+            flagLegend: typeof import("./flagLegend").default;
             flagsCell: typeof import("./flagsCell").default;
             formatCard: typeof import("./formatCard").default;
             formatChips: typeof import("./formatChips").default;
             formatPath: typeof import("./formatPath").default;
             handleHotUpdate: typeof import("./handleHotUpdate").default;
+            highlightCode: typeof import("./highlightCode").default;
             htmlEscape: typeof import("./htmlEscape").default;
             humanType: typeof import("./humanType").default;
             idOf: typeof import("./idOf").default;
@@ -34,9 +41,11 @@ declare global {
             jsonBlock: typeof import("./jsonBlock").default;
             layout: typeof import("./layout").default;
             linkCanonical: typeof import("./linkCanonical").default;
+            linkType: typeof import("./linkType").default;
             loadIntroNotes: typeof import("./loadIntroNotes").default;
             loadPagecontent: typeof import("./loadPagecontent").default;
             metaDl: typeof import("./metaDl").default;
+            navActiveScript: typeof import("./navActiveScript").default;
             notesBlock: typeof import("./notesBlock").default;
             notesFor: typeof import("./notesFor").default;
             order: typeof import("./order").default;
@@ -44,6 +53,7 @@ declare global {
             pageHref: typeof import("./pageHref").default;
             pillType: typeof import("./pillType").default;
             profileTabs: typeof import("./profileTabs").default;
+            quickStartTable: typeof import("./quickStartTable").default;
             renderArtifacts: typeof import("./renderArtifacts").default;
             renderBreadcrumb: typeof import("./renderBreadcrumb").default;
             renderIndex: typeof import("./renderIndex").default;
@@ -51,6 +61,7 @@ declare global {
             renderPage: typeof import("./renderPage").default;
             renderResource: typeof import("./renderResource").default;
             renderSidebarGroup: typeof import("./renderSidebarGroup").default;
+            searchParamsFor: typeof import("./searchParamsFor").default;
             sectionHeader: typeof import("./sectionHeader").default;
             shortLabel: typeof import("./shortLabel").default;
             sidebar: typeof import("./sidebar").default;
@@ -61,6 +72,7 @@ declare global {
             topBar: typeof import("./topBar").default;
             treeIndent: typeof import("./treeIndent").default;
             urlVersionStrip: typeof import("./urlVersionStrip").default;
+            usagesOf: typeof import("./usagesOf").default;
             watchPaths: typeof import("./watchPaths").default;
             writeBundle: typeof import("./writeBundle").default;
         };

@@ -11,6 +11,9 @@ export default function urlVersionStrip(ctx: Context, opts: { d: Record<string, 
     const date      = (d.date as string | undefined) ?? "";
     const name      = (d.name as string | undefined) ?? (d.id as string | undefined) ?? "";
     const copyright = (d.copyright as string | undefined) ?? "";
+    const fhirVer   = (d.fhirVersion as string | undefined) ?? "";
+    const sdType    = (d.type as string | undefined) ?? "";
+    const deriv     = (d.derivation as string | undefined) ?? "";
 
     // Pull standards-status and fmm from extensions if present.
     const exts = (d.extension as Array<{ url: string; valueCode?: string; valueInteger?: number }> | undefined) ?? [];
@@ -41,6 +44,16 @@ export default function urlVersionStrip(ctx: Context, opts: { d: Record<string, 
             ].filter(Boolean).join(" "),
             cell("Computable Name", `<code class="text-slate-800">${esc(name)}</code>`),
         )}
+        ${(fhirVer || sdType || deriv)
+            ? row(
+                [
+                    fhirVer ? cell("FHIR Version", `<span class="font-medium">${esc(fhirVer)}</span>`) : "",
+                    sdType  ? cell("Type", `<code class="text-slate-800">${esc(sdType)}</code>`) : "",
+                    deriv   ? cell("Derivation", `<span class="capitalize">${esc(deriv)}</span>`) : "",
+                ].filter(Boolean).join(" "),
+                "",
+              )
+            : ""}
         ${oids.length || copyright
             ? row(
                 oids.length ? cell("Other Identifiers", oids.map(o => `<code class="text-slate-800">${esc(o)}</code>`).join(", ")) : "",

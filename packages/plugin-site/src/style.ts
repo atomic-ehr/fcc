@@ -19,17 +19,30 @@ details.group-block > summary {
   cursor: pointer;
   user-select: none;
   list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 details.group-block > summary::-webkit-details-marker { display: none; }
-details.group-block > summary::before {
-  content: "\\25B8"; /* right-pointing triangle */
-  display: inline-block;
-  width: 0.85rem;
-  font-size: 0.65rem;
-  color: #6b7280;
-  transition: transform 0.1s ease;
+/* Chevron sits on the RIGHT and rotates down when the group is open. */
+details.group-block > summary::after {
+  content: "\\25B8"; /* ▸ */
+  flex: none;
+  margin-left: 0.5rem;
+  font-size: 0.6rem;
+  color: #94a3b8;
+  transition: transform 0.15s ease;
 }
-details.group-block[open] > summary::before { transform: rotate(90deg); }
+details.group-block[open] > summary::after { transform: rotate(90deg); }
+
+/* Active (current page) sidebar link. */
+#site-nav .nav-active {
+  background: #e0f2fe;               /* sky-100 */
+  color: #075985;                    /* sky-800 */
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 #0284c7; /* sky-600 left accent */
+}
+#site-nav .nav-active:hover { background: #e0f2fe; }
 .prose pre {
   background: #0b1020;
   color: #e5e7eb;

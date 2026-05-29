@@ -8,15 +8,16 @@ export default function topBar(ctx: Context, opts: { active: string }): string {
     const menuFromConfig = ctx.state.menuHtml as string | undefined | null;
     const navHtml = menuFromConfig ?? fallbackNav(ctx, opts);
 
-    return `<header class="bg-sky-800 text-white shadow-sm">
+    return `<header class="bg-slate-900 text-white shadow-sm">
         <div class="mx-auto flex max-w-screen-2xl items-baseline justify-between px-4 py-3 lg:px-8">
-            <div>
-                <a href="index.html" class="text-lg font-semibold tracking-tight hover:text-sky-100">${igTitle}</a>
-                <span class="ml-3 text-xs text-sky-200">v${esc(ctx.cfg.version)} · FHIR ${esc(ctx.target.fhir)}</span>
+            <div class="flex items-baseline">
+                <span class="mr-2 h-2.5 w-2.5 self-center rounded-full bg-brand"></span>
+                <a href="index.html" class="text-lg font-semibold tracking-tight hover:text-brand">${igTitle}</a>
+                <span class="ml-3 text-xs text-slate-400">v${esc(ctx.cfg.version)} · FHIR ${esc(ctx.target.fhir)}</span>
             </div>
             <div class="flex items-center gap-2">
-                <span class="rounded-full bg-sky-900/60 px-2 py-0.5 text-xs uppercase tracking-wide text-sky-100">${esc(ctx.target.name)}</span>
-                <span class="rounded-full bg-amber-400/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-950">${esc(ctx.cfg.status ?? "draft")}</span>
+                <span class="rounded-full bg-slate-700/60 px-2 py-0.5 text-xs uppercase tracking-wide text-slate-200">${esc(ctx.target.name)}</span>
+                <span class="rounded-full bg-brand px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">${esc(ctx.cfg.status ?? "draft")}</span>
             </div>
         </div>
         ${navHtml}

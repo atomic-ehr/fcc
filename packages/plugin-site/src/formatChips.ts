@@ -1,20 +1,19 @@
-// IG-Publisher-style "Content | Detailed Descriptions | Mappings | Examples | XML | JSON" chip row.
-// Right-aligned download links + left-aligned section links.
-export default function formatChips(ctx: Context, opts: { resource: types.fcc.Resource }): string {
+// Top-level page tabs (IG-Publisher "Content | Detailed Descriptions |
+// Examples | JSON"), as real Datastar tabs driven by the `$ptab` signal —
+// matches the original IG layout where these switch the whole main view.
+// The `.json` source download stays a real link on the right (not a tab).
+//
+// `opts.tabs` is the ordered list of {key,label} the renderer decided are
+// available (Content always; Detailed/Examples only when there's content).
+export default function formatChips(
+    ctx: Context,
+    opts: { resource: types.fcc.Resource; tabs: Array<{ key: string; label: string }> },
+): string {
     const esc = (s: string) => ctx.fns.site.htmlEscape(ctx, { s });
-    const href = ctx.fns.site.pageHref(ctx, { resource: opts.resource });
-    const base = href.replace(/\.html$/, "");
-    const chip = (label: string, target?: string) => target
-        ? `<a class="rounded border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-sky-700 hover:bg-sky-50" href="${target}">${esc(label)}</a>`
-        : `<span class="rounded border border-slate-300 bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">${esc(label)}</span>`;
-    return `<div class="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
-        <div class="flex flex-wrap gap-1.5">
-            ${chip("Content")}
-            ${chip("Detailed Descriptions", `${base}#description`)}
-            ${chip("Examples",              `${base}#profile-examples`)}
-        </div>
-        <div class="ml-auto flex flex-wrap gap-1.5">
-            ${chip("JSON", `${base}.json`)}
-        </div>
+    const base = ctx.fns.site.pageHref(ctx, { resource: opts.resource }).replace(/\.html$/, "");
+    const tabStrip = ctx.fns.site.profileTabs(ctx, { tabs: opts.tabs, signal: "ptab" });
+    return `<div class="mt-1 flex flex-wrap items-end justify-between gap-2">
+        <div class="min-w-0">${tabStrip}</div>
+        <a class="mb-1 rounded border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-sky-700 hover:bg-sky-50" href="${base}.json">JSON</a>
     </div>`;
 }

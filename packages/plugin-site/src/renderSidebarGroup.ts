@@ -18,7 +18,10 @@ export default function renderSidebarGroup(
     }).join("");
     return `<details class="group-block" ${isOpen ? "open" : ""} id="${esc(opts.anchor)}">
         <summary class="rounded px-2 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500 hover:bg-slate-100">
-            ${esc(opts.label)} <span class="ml-1 text-slate-400">${opts.list.length}</span>
+            <span class="flex min-w-0 items-center gap-1.5">
+                <span class="truncate">${esc(opts.label)}</span>
+                <span class="rounded-full bg-slate-100 px-1.5 py-px text-[10px] font-medium text-slate-500">${opts.list.length}</span>
+            </span>
         </summary>
         <ul class="mt-1 space-y-0.5 pl-3">${items}</ul>
     </details>`;

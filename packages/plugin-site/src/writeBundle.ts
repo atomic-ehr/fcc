@@ -53,7 +53,7 @@ export default async function writeBundle(
     for (const r of pctx.resources.values()) {
         if (r.resourceType === "ImplementationGuide") continue;
         if (changed && !changed.has(r.id)) continue;
-        const html = ctx.fns.site.renderResource(ctx, { resource: r });
+        const html = await ctx.fns.site.renderResource(ctx, { resource: r });
         const href = ctx.fns.site.pageHref(ctx, { resource: r });
         await writeOne(outDir, href, html);
         pageCount++;

@@ -1,4 +1,4 @@
-export default function $render_StructureDefinition(ctx: Context, opts: { resource: types.fcc.Resource }): string {
+export default async function $render_StructureDefinition(ctx: Context, opts: { resource: types.fcc.Resource }): Promise<string> {
     const r = opts.resource;
     const d = r.data as Record<string, unknown>;
     const esc = (s: string) => ctx.fns.site.htmlEscape(ctx, { s });
@@ -7,81 +7,124 @@ export default function $render_StructureDefinition(ctx: Context, opts: { resour
 
     const { intro, notes } = ctx.fns.site.notesFor(ctx, { resource: r });
 
-    // Differential rows with IG-Publisher-style tree icons + Flags column.
     const elements = ((d.differential as { element?: Array<Record<string, unknown>> } | undefined)?.element) ?? [];
-    const rows = elements.map((e, i) => {
-        const path = String(e.path ?? "");
-        const card = ctx.fns.site.formatCard(ctx, { min: e.min, max: e.max });
-        const flags = ctx.fns.site.flagsCell(ctx, { e });
-        const binding = e.binding as { strength?: string; valueSet?: string } | undefined;
-        const bindingHtml = binding
-            ? `${ctx.fns.site.tagBindingStrength(ctx, { s: binding.strength ?? "" })} ${ctx.fns.site.linkCanonical(ctx, { url: binding.valueSet })}`
-            : "";
-        const types = (e.type as Array<{ code: string }> | undefined)?.map(t => ctx.fns.site.pillType(ctx, { t: t.code })).join(" ") ?? "";
-        const indent = ctx.fns.site.treeIndent(ctx, { path, isLast: i === elements.length - 1 });
-        const lastSeg = path.split(".").pop() ?? path;
-        const desc = (e.short as string | undefined) ?? (e.definition as string | undefined) ?? "";
-        return `
-            <tr class="hover:bg-slate-50/60 even:bg-slate-50/40">
-                <td class="path-cell px-3 py-1 align-top text-sm">${indent}<span class="text-slate-900">${esc(lastSeg)}</span></td>
-                <td class="px-3 py-1 align-top text-xs">${flags}</td>
-                <td class="px-3 py-1 align-top text-xs text-slate-600">${esc(card)}</td>
-                <td class="px-3 py-1 align-top">${types}</td>
-                <td class="px-3 py-1 align-top text-xs text-slate-600">
-                    ${esc(desc)}
-                    ${bindingHtml ? `<div class="mt-0.5">${bindingHtml}</div>` : ""}
-                </td>
-            </tr>`;
-    }).join("");
+
+    // ---- Key Elements: must-support / mandatory / modifier / bound / constrained,
+    // plus every ancestor path so the tree stays connected. -------------------
+    const isKey = (e: Record<string, unknown>) =>
+        e.mustSupport === true ||
+        (typeof e.min === "number" && (e.min as number) >= 1) ||
+        e.isModifier === true ||
+        !!e.binding ||
+        (Array.isArray(e.constraint) && e.constraint.length > 0);
+    const keyPaths = new Set<string>();
+    for (const e of elements) {
+        if (!isKey(e)) continue;
+        const p = String(e.path ?? "");
+        const parts = p.split(".");
+        for (let i = 1; i <= parts.length; i++) keyPaths.add(parts.slice(0, i).join("."));
+    }
+    const keyEls = elements.filter(e => keyPaths.has(String(e.path ?? "")));
 
     const baseLink = ctx.fns.site.linkCanonical(ctx, { url: d.baseDefinition as string });
     const desc = (d.description as string) ?? "";
 
-    const body = `
-        ${ctx.fns.site.pageHeader(ctx, { title, kind: "Profile", d })}
-        ${ctx.fns.site.formatChips(ctx, { resource: r })}
-        ${ctx.fns.site.urlVersionStrip(ctx, { d })}
+    // ---- Inner Formal-Views tabs (signal $sdtab). Only built when populated. -
+    const diffPanel  = ctx.fns.site.elementTable(ctx, { elements });
+    const keyPanel   = keyEls.length ? ctx.fns.site.elementTable(ctx, { elements: keyEls }) : "";
+    const bindPanel  = ctx.fns.site.bindingsTable(ctx, { elements });
+    const constPanel = ctx.fns.site.constraintsTable(ctx, { elements });
 
+    const innerPanels: Array<{ key: string; label: string; html: string }> = [];
+    if (keyPanel)   innerPanels.push({ key: "key",          label: "Key Elements", html: keyPanel });
+    innerPanels.push({ key: "differential", label: "Differential", html: diffPanel });
+    if (bindPanel)  innerPanels.push({ key: "bindings",     label: "Bindings",     html: bindPanel });
+    if (constPanel) innerPanels.push({ key: "constraints",  label: "Constraints",  html: constPanel });
+
+    const activeInner = innerPanels[0]?.key ?? "differential";
+    const innerTabs = ctx.fns.site.profileTabs(ctx, { tabs: innerPanels.map(p => ({ key: p.key, label: p.label })) });
+    const innerHtml = innerPanels.map(p =>
+        `<div data-show="$sdtab === '${p.key}'"${p.key === activeInner ? "" : ` style="display:none"`}>${p.html}</div>`,
+    ).join("");
+
+    // ---- Content-tab sections get sequential numbers. -----------------------
+    let n = 2;
+    const sec = (t: string, sid: string) => ctx.fns.site.sectionHeader(ctx, { num: `1.${++n}`, title: t, id: sid });
+
+    const examples = ctx.fns.site.examplesForProfile(ctx, { profile: r });
+    const usages = ctx.fns.site.usagesOf(ctx, { profile: r });
+    const usageProfiles = usages.filter(u => u.resourceType === "StructureDefinition");
+    const usageCaps     = usages.filter(u => u.resourceType === "CapabilityStatement");
+
+    const linkList = (rs: types.fcc.Resource[]) => `<ul class="mt-1 grid grid-cols-1 gap-0.5 pl-1 text-sm sm:grid-cols-2 lg:grid-cols-3">
+        ${rs.map(u => {
+            const href = ctx.fns.site.pageHref(ctx, { resource: u });
+            const label = esc(ctx.fns.site.titleOf(ctx, { resource: u }));
+            return `<li><a class="text-sky-700 hover:underline" href="${href}">${label}</a></li>`;
+        }).join("")}
+    </ul>`;
+
+    const usagesSection = usages.length ? `${sec(`Usages (${usages.length})`, "usages")}
+        ${usageProfiles.length ? `<p class="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Referenced by profiles (${usageProfiles.length})</p>${linkList(usageProfiles)}` : ""}
+        ${usageCaps.length ? `<p class="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">CapabilityStatements (${usageCaps.length})</p>${linkList(usageCaps)}` : ""}` : "";
+
+    const quickStart = ctx.fns.site.quickStartTable(ctx, { resourceType: (d.type as string) ?? "" });
+    const quickStartSection = quickStart ? `${sec("Quick Start", "quick-start")}
+        <p class="mt-1 text-xs text-slate-500">Search parameters defined for the <code>${esc((d.type as string) ?? "")}</code> resource in this IG.</p>
+        <div class="mt-2">${quickStart}</div>` : "";
+
+    const notesSection = notes ? `${sec("Notes", "notes-section")}
+        <article class="prose prose-slate mt-2 max-w-3xl">${notes}</article>` : "";
+
+    // ---- Top-level page tabs (signal $ptab), matching the original IG. -------
+    const topPanel = (key: string, html: string) =>
+        `<div data-show="$ptab === '${key}'"${key === "content" ? "" : ` style="display:none"`}>${html}</div>`;
+
+    const contentTab = `
         ${ctx.fns.site.sectionHeader(ctx, { num: "1.1", title: "Description", id: "description" })}
         ${desc ? `<p class="mt-2 max-w-3xl text-sm text-slate-700">${esc(desc)}</p>` : ""}
         ${ctx.fns.site.introBlock(ctx, { html: intro })}
 
         ${ctx.fns.site.sectionHeader(ctx, { num: "1.2", title: "Formal Views of Profile Content", id: "views" })}
         <p class="mt-1 text-xs text-slate-500">This structure is derived from ${baseLink}.</p>
-        ${ctx.fns.site.profileTabs(ctx, { active: "differential" })}
-        <div id="differential" class="overflow-x-auto rounded-b border border-t-0 border-slate-200 bg-white">
-            <table class="sd min-w-full text-sm">
-                <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-                    <tr>
-                        <th class="px-3 py-2">Name</th>
-                        <th class="px-3 py-2">Flags</th>
-                        <th class="px-3 py-2">Card.</th>
-                        <th class="px-3 py-2">Type</th>
-                        <th class="px-3 py-2">Description &amp; Constraints</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">${rows}</tbody>
-            </table>
-        </div>
-        <p class="mt-2 text-xs text-slate-500">Other representations of profile: <a class="text-sky-700 hover:underline" href="${ctx.fns.site.pageHref(ctx, { resource: r })}.json">JSON</a></p>
+        ${innerTabs}
+        ${innerHtml}
+        ${ctx.fns.site.flagLegend(ctx)}
 
-        ${(() => {
-            const examples = ctx.fns.site.examplesForProfile(ctx, { profile: r });
-            if (!examples.length) return "";
-            const items = examples.map(ex => {
+        ${usagesSection}
+        ${quickStartSection}
+        ${notesSection}`;
+
+    const detailedTab = `<h2 class="mt-6 text-lg font-semibold text-slate-900">Detailed Descriptions</h2>
+        <div class="mt-2">${ctx.fns.site.detailTable(ctx, { elements })}</div>`;
+
+    const examplesTab = examples.length ? `<h2 class="mt-6 text-lg font-semibold text-slate-900">Examples (${examples.length})</h2>
+        <ul class="mt-2 list-disc space-y-0.5 pl-6 text-sm">
+            ${examples.map(ex => {
                 const href = ctx.fns.site.pageHref(ctx, { resource: ex });
                 const label = esc(ctx.fns.site.titleOf(ctx, { resource: ex }));
                 return `<li><a class="text-sky-700 hover:underline" href="${href}">${label}</a></li>`;
-            }).join("");
-            return `${ctx.fns.site.sectionHeader(ctx, { num: "1.3", title: `Examples (${examples.length})`, id: "profile-examples" })}
-                <ul class="mt-2 list-disc space-y-0.5 pl-6 text-sm">${items}</ul>`;
-        })()}
+            }).join("")}
+        </ul>` : "";
 
-        ${notes ? `${ctx.fns.site.sectionHeader(ctx, { num: "1.4", title: "Notes", id: "notes-section" })}
-        <article class="prose prose-slate mt-2 max-w-3xl">${notes}</article>` : ""}
+    const jsonTab = await ctx.fns.site.jsonBlock(ctx, { d, heading: false });
 
-        ${ctx.fns.site.sectionHeader(ctx, { num: notes ? "1.5" : "1.4", title: "Source JSON", id: "json" })}
-        <pre class="mt-2 max-h-[60vh] overflow-auto rounded border border-slate-200 bg-slate-900 p-4 text-xs leading-relaxed text-slate-100"><code>${esc(JSON.stringify({ ...d, __wasExample: undefined }, null, 2))}</code></pre>
+    // Available top tabs (Content/JSON always; Detailed/Examples when populated).
+    const topTabs: Array<{ key: string; label: string }> = [{ key: "content", label: "Content" }];
+    topTabs.push({ key: "detailed", label: "Detailed Descriptions" });
+    if (examples.length) topTabs.push({ key: "examples", label: "Examples" });
+    topTabs.push({ key: "json", label: "Source JSON" });
+
+    const body = `
+        ${ctx.fns.site.pageHeader(ctx, { title, kind: "Profile", d })}
+        <div data-signals="{ptab: 'content', sdtab: '${activeInner}'}">
+            ${ctx.fns.site.formatChips(ctx, { resource: r, tabs: topTabs })}
+            ${ctx.fns.site.urlVersionStrip(ctx, { d })}
+            ${topPanel("content", contentTab)}
+            ${topPanel("detailed", detailedTab)}
+            ${examples.length ? topPanel("examples", examplesTab) : ""}
+            ${topPanel("json", jsonTab)}
+        </div>
     `;
     return ctx.fns.site.layout(ctx, {
         title,
