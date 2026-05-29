@@ -26,6 +26,12 @@ import renderLanding from "./renderLanding.ts";
 import renderSidebarGroup from "./renderSidebarGroup.ts";
 import navActiveScript from "./navActiveScript.ts";
 import tabHashScript from "./tabHashScript.ts";
+import sdHrefs from "./sdHrefs.ts";
+import sdCompanionPages from "./sdCompanionPages.ts";
+import renderDefinitionsPage from "./renderDefinitionsPage.ts";
+import renderMappingsPage from "./renderMappingsPage.ts";
+import renderExamplesPage from "./renderExamplesPage.ts";
+import renderProfileJsonPage from "./renderProfileJsonPage.ts";
 import shortLabel from "./shortLabel.ts";
 import sidebar from "./sidebar.ts";
 import stripUnrenderedLiquid from "./stripUnrenderedLiquid.ts";
@@ -80,6 +86,8 @@ export default function loadFns(ctx: Context): void {
         examplesForProfile, elementRow, elementTable, bindingsTable,
         constraintsTable, detailTable, usagesOf, linkType, flagLegend,
         searchParamsFor, quickStartTable, navActiveScript, tabHashScript, formatChips,
+        sdHrefs, sdCompanionPages, renderDefinitionsPage, renderMappingsPage,
+        renderExamplesPage, renderProfileJsonPage,
         renderPage, loadPagecontent,
     };
 }

@@ -1,7 +1,7 @@
 // Detailed Descriptions view: one block per ElementDefinition with the full
 // (untruncated) text the compact table elides — definition/short, comment,
 // cardinality, type, binding (with description) and invariants.
-export default function detailTable(ctx: Context, opts: { elements: Array<Record<string, unknown>> }): string {
+export default function detailTable(ctx: Context, opts: { elements: Array<Record<string, unknown>>; anchors?: boolean }): string {
     const esc = (s: string) => ctx.fns.site.htmlEscape(ctx, { s });
     if (!opts.elements.length) return `<p class="px-3 py-4 text-sm text-slate-500">No elements.</p>`;
 
@@ -11,6 +11,8 @@ export default function detailTable(ctx: Context, opts: { elements: Array<Record
     const blocks = opts.elements.map(e => {
         const path = String(e.path ?? "");
         const slice = e.sliceName as string | undefined;
+        const anchorKey = slice ? `${path}:${slice}` : path;
+        const idAttr = opts.anchors ? ` id="${esc(anchorKey)}"` : "";
         const heading = slice ? `${esc(path)}<span class="text-violet-700">:${esc(slice)}</span>` : esc(path);
         const card = ctx.fns.site.formatCard(ctx, { min: e.min, max: e.max });
 
@@ -29,7 +31,7 @@ export default function detailTable(ctx: Context, opts: { elements: Array<Record
             ? cons.map(c => `<div><code class="text-xs text-slate-900">${esc(c.key ?? "")}</code>: ${esc(c.human ?? "")}</div>`).join("")
             : "";
 
-        return `<div class="border-b border-slate-100 px-3 py-2">
+        return `<div${idAttr} class="scroll-mt-20 border-b border-slate-100 px-3 py-2">
             <div class="flex items-center gap-2 text-sm">
                 ${ctx.fns.site.flagsCell(ctx, { e })}
                 <code class="font-semibold text-slate-900">${heading}</code>

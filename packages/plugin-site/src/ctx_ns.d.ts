@@ -56,11 +56,17 @@ declare global {
             quickStartTable: typeof import("./quickStartTable").default;
             renderArtifacts: typeof import("./renderArtifacts").default;
             renderBreadcrumb: typeof import("./renderBreadcrumb").default;
+            renderDefinitionsPage: typeof import("./renderDefinitionsPage").default;
+            renderExamplesPage: typeof import("./renderExamplesPage").default;
             renderIndex: typeof import("./renderIndex").default;
             renderLanding: typeof import("./renderLanding").default;
+            renderMappingsPage: typeof import("./renderMappingsPage").default;
             renderPage: typeof import("./renderPage").default;
+            renderProfileJsonPage: typeof import("./renderProfileJsonPage").default;
             renderResource: typeof import("./renderResource").default;
             renderSidebarGroup: typeof import("./renderSidebarGroup").default;
+            sdCompanionPages: typeof import("./sdCompanionPages").default;
+            sdHrefs: typeof import("./sdHrefs").default;
             searchParamsFor: typeof import("./searchParamsFor").default;
             sectionHeader: typeof import("./sectionHeader").default;
             shortLabel: typeof import("./shortLabel").default;
@@ -91,6 +97,7 @@ declare global {
         }
         namespace site {
             type RenderCtx = import("./$type_RenderCtx").RenderCtx;
+            type SdHrefs = import("./$type_SdHrefs").SdHrefs;
             type SiteOpts = import("./$type_SiteOpts").SiteOpts;
         }
     }

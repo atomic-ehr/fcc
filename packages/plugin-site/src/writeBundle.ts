@@ -57,6 +57,13 @@ export default async function writeBundle(
         const href = ctx.fns.site.pageHref(ctx, { resource: r });
         await writeOne(outDir, href, html);
         pageCount++;
+
+        // IG-Publisher companion pages (…-definitions.html, …-mappings.html,
+        // …-examples.html, …profile.json.html + raw .profile.json) for profiles.
+        for (const page of await ctx.fns.site.sdCompanionPages(ctx, { resource: r })) {
+            await writeOne(outDir, page.name, page.content);
+            pageCount++;
+        }
     }
 
     pctx.emitFile({ path: join(outDir, "index.html"), bytes: ctx.fns.site.bytes(ctx, { s: "" }) });

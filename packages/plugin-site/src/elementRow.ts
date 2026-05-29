@@ -6,7 +6,7 @@
 //      not a bare repeated "extension".
 //   2. Extension slices link to their extension profile (type[].profile[0])
 //      instead of an undifferentiated "Extension" pill.
-export default function elementRow(ctx: Context, opts: { e: Record<string, unknown>; isLast?: boolean }): string {
+export default function elementRow(ctx: Context, opts: { e: Record<string, unknown>; isLast?: boolean; defnHref?: string }): string {
     const e = opts.e;
     const esc = (s: string) => ctx.fns.site.htmlEscape(ctx, { s });
 
@@ -14,9 +14,15 @@ export default function elementRow(ctx: Context, opts: { e: Record<string, unkno
     const sliceName = e.sliceName as string | undefined;
     const lastSeg = path.split(".").pop() ?? path;
     const indent = ctx.fns.site.treeIndent(ctx, { path, isLast: opts.isLast });
-    const name = sliceName
+    // Element key for the definitions-page anchor (path, or path:slice).
+    const anchorKey = sliceName ? `${path}:${sliceName}` : path;
+    const nameText = sliceName
         ? `<span class="text-slate-900">${esc(lastSeg)}</span><span class="text-violet-700">:${esc(sliceName)}</span>`
         : `<span class="text-slate-900">${esc(lastSeg)}</span>`;
+    // Link the name to the Detailed Descriptions page anchor, like IG Publisher.
+    const name = opts.defnHref
+        ? `<a class="hover:underline" href="${esc(opts.defnHref)}#${esc(anchorKey)}">${nameText}</a>`
+        : nameText;
 
     const card = ctx.fns.site.formatCard(ctx, { min: e.min, max: e.max });
     const flags = ctx.fns.site.flagsCell(ctx, { e });
