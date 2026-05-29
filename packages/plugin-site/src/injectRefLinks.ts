@@ -7,11 +7,26 @@ export default function injectRefLinks(ctx: Context, opts: { md: string }): stri
     const map = (ctx.state.site?.refLinkMap ?? {}) as Record<string, string>;
     const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+    const isDefined = (label: string) => new RegExp(`^\\s*\\[${esc(label)}\\]:`, "m").test(opts.md);
+    const isUsed = (label: string) => new RegExp(`\\[${esc(label)}\\](?!\\()`).test(opts.md);
+
     let add = "";
     for (const [label, href] of Object.entries(map)) {
-        const used = new RegExp(`\\[${esc(label)}\\](?!\\()`).test(opts.md); // [Label] not immediately followed by (
-        const defined = new RegExp(`^\\s*\\[${esc(label)}\\]:`, "m").test(opts.md);
-        if (used && !defined) add += `\n[${label}]: ${href}`;
+        if (isUsed(label) && !isDefined(label)) add += `\n[${label}]: ${href}`;
+    }
+
+    // FHIR element-path links like [CarePlan.status] → R4 element definition.
+    // Toggle with site({ features: { fhirPathLinks: false } }); base via fhirSpecBase.
+    if (ctx.fns.site.featureOn(ctx, { name: "fhirPathLinks" })) {
+        const base = (ctx.state.site?.fhirSpecBase as string | undefined) ?? "http://hl7.org/fhir/R4/";
+        const seen = new Set<string>();
+        for (const m of opts.md.matchAll(/\[([A-Z][A-Za-z]+(?:\.[A-Za-z0-9\[\]]+)+)\](?!\()/g)) {
+            const label = m[1]!;
+            if (seen.has(label) || isDefined(label)) continue;
+            seen.add(label);
+            const type = label.split(".")[0]!.toLowerCase();
+            add += `\n[${label}]: ${base}${type}-definitions.html#${label}`;
+        }
     }
     return add ? `${opts.md}\n${add}\n` : opts.md;
 }

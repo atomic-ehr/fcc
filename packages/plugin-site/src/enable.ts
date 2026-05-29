@@ -34,6 +34,8 @@ export default function enable(ctx: Context, opts: { opts?: types.site.SiteOpts 
         introNotes:  o.introNotes  ?? "input/intro-notes",
         out:         o.out         ?? "site",
         dropBalloterNotes: o.dropBalloterNotes ?? false,
+        features: o.features ?? {},
+        fhirSpecBase: o.fhirSpecBase ?? "http://hl7.org/fhir/R4/",
         tabRegistry,
         blockRegistry,
         refLinkMap,

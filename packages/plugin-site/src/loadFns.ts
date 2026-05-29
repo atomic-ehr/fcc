@@ -98,6 +98,7 @@ import warmHighlighter from "./warmHighlighter.ts";
 import highlightBlocks from "./highlightBlocks.ts";
 import expandIncludes from "./expandIncludes.ts";
 import sdListTable from "./sdListTable.ts";
+import featureOn from "./featureOn.ts";
 import renderPage from "./renderPage.ts";
 import loadPagecontent from "./loadPagecontent.ts";
 
@@ -124,7 +125,7 @@ export default function loadFns(ctx: Context): void {
         enable, tabDefaults, blockDefaults, mergeTabs, $avail_notExample,
         tabsFor, canonicalTabStrip, canonicalResource,
         parseIal, applyBlocks, injectRefLinks, mdToHtml, mdInline,
-        warmHighlighter, highlightBlocks, expandIncludes, sdListTable,
+        warmHighlighter, highlightBlocks, expandIncludes, sdListTable, featureOn,
         renderPage, loadPagecontent,
     };
 }

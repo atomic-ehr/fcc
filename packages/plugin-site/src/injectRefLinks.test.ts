@@ -12,6 +12,11 @@ test("injectRefLinks: resolves [Mandatory]/[Formal Views]", () => {
     expect(c.fns.site.injectRefLinks(c, { md: "[Mandatory] and [Formal Views]" })).toContain("[Mandatory]: must-support.html");
     expect(c.fns.site.injectRefLinks(c, { md: "[Formal Views]" })).toContain("[Formal Views]: #views");
 });
+test("injectRefLinks: resolves FHIR element-path links to R4 definitions", () => {
+    const c = mk();
+    const out = c.fns.site.injectRefLinks(c, { md: "binds [CarePlan.status] tightly" });
+    expect(out).toContain("[CarePlan.status]: http://hl7.org/fhir/R4/careplan-definitions.html#CarePlan.status");
+});
 test("injectRefLinks: skips inline link [x](url) and already-defined", () => {
     const c = mk();
     expect(c.fns.site.injectRefLinks(c, { md: "See [Change Log](other.html)." })).not.toContain("[Change Log]: changes.html");

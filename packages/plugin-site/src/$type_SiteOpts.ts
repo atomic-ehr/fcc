@@ -16,8 +16,17 @@ export type SiteOpts = {
     /** Bare reference-link label → href, merged over the built-in IG-page map. */
     refLinks?: Record<string, string>;
 
+    /** Base URL for FHIR-core spec links; element-path links like [CarePlan.status]
+     *  resolve to <base><type>-definitions.html#<Path>. Default R4. */
+    fhirSpecBase?: string;
+
     /** Drop {:.note-to-balloters} callouts (non-ballot builds). Default false. */
     dropBalloterNotes?: boolean;
+
+    /** Toggle named page sections/features on/off, e.g. { usages:false, quickStart:true }.
+     *  Unlisted features use their built-in default (mostly on). Extensible —
+     *  any fn can gate itself with featureOn({ name }). */
+    features?: Record<string, boolean>;
 
     // --- resolved fields written by enable.ts (not author-facing) ---
     tabRegistry?: Record<string, types.site.TabDescriptor[]>;

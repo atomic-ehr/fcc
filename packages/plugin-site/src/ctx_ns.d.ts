@@ -38,6 +38,7 @@ declare global {
             enable: typeof import("./enable").default;
             examplesForProfile: typeof import("./examplesForProfile").default;
             expandIncludes: typeof import("./expandIncludes").default;
+            featureOn: typeof import("./featureOn").default;
             fhirValue: typeof import("./fhirValue").default;
             flagLegend: typeof import("./flagLegend").default;
             flagsCell: typeof import("./flagsCell").default;

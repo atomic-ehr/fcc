@@ -74,11 +74,11 @@ export default function $render_StructureDefinition(ctx: Context, opts: { resour
         }).join("")}
     </ul>`;
 
-    const usagesSection = usages.length ? `${sec(`Usages (${usages.length})`, "usages")}
+    const usagesSection = (usages.length && ctx.fns.site.featureOn(ctx, { name: "usages" })) ? `${sec(`Usages (${usages.length})`, "usages")}
         ${usageProfiles.length ? `<p class="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Referenced by profiles (${usageProfiles.length})</p>${linkList(usageProfiles)}` : ""}
         ${usageCaps.length ? `<p class="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">CapabilityStatements (${usageCaps.length})</p>${linkList(usageCaps)}` : ""}` : "";
 
-    const quickStart = ctx.fns.site.quickStartTable(ctx, { resourceType: (d.type as string) ?? "" });
+    const quickStart = ctx.fns.site.featureOn(ctx, { name: "quickStart" }) ? ctx.fns.site.quickStartTable(ctx, { resourceType: (d.type as string) ?? "" }) : "";
     const quickStartSection = quickStart ? `${sec("Quick Start", "quick-start")}
         <p class="mt-1 text-xs text-slate-500">Search parameters defined for the <code>${esc((d.type as string) ?? "")}</code> resource in this IG.</p>
         <div class="mt-2">${quickStart}</div>` : "";
