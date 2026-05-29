@@ -14,12 +14,17 @@ export default function $render_default(ctx: Context, opts: { resource: types.fc
     rows.push(["Id",            `<code class="text-xs">${esc((d.id as string) ?? "")}</code>`]);
     if (d.url) rows.push(["Canonical", `<code class="text-xs">${esc(d.url as string)}</code>`]);
 
-    // FHIR narrative (text.div) — IG Publisher shows the rendered narrative on
-    // the example/resource page; the JSON source lives on the JSON tab.
-    const narrative = (d.text as { div?: string } | undefined)?.div;
-    const narrativeBlock = narrative
+    // Narrative — prefer a meaningful authored text.div; otherwise generate an
+    // IG-Publisher-style table from the data (the authored div is usually a stub
+    // like "<p>Patient example</p>"). "Meaningful" = more than ~40 chars of text.
+    const authored = (d.text as { div?: string } | undefined)?.div ?? "";
+    const authoredText = authored.replace(/<[^>]+>/g, "").trim();
+    const narrativeInner = authoredText.length > 40
+        ? `<div class="prose prose-slate max-w-none">${authored}</div>`
+        : ctx.fns.site.generateNarrative(ctx, { resource: r });
+    const narrativeBlock = narrativeInner
         ? `<h2 class="mt-6 text-lg font-semibold text-slate-900">Narrative</h2>
-           <div class="prose prose-slate mt-2 max-w-none rounded border border-slate-200 bg-white p-4">${narrative}</div>`
+           <div class="mt-2 overflow-x-auto rounded border border-slate-200 bg-white p-1">${narrativeInner}</div>`
         : "";
 
     const body = `

@@ -72,6 +72,9 @@ import detailTable from "./detailTable.ts";
 import usagesOf from "./usagesOf.ts";
 import codeSystemUsage from "./codeSystemUsage.ts";
 import valueSetUsage from "./valueSetUsage.ts";
+import fhirValue from "./fhirValue.ts";
+import generateNarrative from "./generateNarrative.ts";
+import displayFor from "./displayFor.ts";
 import linkType from "./linkType.ts";
 import flagLegend from "./flagLegend.ts";
 import searchParamsFor from "./searchParamsFor.ts";
@@ -93,6 +96,8 @@ import mdToHtml from "./mdToHtml.ts";
 import mdInline from "./mdInline.ts";
 import warmHighlighter from "./warmHighlighter.ts";
 import highlightBlocks from "./highlightBlocks.ts";
+import expandIncludes from "./expandIncludes.ts";
+import sdListTable from "./sdListTable.ts";
 import renderPage from "./renderPage.ts";
 import loadPagecontent from "./loadPagecontent.ts";
 
@@ -109,7 +114,8 @@ export default function loadFns(ctx: Context): void {
         writeBundle, handleHotUpdate, watchPaths,
         buildInfoBanner, urlVersionStrip, profileTabs, flagsCell, treeIndent, sectionHeader,
         examplesForProfile, elementRow, elementTable, bindingsTable,
-        constraintsTable, detailTable, usagesOf, codeSystemUsage, valueSetUsage, linkType, flagLegend,
+        constraintsTable, detailTable, usagesOf, codeSystemUsage, valueSetUsage,
+        fhirValue, generateNarrative, displayFor, linkType, flagLegend,
         searchParamsFor, quickStartTable, navActiveScript, tabHashScript, formatChips,
         sdHrefs, sdCompanionPages, renderDefinitionsPage, renderMappingsPage,
         renderExamplesPage, renderProfileJsonPage,
@@ -118,7 +124,7 @@ export default function loadFns(ctx: Context): void {
         enable, tabDefaults, blockDefaults, mergeTabs, $avail_notExample,
         tabsFor, canonicalTabStrip, canonicalResource,
         parseIal, applyBlocks, injectRefLinks, mdToHtml, mdInline,
-        warmHighlighter, highlightBlocks,
+        warmHighlighter, highlightBlocks, expandIncludes, sdListTable,
         renderPage, loadPagecontent,
     };
 }

@@ -3,7 +3,8 @@
 // liquid → inject reference-link definitions → Bun.markdown → apply pluggable
 // blocks (kramdown IAL callouts).
 export default function mdToHtml(ctx: Context, opts: { md: string }): string {
-    const stripped = ctx.fns.site.stripUnrenderedLiquid(ctx, { md: opts.md });
+    const expanded = ctx.fns.site.expandIncludes(ctx, { md: opts.md });
+    const stripped = ctx.fns.site.stripUnrenderedLiquid(ctx, { md: expanded });
     const withRefs = ctx.fns.site.injectRefLinks(ctx, { md: stripped });
     const html = (Bun as any).markdown.html(withRefs, {
         tables: true,

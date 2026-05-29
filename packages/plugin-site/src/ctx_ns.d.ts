@@ -32,15 +32,19 @@ declare global {
             conceptTable: typeof import("./conceptTable").default;
             constraintsTable: typeof import("./constraintsTable").default;
             detailTable: typeof import("./detailTable").default;
+            displayFor: typeof import("./displayFor").default;
             elementRow: typeof import("./elementRow").default;
             elementTable: typeof import("./elementTable").default;
             enable: typeof import("./enable").default;
             examplesForProfile: typeof import("./examplesForProfile").default;
+            expandIncludes: typeof import("./expandIncludes").default;
+            fhirValue: typeof import("./fhirValue").default;
             flagLegend: typeof import("./flagLegend").default;
             flagsCell: typeof import("./flagsCell").default;
             formatCard: typeof import("./formatCard").default;
             formatChips: typeof import("./formatChips").default;
             formatPath: typeof import("./formatPath").default;
+            generateNarrative: typeof import("./generateNarrative").default;
             handleHotUpdate: typeof import("./handleHotUpdate").default;
             highlightBlocks: typeof import("./highlightBlocks").default;
             highlightCode: typeof import("./highlightCode").default;
@@ -84,6 +88,7 @@ declare global {
             renderValueSetJsonPage: typeof import("./renderValueSetJsonPage").default;
             sdCompanionPages: typeof import("./sdCompanionPages").default;
             sdHrefs: typeof import("./sdHrefs").default;
+            sdListTable: typeof import("./sdListTable").default;
             searchParamsFor: typeof import("./searchParamsFor").default;
             sectionHeader: typeof import("./sectionHeader").default;
             shortLabel: typeof import("./shortLabel").default;

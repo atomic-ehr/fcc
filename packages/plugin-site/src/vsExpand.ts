@@ -6,7 +6,6 @@ export default function vsExpand(
     ctx: Context,
     opts: { resource: types.fcc.Resource },
 ): { concepts: Array<{ code: string; display?: string; system?: string }> } | null {
-    void ctx;
     const d = opts.resource.data as Record<string, unknown>;
 
     // Prefer a pre-computed expansion if the resource carries one.
@@ -23,7 +22,7 @@ export default function vsExpand(
         const concepts = inc.concept as Array<{ code: string; display?: string }> | undefined;
         if (!concepts || inc.filter || inc.valueSet) return null; // not locally expandable
         const system = inc.system as string | undefined;
-        for (const c of concepts) out.push({ code: c.code, display: c.display, system });
+        for (const c of concepts) out.push({ code: c.code, display: c.display ?? ctx.fns.site.displayFor(ctx, { system, code: c.code }), system });
     }
     return out.length ? { concepts: out } : null;
 }
