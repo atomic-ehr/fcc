@@ -66,6 +66,7 @@ declare global {
             shortLabel: typeof import("./shortLabel").default;
             sidebar: typeof import("./sidebar").default;
             stripUnrenderedLiquid: typeof import("./stripUnrenderedLiquid").default;
+            tabHashScript: typeof import("./tabHashScript").default;
             tagBindingStrength: typeof import("./tagBindingStrength").default;
             tagMS: typeof import("./tagMS").default;
             titleOf: typeof import("./titleOf").default;

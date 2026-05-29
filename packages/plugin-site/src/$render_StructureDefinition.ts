@@ -41,10 +41,18 @@ export default async function $render_StructureDefinition(ctx: Context, opts: { 
     if (bindPanel)  innerPanels.push({ key: "bindings",     label: "Bindings",     html: bindPanel });
     if (constPanel) innerPanels.push({ key: "constraints",  label: "Constraints",  html: constPanel });
 
+    // IG-Publisher hash anchors so tabs are deep-linkable (…#tabs-diff).
+    const ANCHOR: Record<string, string> = {
+        key: "tabs-key", differential: "tabs-diff", bindings: "tabs-bind", constraints: "tabs-inv",
+        detailed: "tabs-defn", examples: "tabs-examples", json: "tabs-json",
+    };
     const activeInner = innerPanels[0]?.key ?? "differential";
-    const innerTabs = ctx.fns.site.profileTabs(ctx, { tabs: innerPanels.map(p => ({ key: p.key, label: p.label })) });
+    const innerTabs = ctx.fns.site.profileTabs(ctx, {
+        tabs: innerPanels.map(p => ({ key: p.key, label: p.label, anchor: ANCHOR[p.key] })),
+        parent: "content",
+    });
     const innerHtml = innerPanels.map(p =>
-        `<div data-show="$sdtab === '${p.key}'"${p.key === activeInner ? "" : ` style="display:none"`}>${p.html}</div>`,
+        `<div id="${ANCHOR[p.key]}" data-show="$sdtab === '${p.key}'"${p.key === activeInner ? "" : ` style="display:none"`}>${p.html}</div>`,
     ).join("");
 
     // ---- Content-tab sections get sequential numbers. -----------------------
@@ -78,7 +86,7 @@ export default async function $render_StructureDefinition(ctx: Context, opts: { 
 
     // ---- Top-level page tabs (signal $ptab), matching the original IG. -------
     const topPanel = (key: string, html: string) =>
-        `<div data-show="$ptab === '${key}'"${key === "content" ? "" : ` style="display:none"`}>${html}</div>`;
+        `<div${ANCHOR[key] ? ` id="${ANCHOR[key]}"` : ""} data-show="$ptab === '${key}'"${key === "content" ? "" : ` style="display:none"`}>${html}</div>`;
 
     const contentTab = `
         ${ctx.fns.site.sectionHeader(ctx, { num: "1.1", title: "Description", id: "description" })}
@@ -110,10 +118,11 @@ export default async function $render_StructureDefinition(ctx: Context, opts: { 
     const jsonTab = await ctx.fns.site.jsonBlock(ctx, { d, heading: false });
 
     // Available top tabs (Content/JSON always; Detailed/Examples when populated).
-    const topTabs: Array<{ key: string; label: string }> = [{ key: "content", label: "Content" }];
-    topTabs.push({ key: "detailed", label: "Detailed Descriptions" });
-    if (examples.length) topTabs.push({ key: "examples", label: "Examples" });
-    topTabs.push({ key: "json", label: "Source JSON" });
+    // Content carries no anchor — it's the default, so it never writes the hash.
+    const topTabs: Array<{ key: string; label: string; anchor?: string }> = [{ key: "content", label: "Content" }];
+    topTabs.push({ key: "detailed", label: "Detailed Descriptions", anchor: ANCHOR.detailed });
+    if (examples.length) topTabs.push({ key: "examples", label: "Examples", anchor: ANCHOR.examples });
+    topTabs.push({ key: "json", label: "Source JSON", anchor: ANCHOR.json });
 
     const body = `
         ${ctx.fns.site.pageHeader(ctx, { title, kind: "Profile", d })}
@@ -125,6 +134,7 @@ export default async function $render_StructureDefinition(ctx: Context, opts: { 
             ${examples.length ? topPanel("examples", examplesTab) : ""}
             ${topPanel("json", jsonTab)}
         </div>
+        <script>${ctx.fns.site.tabHashScript(ctx)}</script>
     `;
     return ctx.fns.site.layout(ctx, {
         title,
