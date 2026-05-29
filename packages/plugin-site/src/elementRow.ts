@@ -30,9 +30,12 @@ export default function elementRow(ctx: Context, opts: { e: Record<string, unkno
     // Type cell. Extension slices carry their target profile in type[].profile;
     // surface it as a link so the row points at the extension definition.
     const types = (e.type as Array<{ code: string; profile?: string[] }> | undefined) ?? [];
-    const typeHtml = types.map(t =>
+    let typeHtml = types.map(t =>
         ctx.fns.site.linkType(ctx, { code: t.code, profile: t.code === "Extension" ? t.profile?.[0] : undefined }),
     ).join(" ");
+    // Root element row (path has no dot, e.g. "Patient") carries no type in the
+    // differential — link it to its base resource type, like IG Publisher.
+    if (!typeHtml && !path.includes(".") && path) typeHtml = ctx.fns.site.linkType(ctx, { code: path });
 
     const binding = e.binding as { strength?: string; valueSet?: string } | undefined;
     const bindingHtml = binding

@@ -70,6 +70,8 @@ import bindingsTable from "./bindingsTable.ts";
 import constraintsTable from "./constraintsTable.ts";
 import detailTable from "./detailTable.ts";
 import usagesOf from "./usagesOf.ts";
+import codeSystemUsage from "./codeSystemUsage.ts";
+import valueSetUsage from "./valueSetUsage.ts";
 import linkType from "./linkType.ts";
 import flagLegend from "./flagLegend.ts";
 import searchParamsFor from "./searchParamsFor.ts";
@@ -107,7 +109,7 @@ export default function loadFns(ctx: Context): void {
         writeBundle, handleHotUpdate, watchPaths,
         buildInfoBanner, urlVersionStrip, profileTabs, flagsCell, treeIndent, sectionHeader,
         examplesForProfile, elementRow, elementTable, bindingsTable,
-        constraintsTable, detailTable, usagesOf, linkType, flagLegend,
+        constraintsTable, detailTable, usagesOf, codeSystemUsage, valueSetUsage, linkType, flagLegend,
         searchParamsFor, quickStartTable, navActiveScript, tabHashScript, formatChips,
         sdHrefs, sdCompanionPages, renderDefinitionsPage, renderMappingsPage,
         renderExamplesPage, renderProfileJsonPage,

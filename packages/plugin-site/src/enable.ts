@@ -24,6 +24,8 @@ export default function enable(ctx: Context, opts: { opts?: types.site.SiteOpts 
         "Mandatory": "must-support.html",
         "Must Support": "must-support.html",
         "Formal Views": "#views",
+        // Well-known FHIR-core spec reference link used across IGs.
+        "Communications": "http://hl7.org/fhir/R4/security.html#http",
         ...(o.refLinks ?? {}),
     };
 

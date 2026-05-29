@@ -10,9 +10,18 @@ export default function $render_ValueSet(ctx: Context, opts: { resource: types.f
     const cld = ctx.fns.site.vsCld(ctx, { compose: d.compose as Record<string, unknown> | undefined });
     const expansion = ctx.fns.site.vsExpand(ctx, { resource: r });
     const expansionHtml = expansion
-        ? `<p class="mt-2 text-sm text-slate-600">This value set contains ${expansion.concepts.length} concept${expansion.concepts.length === 1 ? "" : "s"}.</p>
+        ? `<p class="mt-2 text-sm text-slate-600">This value set contains ${expansion.concepts.length} concept${expansion.concepts.length === 1 ? "" : "s"}.
+           <span class="text-slate-400">Locally computed from the explicit concept lists (no terminology server).</span></p>
            <div class="mt-2">${ctx.fns.site.conceptTable(ctx, { concepts: expansion.concepts, showSystem: true })}</div>`
         : `<p class="mt-2 text-sm text-slate-500">Expansion is not available offline — this value set draws on filters, whole code systems, or imported value sets that require a terminology server to expand.</p>`;
+
+    // References: profiles that bind this value set (IG-Publisher "References").
+    const boundBy = ctx.fns.site.valueSetUsage(ctx, { resource: r });
+    const referencesHtml = boundBy.length
+        ? `<ul class="mt-2 grid grid-cols-1 gap-0.5 pl-1 text-sm sm:grid-cols-2 lg:grid-cols-3">
+            ${boundBy.map(p => `<li><a class="text-sky-700 hover:underline" href="${ctx.fns.site.pageHref(ctx, { resource: p })}">${esc(ctx.fns.site.titleOf(ctx, { resource: p }))}</a></li>`).join("")}
+        </ul>`
+        : `<p class="mt-2 text-sm text-slate-500">This value set is not bound by any profile in this implementation guide; it may be used elsewhere.</p>`;
 
     const body = `
         ${ctx.fns.site.pageHeader(ctx, { title, kind: "Value Set", d })}
@@ -29,7 +38,10 @@ export default function $render_ValueSet(ctx: Context, opts: { resource: types.f
         ${ctx.fns.site.sectionHeader(ctx, { num: "1.3", title: "Expansion", id: "expansion" })}
         ${expansionHtml}
 
-        ${notes ? `${ctx.fns.site.sectionHeader(ctx, { num: "1.4", title: "Notes", id: "notes-section" })}
+        ${ctx.fns.site.sectionHeader(ctx, { num: "1.4", title: "References", id: "references" })}
+        ${referencesHtml}
+
+        ${notes ? `${ctx.fns.site.sectionHeader(ctx, { num: "1.5", title: "Notes", id: "notes-section" })}
         <article class="prose prose-slate mt-2 max-w-3xl">${notes}</article>` : ""}
     `;
     return ctx.fns.site.layout(ctx, {

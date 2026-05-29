@@ -27,6 +27,7 @@ declare global {
             bytes: typeof import("./bytes").default;
             canonicalResource: typeof import("./canonicalResource").default;
             canonicalTabStrip: typeof import("./canonicalTabStrip").default;
+            codeSystemUsage: typeof import("./codeSystemUsage").default;
             companionPages: typeof import("./companionPages").default;
             conceptTable: typeof import("./conceptTable").default;
             constraintsTable: typeof import("./constraintsTable").default;
@@ -99,6 +100,7 @@ declare global {
             treeIndent: typeof import("./treeIndent").default;
             urlVersionStrip: typeof import("./urlVersionStrip").default;
             usagesOf: typeof import("./usagesOf").default;
+            valueSetUsage: typeof import("./valueSetUsage").default;
             vsCld: typeof import("./vsCld").default;
             vsCompanionPages: typeof import("./vsCompanionPages").default;
             vsExpand: typeof import("./vsExpand").default;

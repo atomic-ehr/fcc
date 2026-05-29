@@ -17,7 +17,11 @@ export default function $render_StructureDefinition(ctx: Context, opts: { resour
         (typeof e.min === "number" && (e.min as number) >= 1) ||
         e.isModifier === true ||
         !!e.binding ||
-        (Array.isArray(e.constraint) && e.constraint.length > 0);
+        (Array.isArray(e.constraint) && e.constraint.length > 0) ||
+        // US Core extension slices: their constraints live on the referenced
+        // extension profile, so include any sliced / profiled element.
+        !!e.sliceName ||
+        (Array.isArray(e.type) && (e.type as Array<{ profile?: unknown }>).some(t => t.profile));
     const keyPaths = new Set<string>();
     for (const e of elements) {
         if (!isKey(e)) continue;

@@ -21,6 +21,10 @@ export default async function loadIntroNotes(
         const key = `${rt}/${id}`;
         const md = await readFile(join(absDir, e.name), "utf8");
         const html = ctx.fns.site.mdToHtml(ctx, { md });
+        // Skip unfilled templates: content that is only HTML comments / whitespace
+        // once tags are stripped — otherwise an empty "Notes" section renders.
+        const meaningful = html.replace(/<!--[\s\S]*?-->/g, "").replace(/<[^>]+>/g, "").trim();
+        if (!meaningful) continue;
         const bucket = out.get(key) ?? {};
         bucket[kind as "intro" | "notes"] = html;
         out.set(key, bucket);

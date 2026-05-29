@@ -19,6 +19,14 @@ export default async function writeBundle(
     // highlight fenced code blocks during the renders below.
     await ctx.fns.site.warmHighlighter(ctx);
 
+    // Auto-resolve bare reference links to internal pages: [Page Title] → slug.html.
+    // Loaded once here (before any markdown render) and reused for the page loop.
+    const pages = await ctx.fns.site.loadPagecontent(ctx, { projectRoot: pctx.config.projectRoot, dir: pagecontent });
+    if (!ctx.state.site) ctx.state.site = {};
+    const refs = ((ctx.state.site as any).refLinkMap ?? {}) as Record<string, string>;
+    for (const p of pages) if (p.title && !(p.title in refs)) refs[p.title] = `${p.slug}.html`;
+    (ctx.state.site as any).refLinkMap = refs;
+
     const landingHtml = await ctx.fns.site.renderLanding(ctx, { projectRoot: pctx.config.projectRoot, pagecontent });
 
     // Per-resource intro/notes — loaded once per writeBundle pass, cached in state.
@@ -44,9 +52,7 @@ export default async function writeBundle(
     await writeOne(outDir, "style.css", css);
 
     // Render every pagecontent/*.md (except index.md) as <slug>.html so the
-    // IG-author menu links resolve. Done on every pass — these aren't tied
-    // to per-resource changedIds.
-    const pages = await ctx.fns.site.loadPagecontent(ctx, { projectRoot: pctx.config.projectRoot, dir: pagecontent });
+    // IG-author menu links resolve. `pages` was loaded above (for ref-links).
     for (const p of pages) {
         const html = ctx.fns.site.renderPage(ctx, p);
         await writeOne(outDir, `${p.slug}.html`, html);
