@@ -9,6 +9,9 @@ export default function enable(ctx: Context, opts: { opts?: types.site.SiteOpts 
         overrides: o.tabs,
     });
 
+    // Per-resourceType Content section lists; a project key replaces the default.
+    const sectionRegistry = { ...ctx.fns.site.sectionDefaults(ctx), ...(o.sections ?? {}) };
+
     // Blocks: defaults overlaid with author entries; `false` disables a built-in.
     const blockRegistry: Record<string, types.site.BlockDescriptor> = { ...ctx.fns.site.blockDefaults(ctx) };
     for (const [cls, desc] of Object.entries(o.blocks ?? {})) {
@@ -37,6 +40,7 @@ export default function enable(ctx: Context, opts: { opts?: types.site.SiteOpts 
         features: o.features ?? {},
         fhirSpecBase: o.fhirSpecBase ?? "http://hl7.org/fhir/R4/",
         tabRegistry,
+        sectionRegistry,
         blockRegistry,
         refLinkMap,
     } satisfies types.site.SiteOpts;

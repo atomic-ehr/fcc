@@ -50,10 +50,26 @@ import artifactTable from "./artifactTable.ts";
 import renderArtifacts from "./renderArtifacts.ts";
 import renderIndex from "./renderIndex.ts";
 import renderResource from "./renderResource.ts";
-import $render_StructureDefinition from "./$render_StructureDefinition.ts";
-import $render_ValueSet from "./$render_ValueSet.ts";
-import $render_CodeSystem from "./$render_CodeSystem.ts";
-import $render_default from "./$render_default.ts";
+import canonicalMeta from "./canonicalMeta.ts";
+import sectionDefaults from "./sectionDefaults.ts";
+import sectionsFor from "./sectionsFor.ts";
+import renderCanonical from "./renderCanonical.ts";
+import $section_description from "./$section_description.ts";
+import $section_notes from "./$section_notes.ts";
+import $section_meta from "./$section_meta.ts";
+import $section_narrative from "./$section_narrative.ts";
+import $section_formalViews from "./$section_formalViews.ts";
+import $section_usages from "./$section_usages.ts";
+import $section_quickStart from "./$section_quickStart.ts";
+import $section_cld from "./$section_cld.ts";
+import $section_expansion from "./$section_expansion.ts";
+import $section_vsReferences from "./$section_vsReferences.ts";
+import $section_concepts from "./$section_concepts.ts";
+import $section_csReferences from "./$section_csReferences.ts";
+import $section_capabilityGrid from "./$section_capabilityGrid.ts";
+import $section_searchParamDetail from "./$section_searchParamDetail.ts";
+import expectationOf from "./expectationOf.ts";
+import bundleNarrative from "./bundleNarrative.ts";
 import writeBundle from "./writeBundle.ts";
 import handleHotUpdate from "./handleHotUpdate.ts";
 import watchPaths from "./watchPaths.ts";
@@ -111,7 +127,13 @@ export default function loadFns(ctx: Context): void {
         shortLabel, sidebar, stripUnrenderedLiquid, tagBindingStrength,
         tagMS, titleOf, topBar, artifactTable, renderArtifacts,
         renderIndex, renderResource,
-        $render_StructureDefinition, $render_ValueSet, $render_CodeSystem, $render_default,
+        canonicalMeta, sectionDefaults, sectionsFor, renderCanonical,
+        $section_description, $section_notes, $section_meta, $section_narrative,
+        $section_formalViews, $section_usages, $section_quickStart,
+        $section_cld, $section_expansion, $section_vsReferences,
+        $section_concepts, $section_csReferences,
+        $section_capabilityGrid, $section_searchParamDetail,
+        expectationOf, bundleNarrative,
         writeBundle, handleHotUpdate, watchPaths,
         buildInfoBanner, urlVersionStrip, profileTabs, flagsCell, treeIndent, sectionHeader,
         examplesForProfile, elementRow, elementTable, bindingsTable,

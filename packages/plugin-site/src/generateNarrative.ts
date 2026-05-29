@@ -4,6 +4,8 @@
 // nothing worth showing.
 export default function generateNarrative(ctx: Context, opts: { resource: types.fcc.Resource }): string {
     const esc = (s: string) => ctx.fns.site.htmlEscape(ctx, { s });
+    // Bundles render per-entry, not as a flat key/value table.
+    if (opts.resource.resourceType === "Bundle") return ctx.fns.site.bundleNarrative(ctx, { resource: opts.resource });
     const d = opts.resource.data as Record<string, unknown>;
     const skip = new Set(["resourceType", "id", "meta", "text", "implicitRules", "language", "__wasExample"]);
 

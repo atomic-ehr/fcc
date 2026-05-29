@@ -15,16 +15,28 @@ declare global {
     interface FnsRegistry {
         site: {
             $avail_notExample: typeof import("./$avail_notExample").default;
-            $render_CodeSystem: typeof import("./$render_CodeSystem").default;
-            $render_default: typeof import("./$render_default").default;
-            $render_StructureDefinition: typeof import("./$render_StructureDefinition").default;
-            $render_ValueSet: typeof import("./$render_ValueSet").default;
+            $section_capabilityGrid: typeof import("./$section_capabilityGrid").default;
+            $section_cld: typeof import("./$section_cld").default;
+            $section_concepts: typeof import("./$section_concepts").default;
+            $section_csReferences: typeof import("./$section_csReferences").default;
+            $section_description: typeof import("./$section_description").default;
+            $section_expansion: typeof import("./$section_expansion").default;
+            $section_formalViews: typeof import("./$section_formalViews").default;
+            $section_meta: typeof import("./$section_meta").default;
+            $section_narrative: typeof import("./$section_narrative").default;
+            $section_notes: typeof import("./$section_notes").default;
+            $section_quickStart: typeof import("./$section_quickStart").default;
+            $section_searchParamDetail: typeof import("./$section_searchParamDetail").default;
+            $section_usages: typeof import("./$section_usages").default;
+            $section_vsReferences: typeof import("./$section_vsReferences").default;
             applyBlocks: typeof import("./applyBlocks").default;
             artifactTable: typeof import("./artifactTable").default;
             bindingsTable: typeof import("./bindingsTable").default;
             blockDefaults: typeof import("./blockDefaults").default;
             buildInfoBanner: typeof import("./buildInfoBanner").default;
+            bundleNarrative: typeof import("./bundleNarrative").default;
             bytes: typeof import("./bytes").default;
+            canonicalMeta: typeof import("./canonicalMeta").default;
             canonicalResource: typeof import("./canonicalResource").default;
             canonicalTabStrip: typeof import("./canonicalTabStrip").default;
             codeSystemUsage: typeof import("./codeSystemUsage").default;
@@ -38,6 +50,7 @@ declare global {
             enable: typeof import("./enable").default;
             examplesForProfile: typeof import("./examplesForProfile").default;
             expandIncludes: typeof import("./expandIncludes").default;
+            expectationOf: typeof import("./expectationOf").default;
             featureOn: typeof import("./featureOn").default;
             fhirValue: typeof import("./fhirValue").default;
             flagLegend: typeof import("./flagLegend").default;
@@ -76,6 +89,7 @@ declare global {
             quickStartTable: typeof import("./quickStartTable").default;
             renderArtifacts: typeof import("./renderArtifacts").default;
             renderBreadcrumb: typeof import("./renderBreadcrumb").default;
+            renderCanonical: typeof import("./renderCanonical").default;
             renderDefinitionsPage: typeof import("./renderDefinitionsPage").default;
             renderExamplesPage: typeof import("./renderExamplesPage").default;
             renderIndex: typeof import("./renderIndex").default;
@@ -91,7 +105,9 @@ declare global {
             sdHrefs: typeof import("./sdHrefs").default;
             sdListTable: typeof import("./sdListTable").default;
             searchParamsFor: typeof import("./searchParamsFor").default;
+            sectionDefaults: typeof import("./sectionDefaults").default;
             sectionHeader: typeof import("./sectionHeader").default;
+            sectionsFor: typeof import("./sectionsFor").default;
             shortLabel: typeof import("./shortLabel").default;
             sidebar: typeof import("./sidebar").default;
             stripUnrenderedLiquid: typeof import("./stripUnrenderedLiquid").default;

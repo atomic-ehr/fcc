@@ -28,8 +28,13 @@ export type SiteOpts = {
      *  any fn can gate itself with featureOn({ name }). */
     features?: Record<string, boolean>;
 
+    /** Per-resourceType ordered Content section ids (dispatch to $section_<id>).
+     *  A key replaces that type's built-in list. Key = resourceType | "*". */
+    sections?: Record<string, string[]>;
+
     // --- resolved fields written by enable.ts (not author-facing) ---
     tabRegistry?: Record<string, types.site.TabDescriptor[]>;
+    sectionRegistry?: Record<string, string[]>;
     blockRegistry?: Record<string, types.site.BlockDescriptor>;
     refLinkMap?: Record<string, string>;
 };
