@@ -32,6 +32,13 @@ import renderDefinitionsPage from "./renderDefinitionsPage.ts";
 import renderMappingsPage from "./renderMappingsPage.ts";
 import renderExamplesPage from "./renderExamplesPage.ts";
 import renderProfileJsonPage from "./renderProfileJsonPage.ts";
+import tabLinks from "./tabLinks.ts";
+import conceptTable from "./conceptTable.ts";
+import vsCld from "./vsCld.ts";
+import vsExpand from "./vsExpand.ts";
+import renderValueSetJsonPage from "./renderValueSetJsonPage.ts";
+import vsCompanionPages from "./vsCompanionPages.ts";
+import companionPages from "./companionPages.ts";
 import shortLabel from "./shortLabel.ts";
 import sidebar from "./sidebar.ts";
 import stripUnrenderedLiquid from "./stripUnrenderedLiquid.ts";
@@ -88,6 +95,8 @@ export default function loadFns(ctx: Context): void {
         searchParamsFor, quickStartTable, navActiveScript, tabHashScript, formatChips,
         sdHrefs, sdCompanionPages, renderDefinitionsPage, renderMappingsPage,
         renderExamplesPage, renderProfileJsonPage,
+        tabLinks, conceptTable, vsCld, vsExpand, renderValueSetJsonPage,
+        vsCompanionPages, companionPages,
         renderPage, loadPagecontent,
     };
 }

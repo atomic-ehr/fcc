@@ -7,26 +7,16 @@ export default function formatChips(
     ctx: Context,
     opts: { resource: types.fcc.Resource; active: "content" | "definitions" | "mappings" | "examples" | "json" },
 ): string {
-    const esc = (s: string) => ctx.fns.site.htmlEscape(ctx, { s });
     const h = ctx.fns.site.sdHrefs(ctx, { resource: opts.resource });
-
-    const tab = (key: string, label: string, href: string) => {
-        const cls = key === opts.active
-            ? "rounded-t border-x border-t border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-brand"
-            : "px-3 py-1.5 text-sm text-sky-700 hover:text-sky-900";
-        return key === opts.active
-            ? `<span class="${cls}">${esc(label)}</span>`
-            : `<a class="${cls}" href="${href}">${esc(label)}</a>`;
-    };
-
-    return `<div class="mt-2 flex flex-wrap items-end justify-between gap-2 border-b border-slate-200 bg-slate-50 px-1 pt-1">
-        <div class="flex flex-wrap items-end gap-1">
-            ${tab("content",     "Content",              h.content)}
-            ${tab("definitions", "Detailed Descriptions", h.definitions)}
-            ${tab("mappings",    "Mappings",             h.mappings)}
-            ${tab("examples",    "Examples",             h.examples)}
-            ${tab("json",        "JSON",                 h.jsonPage)}
-        </div>
-        <a class="mb-1 mr-2 text-[11px] text-sky-700 hover:underline" href="${h.jsonRaw}">download .json</a>
-    </div>`;
+    const a = opts.active;
+    return ctx.fns.site.tabLinks(ctx, {
+        tabs: [
+            { label: "Content",               href: h.content,     active: a === "content" },
+            { label: "Detailed Descriptions", href: h.definitions, active: a === "definitions" },
+            { label: "Mappings",              href: h.mappings,    active: a === "mappings" },
+            { label: "Examples",              href: h.examples,    active: a === "examples" },
+            { label: "JSON",                  href: h.jsonPage,    active: a === "json" },
+        ],
+        download: { label: "download .json", href: h.jsonRaw },
+    });
 }

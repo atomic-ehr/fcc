@@ -58,9 +58,9 @@ export default async function writeBundle(
         await writeOne(outDir, href, html);
         pageCount++;
 
-        // IG-Publisher companion pages (…-definitions.html, …-mappings.html,
-        // …-examples.html, …profile.json.html + raw .profile.json) for profiles.
-        for (const page of await ctx.fns.site.sdCompanionPages(ctx, { resource: r })) {
+        // IG-Publisher companion pages per resourceType (profiles: definitions/
+        // mappings/examples/json + raw; value sets: json + raw).
+        for (const page of await ctx.fns.site.companionPages(ctx, { resource: r })) {
             await writeOne(outDir, page.name, page.content);
             pageCount++;
         }

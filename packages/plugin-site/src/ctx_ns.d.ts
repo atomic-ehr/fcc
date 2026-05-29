@@ -22,6 +22,8 @@ declare global {
             bindingsTable: typeof import("./bindingsTable").default;
             buildInfoBanner: typeof import("./buildInfoBanner").default;
             bytes: typeof import("./bytes").default;
+            companionPages: typeof import("./companionPages").default;
+            conceptTable: typeof import("./conceptTable").default;
             constraintsTable: typeof import("./constraintsTable").default;
             detailTable: typeof import("./detailTable").default;
             elementRow: typeof import("./elementRow").default;
@@ -65,6 +67,7 @@ declare global {
             renderProfileJsonPage: typeof import("./renderProfileJsonPage").default;
             renderResource: typeof import("./renderResource").default;
             renderSidebarGroup: typeof import("./renderSidebarGroup").default;
+            renderValueSetJsonPage: typeof import("./renderValueSetJsonPage").default;
             sdCompanionPages: typeof import("./sdCompanionPages").default;
             sdHrefs: typeof import("./sdHrefs").default;
             searchParamsFor: typeof import("./searchParamsFor").default;
@@ -73,6 +76,7 @@ declare global {
             sidebar: typeof import("./sidebar").default;
             stripUnrenderedLiquid: typeof import("./stripUnrenderedLiquid").default;
             tabHashScript: typeof import("./tabHashScript").default;
+            tabLinks: typeof import("./tabLinks").default;
             tagBindingStrength: typeof import("./tagBindingStrength").default;
             tagMS: typeof import("./tagMS").default;
             titleOf: typeof import("./titleOf").default;
@@ -80,6 +84,9 @@ declare global {
             treeIndent: typeof import("./treeIndent").default;
             urlVersionStrip: typeof import("./urlVersionStrip").default;
             usagesOf: typeof import("./usagesOf").default;
+            vsCld: typeof import("./vsCld").default;
+            vsCompanionPages: typeof import("./vsCompanionPages").default;
+            vsExpand: typeof import("./vsExpand").default;
             watchPaths: typeof import("./watchPaths").default;
             writeBundle: typeof import("./writeBundle").default;
         };
