@@ -92,6 +92,18 @@ details.group-block[open] > summary::after { transform: rotate(90deg); }
   overflow-x: auto;
   font-size: 0.8rem;
 }
+/* Shiki-highlighted fenced code blocks in markdown content (light, HS-style).
+   Shiki sets its own background inline; we add the frame + sizing. */
+pre.shiki {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+.prose pre.shiki { color: inherit; }
+.prose pre.shiki code { background: none; border: 0; padding: 0; font-size: inherit; }
 .prose table { font-size: 0.9em; }
 .prose th, .prose td { border: 1px solid #e5e7eb; padding: 0.4rem 0.65rem; }
 .prose thead th { background: #f8f9fa; font-weight: 600; }

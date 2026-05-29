@@ -89,6 +89,8 @@ import applyBlocks from "./applyBlocks.ts";
 import injectRefLinks from "./injectRefLinks.ts";
 import mdToHtml from "./mdToHtml.ts";
 import mdInline from "./mdInline.ts";
+import warmHighlighter from "./warmHighlighter.ts";
+import highlightBlocks from "./highlightBlocks.ts";
 import renderPage from "./renderPage.ts";
 import loadPagecontent from "./loadPagecontent.ts";
 
@@ -114,6 +116,7 @@ export default function loadFns(ctx: Context): void {
         enable, tabDefaults, blockDefaults, mergeTabs, $avail_notExample,
         tabsFor, canonicalTabStrip, canonicalResource,
         parseIal, applyBlocks, injectRefLinks, mdToHtml, mdInline,
+        warmHighlighter, highlightBlocks,
         renderPage, loadPagecontent,
     };
 }

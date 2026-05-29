@@ -15,6 +15,10 @@ export default async function writeBundle(
     const outDir = resolve(pctx.config.projectRoot, pctx.target.out, outSub);
     await mkdir(outDir, { recursive: true });
 
+    // Warm the shared Shiki highlighter once so the (sync) markdown pipeline can
+    // highlight fenced code blocks during the renders below.
+    await ctx.fns.site.warmHighlighter(ctx);
+
     const landingHtml = await ctx.fns.site.renderLanding(ctx, { projectRoot: pctx.config.projectRoot, pagecontent });
 
     // Per-resource intro/notes — loaded once per writeBundle pass, cached in state.

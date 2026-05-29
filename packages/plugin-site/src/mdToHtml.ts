@@ -12,5 +12,6 @@ export default function mdToHtml(ctx: Context, opts: { md: string }): string {
         autolinks: true,
         headings: { ids: true },
     }) as string;
-    return ctx.fns.site.applyBlocks(ctx, { html });
+    const withBlocks = ctx.fns.site.applyBlocks(ctx, { html });
+    return ctx.fns.site.highlightBlocks(ctx, { html: withBlocks });
 }

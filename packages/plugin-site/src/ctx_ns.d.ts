@@ -41,6 +41,7 @@ declare global {
             formatChips: typeof import("./formatChips").default;
             formatPath: typeof import("./formatPath").default;
             handleHotUpdate: typeof import("./handleHotUpdate").default;
+            highlightBlocks: typeof import("./highlightBlocks").default;
             highlightCode: typeof import("./highlightCode").default;
             htmlEscape: typeof import("./htmlEscape").default;
             humanType: typeof import("./humanType").default;
@@ -101,6 +102,7 @@ declare global {
             vsCld: typeof import("./vsCld").default;
             vsCompanionPages: typeof import("./vsCompanionPages").default;
             vsExpand: typeof import("./vsExpand").default;
+            warmHighlighter: typeof import("./warmHighlighter").default;
             watchPaths: typeof import("./watchPaths").default;
             writeBundle: typeof import("./writeBundle").default;
         };

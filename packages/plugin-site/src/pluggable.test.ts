@@ -133,6 +133,21 @@ test("mdInline: empty input → empty string", () => {
     expect(ctx.fns.site.mdInline(ctx, { md: undefined })).toBe("");
 });
 
+// ---- highlightBlocks -----------------------------------------------------
+test("highlightBlocks: no warm highlighter → html unchanged", () => {
+    const ctx = makeCtx();
+    const html = '<pre><code class="language-json">{"a":1}</code></pre>';
+    expect(ctx.fns.site.highlightBlocks(ctx, { html })).toBe(html);
+});
+test("highlightBlocks: highlights tagged + untagged-JSON blocks when warm", async () => {
+    const ctx = makeCtx();
+    await ctx.fns.site.warmHighlighter(ctx);
+    const tagged = ctx.fns.site.highlightBlocks(ctx, { html: '<pre><code class="language-json">{&quot;a&quot;:1}</code></pre>' });
+    expect(tagged).toContain('class="shiki');
+    const untagged = ctx.fns.site.highlightBlocks(ctx, { html: "<pre><code>{&quot;a&quot;:1}</code></pre>" });
+    expect(untagged).toContain('class="shiki'); // auto-detected JSON
+});
+
 // ---- vsExpand ------------------------------------------------------------
 test("vsExpand: explicit concepts are locally expandable", () => {
     const ctx = makeCtx();
