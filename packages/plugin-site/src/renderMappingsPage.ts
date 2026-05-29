@@ -2,7 +2,7 @@
 // Renders ElementDefinition.mapping entries grouped per declared map
 // (StructureDefinition.mapping → identity/name/uri). US Core differentials
 // carry no mappings, so the page degrades to an explicit "none" notice.
-export default function renderMappingsPage(ctx: Context, opts: { resource: types.fcc.Resource }): string {
+export default function renderMappingsPage(ctx: Context, opts: { resource: types.fcc.Resource; strip?: string }): string {
     const r = opts.resource;
     const d = r.data as Record<string, unknown>;
     const esc = (s: string) => ctx.fns.site.htmlEscape(ctx, { s });
@@ -37,7 +37,7 @@ export default function renderMappingsPage(ctx: Context, opts: { resource: types
 
     const body = `
         ${ctx.fns.site.pageHeader(ctx, { title, kind: "Profile", d })}
-        ${ctx.fns.site.formatChips(ctx, { resource: r, active: "mappings" })}
+        ${opts.strip ?? ctx.fns.site.formatChips(ctx, { resource: r, active: "mappings" })}
         ${ctx.fns.site.urlVersionStrip(ctx, { d })}
         <h2 class="mt-6 text-lg font-semibold text-slate-900">Mappings</h2>
         ${bodyInner}

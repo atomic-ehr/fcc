@@ -6,18 +6,15 @@
 import type { Plugin } from "fcc";
 import loadFns from "./loadFns.ts";
 
-type Opts = {
-    pagecontent?: string;
-    introNotes?: string;
-    out?: string;
-};
+type Opts = types.site.SiteOpts;
 
 export default function site(opts: Opts = {}): Plugin {
     // One Context shared across hooks for this plugin instance. The fcc
     // PluginContext gets injected per-hook into ctx via writeBundle/etc.
     const ctx = makeFreshContext();
     loadFns(ctx);
-    ctx.state.site = { ...opts };
+    // Resolve opts + built-in registries (tabs/blocks/refLinks) into ctx.state.site.
+    ctx.fns.site.enable(ctx, { opts });
 
     return {
         name: "fcc/site",

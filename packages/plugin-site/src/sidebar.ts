@@ -20,7 +20,7 @@ export default function sidebar(ctx: Context, _opts: {} = {}): string {
         }),
     );
 
-    return `<aside class="sticky top-0 hidden h-screen w-72 shrink-0 overflow-y-auto border-r border-slate-200 bg-white px-3 py-4 lg:block">
+    return `<aside data-show="$nav" class="sticky top-0 hidden h-screen w-72 shrink-0 overflow-y-auto border-r border-slate-200 bg-slate-50 px-3 py-4 lg:block">
         <a href="index.html" class="block px-2 text-sm font-semibold text-slate-900 hover:text-sky-700">${esc(ctx.cfg.title ?? ctx.cfg.id)}</a>
         <p class="px-2 text-xs text-slate-500">v${esc(ctx.cfg.version)} · ${esc(ctx.target.name)}</p>
         <a href="artifacts.html" class="mt-3 inline-block px-2 text-xs font-medium text-sky-700 hover:underline">All artefacts →</a>

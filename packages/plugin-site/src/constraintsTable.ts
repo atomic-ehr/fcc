@@ -30,7 +30,7 @@ export default function constraintsTable(ctx: Context, opts: { elements: Array<R
             <td class="px-3 py-1.5 font-mono text-xs text-slate-900">${esc(c.key)}</td>
             <td class="px-3 py-1.5 font-mono text-xs text-slate-500">${esc(c.path)}</td>
             <td class="px-3 py-1.5">${sev(c.severity)}</td>
-            <td class="px-3 py-1.5 text-xs text-slate-700">${esc(c.human ?? "")}</td>
+            <td class="px-3 py-1.5 text-xs text-slate-700">${ctx.fns.site.mdInline(ctx, { md: c.human })}</td>
             <td class="px-3 py-1.5"><code class="text-[11px] text-slate-600">${esc(c.expression ?? "")}</code></td>
         </tr>`).join("");
 

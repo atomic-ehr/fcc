@@ -41,15 +41,20 @@ tailwind.config = {
 <script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.0-beta.11/bundles/datastar.js"></script>
 <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-slate-50 text-slate-900 antialiased">
+<body class="bg-white text-slate-900 antialiased">
 
 ${ctx.fns.site.topBar(ctx, { active: activeNav })}
 ${ctx.fns.site.buildInfoBanner(ctx)}
 
-<div class="mx-auto flex max-w-screen-2xl">
+<div class="mx-auto flex max-w-screen-2xl" data-signals="{nav: true}" data-persist="nav">
     ${ctx.fns.site.sidebar(ctx)}
-    <main class="min-w-0 flex-1 px-6 py-6 lg:px-10">
-        ${ctx.fns.site.renderBreadcrumb(ctx, { crumbs: breadcrumb })}
+    <main class="min-w-0 flex-1 bg-white px-6 py-6 lg:px-10">
+        <div class="mb-3 flex items-center gap-2">
+            <button type="button" title="Toggle navigation"
+                class="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                data-on-click="$nav = !$nav">☰</button>
+            ${ctx.fns.site.renderBreadcrumb(ctx, { crumbs: breadcrumb })}
+        </div>
         ${opts.content}
         <footer class="mt-16 border-t border-slate-200 pt-4 text-xs text-slate-500">
             Built by <a class="text-sky-700 hover:underline" href="https://github.com/HealthSamurai/fcc">fcc</a>

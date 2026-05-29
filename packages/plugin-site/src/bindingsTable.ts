@@ -23,7 +23,7 @@ export default function bindingsTable(ctx: Context, opts: { elements: Array<Reco
             <td class="px-3 py-1.5 font-mono text-xs text-slate-900">${esc(b.path)}</td>
             <td class="px-3 py-1.5">${ctx.fns.site.tagBindingStrength(ctx, { s: b.strength ?? "" })}</td>
             <td class="px-3 py-1.5">${ctx.fns.site.linkCanonical(ctx, { url: b.valueSet, short: true })}</td>
-            <td class="px-3 py-1.5 text-xs text-slate-600">${esc(b.description ?? "")}</td>
+            <td class="px-3 py-1.5 text-xs text-slate-600">${ctx.fns.site.mdInline(ctx, { md: b.description })}</td>
         </tr>`).join("");
 
     return `<div class="overflow-x-auto rounded-b border border-t-0 border-slate-200 bg-white">

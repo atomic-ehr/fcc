@@ -1,6 +1,6 @@
 // The "Examples" companion page (…-examples.html), matching IG Publisher —
 // the instances that claim this profile via meta.profile.
-export default function renderExamplesPage(ctx: Context, opts: { resource: types.fcc.Resource }): string {
+export default function renderExamplesPage(ctx: Context, opts: { resource: types.fcc.Resource; strip?: string }): string {
     const r = opts.resource;
     const d = r.data as Record<string, unknown>;
     const esc = (s: string) => ctx.fns.site.htmlEscape(ctx, { s });
@@ -15,7 +15,7 @@ export default function renderExamplesPage(ctx: Context, opts: { resource: types
 
     const body = `
         ${ctx.fns.site.pageHeader(ctx, { title, kind: "Profile", d })}
-        ${ctx.fns.site.formatChips(ctx, { resource: r, active: "examples" })}
+        ${opts.strip ?? ctx.fns.site.formatChips(ctx, { resource: r, active: "examples" })}
         ${ctx.fns.site.urlVersionStrip(ctx, { d })}
         <h2 class="mt-6 text-lg font-semibold text-slate-900">Examples${examples.length ? ` (${examples.length})` : ""}</h2>
         ${list}

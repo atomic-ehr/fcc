@@ -48,7 +48,7 @@ export default function elementRow(ctx: Context, opts: { e: Record<string, unkno
             <td class="px-3 py-1 align-top text-xs text-slate-600">${esc(card)}</td>
             <td class="px-3 py-1 align-top">${typeHtml}</td>
             <td class="px-3 py-1 align-top text-xs text-slate-600">
-                ${esc(desc)}
+                ${ctx.fns.site.mdInline(ctx, { md: desc })}
                 ${bindingHtml ? `<div class="mt-0.5">${bindingHtml}</div>` : ""}
             </td>
         </tr>`;

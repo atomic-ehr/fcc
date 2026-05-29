@@ -75,6 +75,20 @@ import flagLegend from "./flagLegend.ts";
 import searchParamsFor from "./searchParamsFor.ts";
 import quickStartTable from "./quickStartTable.ts";
 import formatChips from "./formatChips.ts";
+import renderResourceJsonPage from "./renderResourceJsonPage.ts";
+import enable from "./enable.ts";
+import tabDefaults from "./tabDefaults.ts";
+import blockDefaults from "./blockDefaults.ts";
+import mergeTabs from "./mergeTabs.ts";
+import $avail_notExample from "./$avail_notExample.ts";
+import tabsFor from "./tabsFor.ts";
+import canonicalTabStrip from "./canonicalTabStrip.ts";
+import canonicalResource from "./canonicalResource.ts";
+import parseIal from "./parseIal.ts";
+import applyBlocks from "./applyBlocks.ts";
+import injectRefLinks from "./injectRefLinks.ts";
+import mdToHtml from "./mdToHtml.ts";
+import mdInline from "./mdInline.ts";
 import renderPage from "./renderPage.ts";
 import loadPagecontent from "./loadPagecontent.ts";
 
@@ -96,7 +110,10 @@ export default function loadFns(ctx: Context): void {
         sdHrefs, sdCompanionPages, renderDefinitionsPage, renderMappingsPage,
         renderExamplesPage, renderProfileJsonPage,
         tabLinks, conceptTable, vsCld, vsExpand, renderValueSetJsonPage,
-        vsCompanionPages, companionPages,
+        vsCompanionPages, companionPages, renderResourceJsonPage,
+        enable, tabDefaults, blockDefaults, mergeTabs, $avail_notExample,
+        tabsFor, canonicalTabStrip, canonicalResource,
+        parseIal, applyBlocks, injectRefLinks, mdToHtml, mdInline,
         renderPage, loadPagecontent,
     };
 }

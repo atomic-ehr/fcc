@@ -1,4 +1,4 @@
-export default async function $render_CodeSystem(ctx: Context, opts: { resource: types.fcc.Resource }): Promise<string> {
+export default function $render_CodeSystem(ctx: Context, opts: { resource: types.fcc.Resource; strip?: string }): string {
     const r = opts.resource;
     const d = r.data as Record<string, unknown>;
     const esc = (s: string) => ctx.fns.site.htmlEscape(ctx, { s });
@@ -8,19 +8,18 @@ export default async function $render_CodeSystem(ctx: Context, opts: { resource:
     const conceptsHtml = ctx.fns.site.conceptTable(ctx, { concepts, showDefinition: true });
 
     const title = (d.title as string) ?? (d.id as string);
-    const json = await ctx.fns.site.jsonBlock(ctx, { d });
     const body = `
         ${ctx.fns.site.pageHeader(ctx, { title, kind: "Code System", d })}
+        ${opts.strip ?? ctx.fns.site.canonicalTabStrip(ctx, { resource: r, activeId: "content" })}
         ${ctx.fns.site.introBlock(ctx, { html: intro })}
         ${ctx.fns.site.metaDl(ctx, { rows: [
             ["Canonical",   `<code class="text-xs">${esc((d.url as string) ?? "")}</code>`],
-            ["Description", esc((d.description as string) ?? "—")],
+            ["Description", d.description ? ctx.fns.site.mdInline(ctx, { md: d.description as string }) : "—"],
             ["Concepts",    `${concepts.length}`],
         ] })}
         <h2 class="mt-8 text-lg font-semibold text-slate-900">Concepts</h2>
         <div class="mt-2">${conceptsHtml}</div>
         ${ctx.fns.site.notesBlock(ctx, { html: notes })}
-        ${json}
     `;
     return ctx.fns.site.layout(ctx, {
         title,

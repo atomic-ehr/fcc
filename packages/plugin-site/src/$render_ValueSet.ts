@@ -1,18 +1,11 @@
-export default function $render_ValueSet(ctx: Context, opts: { resource: types.fcc.Resource }): string {
+export default function $render_ValueSet(ctx: Context, opts: { resource: types.fcc.Resource; strip?: string }): string {
     const r = opts.resource;
     const d = r.data as Record<string, unknown>;
     const esc = (s: string) => ctx.fns.site.htmlEscape(ctx, { s });
     const { intro, notes } = ctx.fns.site.notesFor(ctx, { resource: r });
     const title = (d.title as string) ?? (d.id as string);
 
-    const base = ctx.fns.site.pageHref(ctx, { resource: r }).replace(/\.html$/, "");
-    const tabs = ctx.fns.site.tabLinks(ctx, {
-        tabs: [
-            { label: "Content", href: `${base}.html`, active: true },
-            { label: "JSON", href: `${base}.json.html` },
-        ],
-        download: { label: "download .json", href: `${base}.json` },
-    });
+    const tabs = opts.strip ?? ctx.fns.site.canonicalTabStrip(ctx, { resource: r, activeId: "content" });
 
     const cld = ctx.fns.site.vsCld(ctx, { compose: d.compose as Record<string, unknown> | undefined });
     const expansion = ctx.fns.site.vsExpand(ctx, { resource: r });
@@ -27,7 +20,7 @@ export default function $render_ValueSet(ctx: Context, opts: { resource: types.f
         ${ctx.fns.site.urlVersionStrip(ctx, { d })}
 
         ${ctx.fns.site.sectionHeader(ctx, { num: "1.1", title: "Description", id: "description" })}
-        ${d.description ? `<p class="mt-2 max-w-3xl text-sm text-slate-700">${esc(d.description as string)}</p>` : ""}
+        ${d.description ? `<div class="prose prose-slate prose-sm mt-2 max-w-3xl">${ctx.fns.site.mdToHtml(ctx, { md: d.description as string })}</div>` : ""}
         ${ctx.fns.site.introBlock(ctx, { html: intro })}
 
         ${ctx.fns.site.sectionHeader(ctx, { num: "1.2", title: "Logical Definition (CLD)", id: "definition" })}

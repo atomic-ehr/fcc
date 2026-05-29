@@ -1,6 +1,6 @@
-// Dispatcher: picks `$render_<ResourceType>` from the registry or falls back to default.
+// Render a resource's MAIN page (the "content" tab) through the canonical-
+// resource template, which resolves the tab strip and dispatches to the
+// resourceType's registered renderer (still a `$render_<RT>` fn under the hood).
 export default async function renderResource(ctx: Context, opts: { resource: types.fcc.Resource }): Promise<string> {
-    const key = `$render_${opts.resource.resourceType}` as keyof FnsRegistry["site"];
-    const fn = (ctx.fns.site as any)[key] ?? ctx.fns.site.$render_default;
-    return await fn(ctx, opts);
+    return await ctx.fns.site.canonicalResource(ctx, { resource: opts.resource, activeId: "content" });
 }

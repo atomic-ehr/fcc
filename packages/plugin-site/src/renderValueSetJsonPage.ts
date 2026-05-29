@@ -1,6 +1,6 @@
 // The JSON source companion page for a ValueSet (ValueSet-<id>.json.html),
 // matching IG Publisher. Shiki-highlighted; raw .json offered as a download.
-export default async function renderValueSetJsonPage(ctx: Context, opts: { resource: types.fcc.Resource }): Promise<string> {
+export default async function renderValueSetJsonPage(ctx: Context, opts: { resource: types.fcc.Resource; strip?: string }): Promise<string> {
     const r = opts.resource;
     const d = r.data as Record<string, unknown>;
     const title = (d.title as string) ?? (d.id as string);
@@ -9,13 +9,7 @@ export default async function renderValueSetJsonPage(ctx: Context, opts: { resou
 
     const body = `
         ${ctx.fns.site.pageHeader(ctx, { title, kind: "Value Set", d })}
-        ${ctx.fns.site.tabLinks(ctx, {
-            tabs: [
-                { label: "Content", href: `${base}.html` },
-                { label: "JSON", href: `${base}.json.html`, active: true },
-            ],
-            download: { label: "download .json", href: `${base}.json` },
-        })}
+        ${opts.strip ?? ctx.fns.site.canonicalTabStrip(ctx, { resource: r, activeId: "json" })}
         ${ctx.fns.site.urlVersionStrip(ctx, { d })}
         <h2 class="mt-6 text-lg font-semibold text-slate-900">JSON</h2>
         <p class="mt-1 text-xs text-slate-500">Raw: <a class="text-sky-700 hover:underline" href="${base}.json">${base}.json</a></p>

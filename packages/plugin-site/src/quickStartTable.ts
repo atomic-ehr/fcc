@@ -12,7 +12,7 @@ export default function quickStartTable(ctx: Context, opts: { resourceType: stri
         return `<tr class="even:bg-slate-50/40 align-top">
             <td class="px-3 py-1.5"><a class="font-mono text-xs text-sky-700 hover:underline" href="${href}">${esc(d.code ?? "")}</a></td>
             <td class="px-3 py-1.5">${ctx.fns.site.pillType(ctx, { t: d.type ?? "" })}</td>
-            <td class="px-3 py-1.5 text-xs text-slate-600">${esc(d.description ?? "")}</td>
+            <td class="prose prose-sm max-w-none px-3 py-1.5 text-xs text-slate-600">${ctx.fns.site.mdInline(ctx, { md: d.description })}</td>
         </tr>`;
     }).join("");
 

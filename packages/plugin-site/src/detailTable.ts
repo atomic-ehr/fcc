@@ -28,7 +28,7 @@ export default function detailTable(ctx: Context, opts: { elements: Array<Record
 
         const cons = (e.constraint as Array<{ key?: string; human?: string }> | undefined) ?? [];
         const consHtml = cons.length
-            ? cons.map(c => `<div><code class="text-xs text-slate-900">${esc(c.key ?? "")}</code>: ${esc(c.human ?? "")}</div>`).join("")
+            ? cons.map(c => `<div><code class="text-xs text-slate-900">${esc(c.key ?? "")}</code>: ${ctx.fns.site.mdInline(ctx, { md: c.human })}</div>`).join("")
             : "";
 
         return `<div${idAttr} class="scroll-mt-20 border-b border-slate-100 px-3 py-2">
@@ -37,8 +37,8 @@ export default function detailTable(ctx: Context, opts: { elements: Array<Record
                 <code class="font-semibold text-slate-900">${heading}</code>
             </div>
             <dl class="mt-1 text-xs">
-                ${field("Definition", esc((e.short as string | undefined) ?? (e.definition as string | undefined) ?? ""))}
-                ${field("Comment", esc((e.comment as string | undefined) ?? ""))}
+                ${field("Definition", ctx.fns.site.mdInline(ctx, { md: (e.short as string | undefined) ?? (e.definition as string | undefined) }))}
+                ${field("Comment", ctx.fns.site.mdInline(ctx, { md: e.comment as string | undefined }))}
                 ${field("Cardinality", esc(card))}
                 ${field("Type", typeHtml)}
                 ${field("Binding", bindingHtml)}

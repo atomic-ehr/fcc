@@ -1,13 +1,24 @@
-// Dispatch to the per-resourceType companion-page builders (extra HTML pages +
-// raw source files IG Publisher emits next to a resource's main page). Returns
-// [] for types without companions so writeBundle can call it unconditionally.
+// Companion files for a resource, enumerated from the SAME tab registry as the
+// page tab strip (tabsFor) — one source of truth. Every non-"main" tab becomes
+// a companion HTML page rendered through canonicalResource (so its strip marks
+// the right tab active), plus an optional raw side-car (e.g. .json) with the
+// internal __wasExample flag stripped. Returns [] when there are no companions.
 export default async function companionPages(
     ctx: Context,
     opts: { resource: types.fcc.Resource },
 ): Promise<Array<{ name: string; content: string }>> {
-    switch (opts.resource.resourceType) {
-        case "StructureDefinition": return ctx.fns.site.sdCompanionPages(ctx, opts);
-        case "ValueSet":            return ctx.fns.site.vsCompanionPages(ctx, opts);
-        default:                    return [];
+    const r = opts.resource;
+    const resolved = ctx.fns.site.tabsFor(ctx, { resource: r });
+    const out: Array<{ name: string; content: string }> = [];
+
+    for (const t of resolved) {
+        if (t.d.kind === "main") continue; // writeBundle already wrote the main page
+        out.push({ name: t.href, content: await ctx.fns.site.canonicalResource(ctx, { resource: r, activeId: t.d.id }) });
+        if (t.rawName) {
+            const clean = { ...(r.data as Record<string, unknown>) };
+            delete (clean as { __wasExample?: boolean }).__wasExample;
+            out.push({ name: t.rawName, content: JSON.stringify(clean, null, 2) });
+        }
     }
+    return out;
 }

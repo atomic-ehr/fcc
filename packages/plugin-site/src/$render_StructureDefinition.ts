@@ -1,4 +1,4 @@
-export default function $render_StructureDefinition(ctx: Context, opts: { resource: types.fcc.Resource }): string {
+export default function $render_StructureDefinition(ctx: Context, opts: { resource: types.fcc.Resource; strip?: string }): string {
     const r = opts.resource;
     const d = r.data as Record<string, unknown>;
     const esc = (s: string) => ctx.fns.site.htmlEscape(ctx, { s });
@@ -84,11 +84,11 @@ export default function $render_StructureDefinition(ctx: Context, opts: { resour
 
     const body = `
         ${ctx.fns.site.pageHeader(ctx, { title, kind: "Profile", d })}
-        ${ctx.fns.site.formatChips(ctx, { resource: r, active: "content" })}
+        ${opts.strip ?? ctx.fns.site.canonicalTabStrip(ctx, { resource: r, activeId: "content" })}
         ${ctx.fns.site.urlVersionStrip(ctx, { d })}
 
         ${ctx.fns.site.sectionHeader(ctx, { num: "1.1", title: "Description", id: "description" })}
-        ${desc ? `<p class="mt-2 max-w-3xl text-sm text-slate-700">${esc(desc)}</p>` : ""}
+        ${desc ? `<div class="prose prose-slate prose-sm mt-2 max-w-3xl">${ctx.fns.site.mdToHtml(ctx, { md: desc })}</div>` : ""}
         ${ctx.fns.site.introBlock(ctx, { html: intro })}
 
         ${ctx.fns.site.sectionHeader(ctx, { num: "1.2", title: "Formal Views of Profile Content", id: "views" })}

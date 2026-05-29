@@ -14,20 +14,26 @@ declare global {
 
     interface FnsRegistry {
         site: {
+            $avail_notExample: typeof import("./$avail_notExample").default;
             $render_CodeSystem: typeof import("./$render_CodeSystem").default;
             $render_default: typeof import("./$render_default").default;
             $render_StructureDefinition: typeof import("./$render_StructureDefinition").default;
             $render_ValueSet: typeof import("./$render_ValueSet").default;
+            applyBlocks: typeof import("./applyBlocks").default;
             artifactTable: typeof import("./artifactTable").default;
             bindingsTable: typeof import("./bindingsTable").default;
+            blockDefaults: typeof import("./blockDefaults").default;
             buildInfoBanner: typeof import("./buildInfoBanner").default;
             bytes: typeof import("./bytes").default;
+            canonicalResource: typeof import("./canonicalResource").default;
+            canonicalTabStrip: typeof import("./canonicalTabStrip").default;
             companionPages: typeof import("./companionPages").default;
             conceptTable: typeof import("./conceptTable").default;
             constraintsTable: typeof import("./constraintsTable").default;
             detailTable: typeof import("./detailTable").default;
             elementRow: typeof import("./elementRow").default;
             elementTable: typeof import("./elementTable").default;
+            enable: typeof import("./enable").default;
             examplesForProfile: typeof import("./examplesForProfile").default;
             flagLegend: typeof import("./flagLegend").default;
             flagsCell: typeof import("./flagsCell").default;
@@ -39,6 +45,7 @@ declare global {
             htmlEscape: typeof import("./htmlEscape").default;
             humanType: typeof import("./humanType").default;
             idOf: typeof import("./idOf").default;
+            injectRefLinks: typeof import("./injectRefLinks").default;
             introBlock: typeof import("./introBlock").default;
             jsonBlock: typeof import("./jsonBlock").default;
             layout: typeof import("./layout").default;
@@ -46,6 +53,9 @@ declare global {
             linkType: typeof import("./linkType").default;
             loadIntroNotes: typeof import("./loadIntroNotes").default;
             loadPagecontent: typeof import("./loadPagecontent").default;
+            mdInline: typeof import("./mdInline").default;
+            mdToHtml: typeof import("./mdToHtml").default;
+            mergeTabs: typeof import("./mergeTabs").default;
             metaDl: typeof import("./metaDl").default;
             navActiveScript: typeof import("./navActiveScript").default;
             notesBlock: typeof import("./notesBlock").default;
@@ -53,6 +63,7 @@ declare global {
             order: typeof import("./order").default;
             pageHeader: typeof import("./pageHeader").default;
             pageHref: typeof import("./pageHref").default;
+            parseIal: typeof import("./parseIal").default;
             pillType: typeof import("./pillType").default;
             profileTabs: typeof import("./profileTabs").default;
             quickStartTable: typeof import("./quickStartTable").default;
@@ -66,6 +77,7 @@ declare global {
             renderPage: typeof import("./renderPage").default;
             renderProfileJsonPage: typeof import("./renderProfileJsonPage").default;
             renderResource: typeof import("./renderResource").default;
+            renderResourceJsonPage: typeof import("./renderResourceJsonPage").default;
             renderSidebarGroup: typeof import("./renderSidebarGroup").default;
             renderValueSetJsonPage: typeof import("./renderValueSetJsonPage").default;
             sdCompanionPages: typeof import("./sdCompanionPages").default;
@@ -75,8 +87,10 @@ declare global {
             shortLabel: typeof import("./shortLabel").default;
             sidebar: typeof import("./sidebar").default;
             stripUnrenderedLiquid: typeof import("./stripUnrenderedLiquid").default;
+            tabDefaults: typeof import("./tabDefaults").default;
             tabHashScript: typeof import("./tabHashScript").default;
             tabLinks: typeof import("./tabLinks").default;
+            tabsFor: typeof import("./tabsFor").default;
             tagBindingStrength: typeof import("./tagBindingStrength").default;
             tagMS: typeof import("./tagMS").default;
             titleOf: typeof import("./titleOf").default;
@@ -103,9 +117,13 @@ declare global {
             type HotUpdateContext = import("fcc").HotUpdateContext;
         }
         namespace site {
+            type BlockDescriptor = import("./$type_BlockDescriptor").BlockDescriptor;
+            type Ial = import("./$type_Ial").Ial;
             type RenderCtx = import("./$type_RenderCtx").RenderCtx;
             type SdHrefs = import("./$type_SdHrefs").SdHrefs;
             type SiteOpts = import("./$type_SiteOpts").SiteOpts;
+            type TabDescriptor = import("./$type_TabDescriptor").TabDescriptor;
+            type TabMergeSpec = import("./$type_TabMergeSpec").TabMergeSpec;
         }
     }
 }

@@ -15,7 +15,7 @@ export default function conceptTable(
     const cols = ["Code", ...(opts.showSystem ? ["System"] : []), "Display", ...(opts.showDefinition ? ["Definition"] : [])];
     const rows = opts.concepts.map(c => {
         const sysCell = opts.showSystem ? `<td class="px-3 py-1.5 text-xs text-slate-500">${c.system ? ctx.fns.site.linkCanonical(ctx, { url: c.system, short: true }) : ""}</td>` : "";
-        const defCell = opts.showDefinition ? `<td class="px-3 py-1.5 text-xs text-slate-600">${esc(c.definition ?? "")}</td>` : "";
+        const defCell = opts.showDefinition ? `<td class="px-3 py-1.5 text-xs text-slate-600">${ctx.fns.site.mdInline(ctx, { md: c.definition })}</td>` : "";
         return `<tr class="even:bg-slate-50/40 align-top">
             <td class="px-3 py-1.5"><code class="rounded bg-slate-100 px-1 text-xs">${esc(c.code)}</code></td>
             ${sysCell}

@@ -1,6 +1,5 @@
 import { readFile, readdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { marked } from "marked";
 
 export default async function loadIntroNotes(
     ctx: Context,
@@ -21,8 +20,7 @@ export default async function loadIntroNotes(
         const [, rt, id, kind] = m;
         const key = `${rt}/${id}`;
         const md = await readFile(join(absDir, e.name), "utf8");
-        const stripped = ctx.fns.site.stripUnrenderedLiquid(ctx, { md });
-        const html = marked.parse(stripped, { async: false }) as string;
+        const html = ctx.fns.site.mdToHtml(ctx, { md });
         const bucket = out.get(key) ?? {};
         bucket[kind as "intro" | "notes"] = html;
         out.set(key, bucket);
