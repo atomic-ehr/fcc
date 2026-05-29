@@ -57,10 +57,11 @@ ${ctx.fns.site.buildInfoBanner(ctx)}
         </div>
         ${opts.content}
         <footer class="mt-16 border-t border-slate-200 pt-4 text-xs text-slate-500">
-            Built by <a class="text-sky-700 hover:underline" href="https://github.com/HealthSamurai/fcc">fcc</a>
+            ${ctx.fns.site.featureOn(ctx, { name: "igFooter" }) ? `<p>This page is part of the <span class="font-medium text-slate-700">${esc(ctx.cfg.title ?? ctx.cfg.id)}</span> (v${esc(ctx.cfg.version)}) based on FHIR ${esc(ctx.target.fhir)} — package <code class="rounded bg-slate-100 px-1">${esc(ctx.cfg.id)}#${esc(ctx.cfg.version)}</code>.</p>` : ""}
+            <p class="mt-1">Built by <a class="text-sky-700 hover:underline" href="https://github.com/HealthSamurai/fcc">fcc</a>
             · target <code class="rounded bg-slate-100 px-1">${esc(ctx.target.name)}</code>
             (FHIR ${esc(ctx.target.fhir)})
-            · ${new Date().toISOString().slice(0, 10)}
+            · ${new Date().toISOString().slice(0, 10)}</p>
         </footer>
     </main>
 </div>

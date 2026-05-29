@@ -27,16 +27,21 @@ export default function renderIndex(ctx: Context, opts: { landingHtml: string })
            </div>`
         : "";
 
+    // IG-Publisher-style publish box (toggle: site({ features:{ publishBox:false } })).
+    const boxRow = (label: string, body: string) => body ? `<div class="flex gap-2"><dt class="w-36 shrink-0 text-slate-500">${esc(label)}</dt><dd class="text-slate-800">${body}</dd></div>` : "";
+    const publishBox = ctx.fns.site.featureOn(ctx, { name: "publishBox" }) ? `
+        <dl class="mt-3 max-w-2xl space-y-0.5 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
+            ${boxRow("Official URL", ig.url ? `<code class="text-xs">${esc(ig.url as string)}</code>` : "")}
+            ${boxRow("Computable Name", `<code class="text-xs">${esc((ig.name as string) ?? ctx.cfg.id)}</code>`)}
+            ${boxRow("Version", esc(ctx.cfg.version))}
+            ${boxRow("Status", `<span class="font-medium">${esc(ctx.cfg.status ?? "draft")}</span>`)}
+            ${boxRow("FHIR Version", esc(ctx.target.fhir))}
+            ${boxRow("Package", `<code class="text-xs">${esc(ctx.cfg.id)}#${esc(ctx.cfg.version)}</code>`)}
+        </dl>` : "";
+
     const head = `
         <h1 class="text-3xl font-semibold text-slate-900">${esc(ctx.cfg.title ?? ctx.cfg.id)}</h1>
-        <div class="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-600">
-            <code class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-700">${esc(ctx.cfg.id)}</code>
-            <span>v${esc(ctx.cfg.version)}</span>
-            <span class="text-slate-300">·</span>
-            <span>FHIR ${esc(ctx.target.fhir)}</span>
-            <span class="text-slate-300">·</span>
-            <span>status <span class="font-medium text-slate-800">${esc(ctx.cfg.status ?? "draft")}</span></span>
-        </div>
+        ${publishBox}
         ${ctx.cfg.description ? `<p class="mt-4 max-w-3xl text-slate-700">${esc(ctx.cfg.description)}</p>` : ""}
         ${depsBlock}
         <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">${tiles}</div>

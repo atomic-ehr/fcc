@@ -83,6 +83,7 @@ declare global {
             order: typeof import("./order").default;
             pageHeader: typeof import("./pageHeader").default;
             pageHref: typeof import("./pageHref").default;
+            pageToc: typeof import("./pageToc").default;
             parseIal: typeof import("./parseIal").default;
             pillType: typeof import("./pillType").default;
             profileTabs: typeof import("./profileTabs").default;
