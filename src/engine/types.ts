@@ -160,6 +160,23 @@ export interface PluginContext {
   shared: Record<string, unknown>;
 
   /**
+   * Render/UI scratch state, persisted across incremental rebuilds (e.g. the
+   * site's loaded opts, ref-link map, notes cache). Distinct from `shared`
+   * (cross-plugin handoffs) so namespaces don't collide.
+   */
+  state: Record<string, any>;
+
+  /**
+   * The flat-namespace function registry (`ctx.fns.<ns>.<fn>(ctx, opts)`).
+   * Populated by flat-ns plugins (site, menu) attaching their `loadFns`.
+   * Loosely typed here; the site's ambient `Context` narrows it to `FnsRegistry`.
+   */
+  fns: Record<string, any>;
+
+  /** Per-resource intro/notes markdown (site render state), set per build. */
+  notes?: Map<string, { intro?: string; notes?: string }>;
+
+  /**
    * On incremental rebuilds, the set of resource ids that have been
    * (re)loaded or re-transformed this round. Null on a full build.
    * Emit plugins use this to optimise writes; transformers can ignore it.

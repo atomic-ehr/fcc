@@ -7,8 +7,8 @@ export default function linkCanonical(ctx: Context, opts: { url: string | undefi
     if (!url) return `<span class="text-slate-400">—</span>`;
     const esc = (s: string) => ctx.fns.site_core.htmlEscape(ctx, { s });
     const bare = url.split("|", 1)[0];
-    const rid = ctx.bundle.byCanonical.get(bare) ?? ctx.bundle.byCanonical.get(url);
-    const target = rid ? ctx.bundle.resources.get(rid) : undefined;
+    const rid = ctx.byCanonical.get(bare) ?? ctx.byCanonical.get(url);
+    const target = rid ? ctx.resources.get(rid) : undefined;
 
     if (opts.short) {
         const label = target ? ctx.fns.site_core.shortLabel(ctx, { resource: target }) : (bare.split("/").pop() || bare);

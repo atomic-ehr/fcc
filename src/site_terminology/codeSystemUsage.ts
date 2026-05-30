@@ -5,7 +5,7 @@ export default function codeSystemUsage(ctx: Context, opts: { resource: types.fc
     const url = (opts.resource.data as { url?: string }).url;
     if (!url) return [];
     const out: types.fcc.Resource[] = [];
-    for (const r of ctx.bundle.resources.values()) {
+    for (const r of ctx.resources.values()) {
         if (r.resourceType !== "ValueSet") continue;
         const compose = (r.data as { compose?: { include?: any[]; exclude?: any[] } }).compose;
         const groups = [...(compose?.include ?? []), ...(compose?.exclude ?? [])];

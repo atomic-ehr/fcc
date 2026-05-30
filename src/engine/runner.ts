@@ -279,6 +279,8 @@ export function makeContext(cfg: ResolvedConfig, ts: TargetState, changedIds: Se
     cycle: ts.cycle,
     dev: cfg.dev === true,
     shared: ts.shared,
+    state: ts.state,
+    fns: ts.fns,
 
     query(type, where) {
       const out: Resource[] = [];

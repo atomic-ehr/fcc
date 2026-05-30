@@ -2,15 +2,8 @@
 // Sources: $type_*.ts → types.site_core.*, every other .ts → FnsRegistry.site_core.*
 
 declare global {
-    type Context = {
-        cfg:     types.fcc.ResolvedConfig;
-        target:  types.fcc.Target;
-        bundle:  types.fcc.Bundle;
-        notes?:  Map<string, { intro?: string; notes?: string }>;
-        state:   Record<string, any>;
-        env:     Record<string, string | undefined>;
-        fns:     FnsRegistry;
-    };
+    // The one ctx: the engine PluginContext + the flat-ns fn registry.
+    type Context = types.fcc.PluginContext & { fns: FnsRegistry };
 
     interface FnsRegistry {
         site_core: {

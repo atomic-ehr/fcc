@@ -6,7 +6,7 @@ export default function urlVersionStrip(ctx: Context, opts: { d: Record<string, 
     const esc = (s: string) => ctx.fns.site_core.htmlEscape(ctx, { s });
     const d = opts.d;
     const url       = (d.url as string | undefined) ?? "";
-    const version   = (d.version as string | undefined) ?? ctx.cfg.version;
+    const version   = (d.version as string | undefined) ?? ctx.config.version;
     const status    = (d.status as string | undefined) ?? "";
     const date      = (d.date as string | undefined) ?? "";
     const name      = (d.name as string | undefined) ?? (d.id as string | undefined) ?? "";

@@ -5,7 +5,7 @@
 export default function sdListTable(ctx: Context, opts: { kind: "profile" | "extension" }): string {
     const esc = (s: string) => ctx.fns.site_core.htmlEscape(ctx, { s });
     const out: types.fcc.Resource[] = [];
-    for (const r of ctx.bundle.resources.values()) {
+    for (const r of ctx.resources.values()) {
         if (r.resourceType !== "StructureDefinition") continue;
         if ((r.data as { __wasExample?: boolean }).__wasExample) continue;
         const isExt = (r.data as { type?: string }).type === "Extension";

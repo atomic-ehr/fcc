@@ -5,7 +5,7 @@ export default function valueSetUsage(ctx: Context, opts: { resource: types.fcc.
     const url = (opts.resource.data as { url?: string }).url;
     if (!url) return [];
     const out: types.fcc.Resource[] = [];
-    for (const r of ctx.bundle.resources.values()) {
+    for (const r of ctx.resources.values()) {
         if (r.resourceType !== "StructureDefinition") continue;
         const d = r.data as { differential?: { element?: any[] }; snapshot?: { element?: any[] } };
         const els = [...(d.differential?.element ?? []), ...(d.snapshot?.element ?? [])];

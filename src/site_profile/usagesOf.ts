@@ -8,7 +8,7 @@ export default function usagesOf(ctx: Context, opts: { profile: types.fcc.Resour
     const selfId = opts.profile.id;
     const out: types.fcc.Resource[] = [];
 
-    for (const r of ctx.bundle.resources.values()) {
+    for (const r of ctx.resources.values()) {
         if (r.id === selfId) continue;
         const d = r.data as Record<string, any>;
 

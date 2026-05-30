@@ -3,8 +3,8 @@
 // carry — the caller then shows the code alone. Searches nested concepts.
 export default function displayFor(ctx: Context, opts: { system?: string; code: string }): string | undefined {
     if (!opts.system) return undefined;
-    const rid = ctx.bundle.byCanonical.get(opts.system) ?? ctx.bundle.byCanonical.get(opts.system.split("|", 1)[0]);
-    const cs = rid ? ctx.bundle.resources.get(rid) : undefined;
+    const rid = ctx.byCanonical.get(opts.system) ?? ctx.byCanonical.get(opts.system.split("|", 1)[0]);
+    const cs = rid ? ctx.resources.get(rid) : undefined;
     if (!cs || cs.resourceType !== "CodeSystem") return undefined;
 
     const walk = (concepts: Array<{ code?: string; display?: string; concept?: any[] }> | undefined): string | undefined => {

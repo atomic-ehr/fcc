@@ -1,7 +1,7 @@
 import { test, expect } from "bun:test";
 import loadAll from "../site/loadAll.ts";
 
-const mk = (opts: Record<string, unknown> = {}) => { const c: any = { state: {}, fns: {}, bundle: { resources: new Map(), byCanonical: new Map() } }; loadAll(c); c.fns.site_core.enable(c, { opts }); return c; };
+const mk = (opts: Record<string, unknown> = {}) => { const c: any = { state: {}, fns: {}, resources: new Map(), byCanonical: new Map(), config: {} }; loadAll(c); c.fns.site_core.enable(c, { opts }); return c; };
 
 test("applyBlocks: trailing stu-note → callout, no leak", () => {
     const c = mk();

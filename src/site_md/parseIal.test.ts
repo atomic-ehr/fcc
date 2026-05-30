@@ -4,7 +4,7 @@ import loadAll from "../site/loadAll.ts";
 // Local harness — *.test.ts files are excluded from the build, so importing
 // loadAll to assemble ctx.fns.<ns> is fine. Kept tiny + inline per the
 // one-fn-per-file convention (no shared helper module to avoid gentypes noise).
-const mk = () => { const c: any = { state: {}, fns: {}, bundle: { resources: new Map(), byCanonical: new Map() } }; loadAll(c); c.fns.site_core.enable(c, { opts: {} }); return c; };
+const mk = () => { const c: any = { state: {}, fns: {}, resources: new Map(), byCanonical: new Map(), config: {} }; loadAll(c); c.fns.site_core.enable(c, { opts: {} }); return c; };
 
 test("parseIal: class marker", () => {
     const c = mk();

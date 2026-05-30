@@ -11,7 +11,7 @@ export default function layout(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(opts.title)} — ${esc(ctx.cfg.title ?? ctx.cfg.id)}</title>
+<title>${esc(opts.title)} — ${esc(ctx.config.title ?? ctx.config.id)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -57,7 +57,7 @@ ${ctx.fns.site_core.buildInfoBanner(ctx)}
         </div>
         ${opts.content}
         <footer class="mt-16 border-t border-slate-200 pt-4 text-xs text-slate-500">
-            ${ctx.fns.site_core.featureOn(ctx, { name: "igFooter" }) ? `<p>This page is part of the <span class="font-medium text-slate-700">${esc(ctx.cfg.title ?? ctx.cfg.id)}</span> (v${esc(ctx.cfg.version)}) based on FHIR ${esc(ctx.target.fhir)} — package <code class="rounded bg-slate-100 px-1">${esc(ctx.cfg.id)}#${esc(ctx.cfg.version)}</code>.</p>` : ""}
+            ${ctx.fns.site_core.featureOn(ctx, { name: "igFooter" }) ? `<p>This page is part of the <span class="font-medium text-slate-700">${esc(ctx.config.title ?? ctx.config.id)}</span> (v${esc(ctx.config.version)}) based on FHIR ${esc(ctx.target.fhir)} — package <code class="rounded bg-slate-100 px-1">${esc(ctx.config.id)}#${esc(ctx.config.version)}</code>.</p>` : ""}
             <p class="mt-1">Built by <a class="text-sky-700 hover:underline" href="https://github.com/HealthSamurai/fcc">fcc</a>
             · target <code class="rounded bg-slate-100 px-1">${esc(ctx.target.name)}</code>
             (FHIR ${esc(ctx.target.fhir)})

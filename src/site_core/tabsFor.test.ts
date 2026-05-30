@@ -1,7 +1,7 @@
 import { test, expect } from "bun:test";
 import loadAll from "../site/loadAll.ts";
 
-const mk = () => { const c: any = { state: {}, fns: {}, bundle: { resources: new Map(), byCanonical: new Map() } }; loadAll(c); c.fns.site_core.enable(c, { opts: {} }); return c; };
+const mk = () => { const c: any = { state: {}, fns: {}, resources: new Map(), byCanonical: new Map(), config: {} }; loadAll(c); c.fns.site_core.enable(c, { opts: {} }); return c; };
 const sd = (id: string, extra: Record<string, unknown> = {}) => ({ resourceType: "StructureDefinition", id, data: { id, ...extra } });
 
 test("tabsFor: StructureDefinition default set + hrefs", () => {

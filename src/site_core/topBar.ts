@@ -1,6 +1,6 @@
 export default function topBar(ctx: Context, opts: { active: string }): string {
     const esc = (s: string) => ctx.fns.site_core.htmlEscape(ctx, { s });
-    const igTitle = esc(ctx.cfg.title ?? ctx.cfg.id);
+    const igTitle = esc(ctx.config.title ?? ctx.config.id);
 
     // If @fcc/plugin-menu supplied a rendered menu via pctx.shared, use it
     // (IG-author-defined nav from sushi-config). Otherwise fall back to fcc's
@@ -13,12 +13,12 @@ export default function topBar(ctx: Context, opts: { active: string }): string {
             <div class="flex items-baseline">
                 <span class="mr-2 h-2.5 w-2.5 self-center rounded-full bg-brand"></span>
                 <a href="index.html" class="text-lg font-semibold tracking-tight hover:text-brand">${igTitle}</a>
-                <span class="ml-3 text-xs text-slate-400">v${esc(ctx.cfg.version)} · FHIR ${esc(ctx.target.fhir)}</span>
+                <span class="ml-3 text-xs text-slate-400">v${esc(ctx.config.version)} · FHIR ${esc(ctx.target.fhir)}</span>
             </div>
             <div class="flex items-center gap-2">
                 ${qaChip(ctx)}
                 <span class="rounded-full bg-slate-700/60 px-2 py-0.5 text-xs uppercase tracking-wide text-slate-200">${esc(ctx.target.name)}</span>
-                <span class="rounded-full bg-brand px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">${esc(ctx.cfg.status ?? "draft")}</span>
+                <span class="rounded-full bg-brand px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">${esc(ctx.config.status ?? "draft")}</span>
             </div>
         </div>
         ${navHtml}

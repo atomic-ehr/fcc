@@ -60,6 +60,11 @@ export type TargetState = {
    * own keys when needed.
    */
   shared: Record<string, unknown>;
+
+  // Render/UI scratch + the flat-ns fn registry (ctx.fns) — persist across
+  // incremental rebuilds; reset on a full build (freshTargetState).
+  state: Record<string, any>;
+  fns: Record<string, any>;
 };
 
 export type BuildState = {
@@ -98,6 +103,8 @@ export function freshTargetState(target: Target): TargetState {
     emitted: [],
     cycle: 0,
     shared: {},
+    state: {},
+    fns: {},
   };
 }
 

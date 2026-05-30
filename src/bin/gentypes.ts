@@ -122,15 +122,8 @@ function render(opts: {
     // declared once by the base run; fragment runs only augment FnsRegistry +
     // their own types namespace (interface/namespace declaration merging).
     if (!fragment) {
-        lines.push(`    type Context = {`);
-        lines.push(`        cfg:     types.fcc.ResolvedConfig;`);
-        lines.push(`        target:  types.fcc.Target;`);
-        lines.push(`        bundle:  types.fcc.Bundle;`);
-        lines.push(`        notes?:  Map<string, { intro?: string; notes?: string }>;`);
-        lines.push(`        state:   Record<string, any>;`);
-        lines.push(`        env:     Record<string, string | undefined>;`);
-        lines.push(`        fns:     FnsRegistry;`);
-        lines.push(`    };`);
+        lines.push(`    // The one ctx: the engine PluginContext + the flat-ns fn registry.`);
+        lines.push(`    type Context = types.fcc.PluginContext & { fns: FnsRegistry };`);
         lines.push(``);
     }
     lines.push(`    interface FnsRegistry {`);

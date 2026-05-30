@@ -5,7 +5,7 @@ export default function examplesForProfile(ctx: Context, opts: { profile: types.
     const url = opts.profile.url;
     if (!url) return [];
     const out: types.fcc.Resource[] = [];
-    for (const r of ctx.bundle.resources.values()) {
+    for (const r of ctx.resources.values()) {
         if (r.resourceType === "ImplementationGuide") continue;
         if (!(r.data as { __wasExample?: boolean }).__wasExample) continue;
         const profiles = ((r.data as { meta?: { profile?: string[] } }).meta?.profile) ?? [];

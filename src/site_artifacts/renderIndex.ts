@@ -1,10 +1,10 @@
 export default function renderIndex(ctx: Context, opts: { landingHtml: string }): string {
     const esc = (s: string) => ctx.fns.site_core.htmlEscape(ctx, { s });
-    const ig = ctx.bundle.ig.data as Record<string, unknown>;
+    const ig = (ctx.byId(`ImplementationGuide/${ctx.config.id}`)?.data ?? {}) as Record<string, unknown>;
     const dependencies = (ig.dependsOn as Array<{ packageId: string; version: string }> | undefined) ?? [];
 
     const counts: Record<string, number> = {};
-    for (const r of ctx.bundle.resources.values()) {
+    for (const r of ctx.resources.values()) {
         if (r.resourceType === "ImplementationGuide") continue;
         if ((r.data as { __wasExample?: boolean }).__wasExample) {
             counts["Examples"] = (counts["Examples"] ?? 0) + 1;
@@ -32,17 +32,17 @@ export default function renderIndex(ctx: Context, opts: { landingHtml: string })
     const publishBox = ctx.fns.site_core.featureOn(ctx, { name: "publishBox" }) ? `
         <dl class="mt-3 max-w-2xl space-y-0.5 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
             ${boxRow("Official URL", ig.url ? `<code class="text-xs">${esc(ig.url as string)}</code>` : "")}
-            ${boxRow("Computable Name", `<code class="text-xs">${esc((ig.name as string) ?? ctx.cfg.id)}</code>`)}
-            ${boxRow("Version", esc(ctx.cfg.version))}
-            ${boxRow("Status", `<span class="font-medium">${esc(ctx.cfg.status ?? "draft")}</span>`)}
+            ${boxRow("Computable Name", `<code class="text-xs">${esc((ig.name as string) ?? ctx.config.id)}</code>`)}
+            ${boxRow("Version", esc(ctx.config.version))}
+            ${boxRow("Status", `<span class="font-medium">${esc(ctx.config.status ?? "draft")}</span>`)}
             ${boxRow("FHIR Version", esc(ctx.target.fhir))}
-            ${boxRow("Package", `<code class="text-xs">${esc(ctx.cfg.id)}#${esc(ctx.cfg.version)}</code>`)}
+            ${boxRow("Package", `<code class="text-xs">${esc(ctx.config.id)}#${esc(ctx.config.version)}</code>`)}
         </dl>` : "";
 
     const head = `
-        <h1 class="text-3xl font-semibold text-slate-900">${esc(ctx.cfg.title ?? ctx.cfg.id)}</h1>
+        <h1 class="text-3xl font-semibold text-slate-900">${esc(ctx.config.title ?? ctx.config.id)}</h1>
         ${publishBox}
-        ${ctx.cfg.description ? `<p class="mt-4 max-w-3xl text-slate-700">${esc(ctx.cfg.description)}</p>` : ""}
+        ${ctx.config.description ? `<p class="mt-4 max-w-3xl text-slate-700">${esc(ctx.config.description)}</p>` : ""}
         ${depsBlock}
         <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">${tiles}</div>
     `;
