@@ -2,16 +2,6 @@
 // Sources: $type_*.ts → types.md.*, every other .ts → FnsRegistry.md.*
 
 declare global {
-    type Context = {
-        cfg:     types.fcc.ResolvedConfig;
-        target:  types.fcc.Target;
-        bundle:  types.fcc.Bundle;
-        notes?:  Map<string, { intro?: string; notes?: string }>;
-        state:   Record<string, any>;
-        env:     Record<string, string | undefined>;
-        fns:     FnsRegistry;
-    };
-
     interface FnsRegistry {
         md: {
             applyBlocks: typeof import("./applyBlocks").default;
@@ -30,15 +20,6 @@ declare global {
     }
 
     namespace types {
-        namespace fcc {
-            type Bundle = import("fcc").Bundle;
-            type Resource = import("fcc").Resource;
-            type ResolvedConfig = import("fcc").ResolvedConfig;
-            type Target = import("fcc").Target;
-            type Plugin = import("fcc").Plugin;
-            type PluginContext = import("fcc").PluginContext;
-            type HotUpdateContext = import("fcc").HotUpdateContext;
-        }
         namespace md {
             type BlockDescriptor = import("./$type_BlockDescriptor").BlockDescriptor;
             type Ial = import("./$type_Ial").Ial;

@@ -2,7 +2,7 @@
 // set (tabsFor) and renders it via tabLinks, marking the active tab. The
 // download chip comes from the active tab's `download`, else the set's first
 // download (so the Content page still shows "download .json" pointing at the
-// JSON companion's raw file, matching the old formatChips behaviour).
+// JSON companion's raw file, the JSON companion download).
 export default function canonicalTabStrip(ctx: Context, opts: { resource: types.fcc.Resource; activeId: string }): string {
     const resolved = ctx.fns.core.tabsFor(ctx, { resource: opts.resource });
     if (!resolved.length) return "";

@@ -2,16 +2,6 @@
 // Sources: $type_*.ts → types.profile.*, every other .ts → FnsRegistry.profile.*
 
 declare global {
-    type Context = {
-        cfg:     types.fcc.ResolvedConfig;
-        target:  types.fcc.Target;
-        bundle:  types.fcc.Bundle;
-        notes?:  Map<string, { intro?: string; notes?: string }>;
-        state:   Record<string, any>;
-        env:     Record<string, string | undefined>;
-        fns:     FnsRegistry;
-    };
-
     interface FnsRegistry {
         profile: {
             $section_formalViews: typeof import("./$section_formalViews").default;
@@ -40,15 +30,6 @@ declare global {
     }
 
     namespace types {
-        namespace fcc {
-            type Bundle = import("fcc").Bundle;
-            type Resource = import("fcc").Resource;
-            type ResolvedConfig = import("fcc").ResolvedConfig;
-            type Target = import("fcc").Target;
-            type Plugin = import("fcc").Plugin;
-            type PluginContext = import("fcc").PluginContext;
-            type HotUpdateContext = import("fcc").HotUpdateContext;
-        }
         namespace profile {
             type SdHrefs = import("./$type_SdHrefs").SdHrefs;
         }

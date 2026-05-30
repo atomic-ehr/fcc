@@ -9,7 +9,7 @@ export default async function renderProfileJsonPage(ctx: Context, opts: { resour
 
     const body = `
         ${ctx.fns.core.pageHeader(ctx, { title, kind: "Profile", d })}
-        ${opts.strip ?? ctx.fns.core.formatChips(ctx, { resource: r, active: "json" })}
+        ${opts.strip ?? ctx.fns.core.canonicalTabStrip(ctx, { resource: r, activeId: "json" })}
         ${ctx.fns.core.urlVersionStrip(ctx, { d })}
         <h2 class="mt-6 text-lg font-semibold text-slate-900">JSON</h2>
         <p class="mt-1 text-xs text-slate-500">Raw: <a class="text-sky-700 hover:underline" href="${h.jsonRaw}">${h.jsonRaw}</a></p>

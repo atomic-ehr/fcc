@@ -9,7 +9,7 @@ export default function renderDefinitionsPage(ctx: Context, opts: { resource: ty
 
     const body = `
         ${ctx.fns.core.pageHeader(ctx, { title, kind: "Profile", d })}
-        ${opts.strip ?? ctx.fns.core.formatChips(ctx, { resource: r, active: "definitions" })}
+        ${opts.strip ?? ctx.fns.core.canonicalTabStrip(ctx, { resource: r, activeId: "definitions" })}
         ${ctx.fns.core.urlVersionStrip(ctx, { d })}
         <h2 class="mt-6 text-lg font-semibold text-slate-900">Detailed Descriptions</h2>
         <div class="mt-2">${ctx.fns.profile.detailTable(ctx, { elements, anchors: true })}</div>

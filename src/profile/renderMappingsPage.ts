@@ -37,7 +37,7 @@ export default function renderMappingsPage(ctx: Context, opts: { resource: types
 
     const body = `
         ${ctx.fns.core.pageHeader(ctx, { title, kind: "Profile", d })}
-        ${opts.strip ?? ctx.fns.core.formatChips(ctx, { resource: r, active: "mappings" })}
+        ${opts.strip ?? ctx.fns.core.canonicalTabStrip(ctx, { resource: r, activeId: "mappings" })}
         ${ctx.fns.core.urlVersionStrip(ctx, { d })}
         <h2 class="mt-6 text-lg font-semibold text-slate-900">Mappings</h2>
         ${bodyInner}

@@ -15,7 +15,7 @@ export default function renderExamplesPage(ctx: Context, opts: { resource: types
 
     const body = `
         ${ctx.fns.core.pageHeader(ctx, { title, kind: "Profile", d })}
-        ${opts.strip ?? ctx.fns.core.formatChips(ctx, { resource: r, active: "examples" })}
+        ${opts.strip ?? ctx.fns.core.canonicalTabStrip(ctx, { resource: r, activeId: "examples" })}
         ${ctx.fns.core.urlVersionStrip(ctx, { d })}
         <h2 class="mt-6 text-lg font-semibold text-slate-900">Examples${examples.length ? ` (${examples.length})` : ""}</h2>
         ${list}

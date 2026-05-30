@@ -2,16 +2,6 @@
 // Sources: $type_*.ts → types.terminology.*, every other .ts → FnsRegistry.terminology.*
 
 declare global {
-    type Context = {
-        cfg:     types.fcc.ResolvedConfig;
-        target:  types.fcc.Target;
-        bundle:  types.fcc.Bundle;
-        notes?:  Map<string, { intro?: string; notes?: string }>;
-        state:   Record<string, any>;
-        env:     Record<string, string | undefined>;
-        fns:     FnsRegistry;
-    };
-
     interface FnsRegistry {
         terminology: {
             $section_cld: typeof import("./$section_cld").default;
@@ -25,21 +15,11 @@ declare global {
             renderValueSetJsonPage: typeof import("./renderValueSetJsonPage").default;
             valueSetUsage: typeof import("./valueSetUsage").default;
             vsCld: typeof import("./vsCld").default;
-            vsCompanionPages: typeof import("./vsCompanionPages").default;
             vsExpand: typeof import("./vsExpand").default;
         };
     }
 
     namespace types {
-        namespace fcc {
-            type Bundle = import("fcc").Bundle;
-            type Resource = import("fcc").Resource;
-            type ResolvedConfig = import("fcc").ResolvedConfig;
-            type Target = import("fcc").Target;
-            type Plugin = import("fcc").Plugin;
-            type PluginContext = import("fcc").PluginContext;
-            type HotUpdateContext = import("fcc").HotUpdateContext;
-        }
         namespace terminology {
         }
     }

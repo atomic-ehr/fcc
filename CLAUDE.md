@@ -5,17 +5,40 @@ alwaysApply: true
 
 # fcc — codebase conventions
 
-Procedural TypeScript on Bun. Plugin packages are flat namespaces of single-purpose functions, hot-reloadable through a per-build `ctx`. There is a live REPL over the dev server for inspecting and driving builds.
+Procedural TypeScript on Bun. Code is organized as flat namespaces of single-purpose functions, hot-reloadable through a per-build `ctx`. There is a live REPL over the dev server for inspecting and driving builds.
+
+## Where the code lives
+
+- **`/src/<namespace>/<fn>.ts`** — the IG-site renderer (`@fcc/plugin-site`),
+  split into cohesive namespaces, each a folder of fn-per-file modules:
+  `core` (chrome, layout, dispatch, tab/section registries, hooks, utils),
+  `md` (markdown pipeline + pluggable blocks + Shiki), `profile`
+  (StructureDefinition sections + element tables), `terminology` (ValueSet/
+  CodeSystem), `capability` (CapabilityStatement/SearchParameter), `narrative`
+  (generated narratives), `artifacts` (index/artifacts/landing pages).
+  Each namespace has its own `loadFns.ts` + `ctx_ns.d.ts`; `/src/loadAll.ts`
+  assembles them all; `/src/index.ts` is the plugin entry. **A future extension
+  = a new `/src/<namespace>/` folder + its `loadFns` + one line in `loadAll`.**
+- **`/packages/fcc`** — the core engine (CLI `bin/`, runner, loader, watcher).
+- **`/packages/plugin-*`** — the other plugins (menu, snapshot, validate, …),
+  each still a single flat namespace in its own `src/`.
 
 ## Hard rules
 
-- **No project imports.** Files inside a plugin / namespace MUST NOT
-  `import` *any other project file*. Cross-file calls go through
-  `ctx.fns.<ns>.<fn>(ctx, opts)`. Cross-file types go through
-  `types.<ns>.<Name>`. The single exception is `loadFns.ts`, whose
-  *only* job is to import every sibling default-export and assemble
-  `ctx.fns.<ns>`. Everywhere else, `import` is only allowed for
-  external libraries (`marked`, `node:fs/promises`, `fcc`, etc.).
+- **No project imports.** Files inside a namespace MUST NOT `import` *any other
+  project file*. Cross-file calls go through `ctx.fns.<ns>.<fn>(ctx, opts)` —
+  including across namespaces (e.g. a `profile` fn calls
+  `ctx.fns.core.htmlEscape(ctx, …)` or `ctx.fns.md.mdInline(ctx, …)`). Cross-file
+  types go through `types.<ns>.<Name>`. The single exception is `loadFns.ts`,
+  whose *only* job is to import every sibling default-export and assemble
+  `ctx.fns.<ns>`. Everywhere else, `import` is only allowed for external
+  libraries (`shiki`, `node:fs/promises`, `fcc`, etc.).
+
+- **String-keyed dispatch crosses namespaces via `ctx.fns.core.resolveFn`.**
+  Registries that reference a fn by bare name (tab `render`/`avail`, section ids
+  → `$section_<id>`, block `render`) resolve it across all loaded namespaces
+  with `resolveFn({ key })` — fn names are globally unique, so it's
+  deterministic. Don't hardcode the namespace for a registry key.
 
 - **One fn per file.** Every reusable function lives in its own file.
   File-local helpers (used inside one parent only) may stay nested,
@@ -48,7 +71,11 @@ Inside a plugin's `src/` directory:
 | `ctx_ns.d.ts`          | Ambient registry: `Context`, `FnsRegistry`, `types.*` namespaces.       |
 | `<hookName>.ts`        | Auto-registered as that fcc lifecycle hook (e.g. `writeBundle.ts`).     |
 | `$type_<Name>.ts`      | Type-only file. Scanner skips. Hoisted via `ctx_ns.d.ts`.               |
-| `$render_<RT>.ts`      | `@fcc/site` per-resourceType renderer dispatch.                         |
+| `$section_<id>.ts`     | `@fcc/site` one Content-page section. `(ctx,{resource}) → {title,id,html}\|null`. Ordered per resourceType by `sectionDefaults`/`sectionsFor`; rendered by `renderCanonical`. |
+| `$tab_<id>.ts`         | `@fcc/site` project escape-hatch tab renderer (referenced from a `tabDefaults` override). |
+| `$block_<class>.ts`    | `@fcc/site` custom kramdown-block renderer (referenced from `blockDefaults`/`site({blocks})`). |
+| `$avail_<name>.ts`     | `@fcc/site` tab/section availability predicate `(ctx,{resource}) → boolean`. |
+| `$render_<RT>.ts`      | Generic per-resourceType renderer dispatch family (other plugins). `@fcc/site` uses `renderCanonical` + `$section_` instead. |
 | `$loader_<ext>.ts`     | `@fcc/loader-*` per-extension loader.                                   |
 | `$rule_<name>.ts`      | `@fcc/validate` per-lint-rule (one rule = one file).                    |
 | `$narrative_<RT>.ts`   | `@fcc/narrative` per-resourceType narrative generator.                  |
@@ -68,33 +95,43 @@ Inside a plugin's `src/` directory:
 ## File template
 
 ```ts
-// packages/plugin-site/src/myHelper.ts
-// Cross-file types via `types.*`. Cross-file fns via `ctx.fns.site.*`.
+// src/profile/myHelper.ts  (a fn in the `profile` namespace)
+// Cross-file types via `types.*`. Cross-file fns via `ctx.fns.<ns>.*`.
 // No `import` from sibling files.
 
 export default async function myHelper(ctx: Context, opts: { resource: types.fcc.Resource }): Promise<string> {
-    const title = ctx.fns.site.titleOf(ctx, { resource: opts.resource });
-    const safe  = ctx.fns.site.htmlEscape(ctx, { s: title });
+    const title = ctx.fns.core.titleOf(ctx, { resource: opts.resource });   // cross-ns
+    const safe  = ctx.fns.core.htmlEscape(ctx, { s: title });
     return `<h1>${safe}</h1>`;
 }
 ```
 
 ## Ambient registry (`ctx_ns.d.ts`)
 
-The single ambient declaration that makes `Context`, `FnsRegistry`,
-and `types.*` available everywhere without imports. **Auto-generated
-by `fcc-gentypes`** — do not hand-edit. Run after adding, renaming, or
-removing files:
+The ambient declarations that make `Context`, `FnsRegistry`, and `types.*`
+available everywhere without imports. One `ctx_ns.d.ts` per namespace folder;
+they merge (interface/namespace declaration merging). **Auto-generated** — do
+not hand-edit. After adding, renaming, or removing files, regenerate **every**
+namespace:
 
 ```sh
-bun packages/fcc/bin/gentypes.ts packages/plugin-site/src \
-  --ns site \
+bash src/gentypes.sh        # @fcc/site: core (base) + the 6 --fragment namespaces
+```
+
+`src/gentypes.sh` runs `core` as the **base** (declares `Context` + the `fcc`
+external types once) and the rest with **`--fragment`** (each only augments
+`FnsRegistry.<ns>` + `types.<ns>`). For a single-namespace plugin, call the tool
+directly:
+
+```sh
+bun packages/fcc/bin/gentypes.ts <srcDir> --ns <name> \
   --external 'fcc:fcc:Bundle,Resource,ResolvedConfig,Target,Plugin,PluginContext,HotUpdateContext'
 ```
 
-`--ns <name>` names the namespace under `ctx.fns.<name>` and
-`types.<name>` (defaults to the parent dir's basename, stripped of any
-`plugin-` prefix).
+`--ns <name>` names the namespace under `ctx.fns.<name>` and `types.<name>`
+(defaults to the parent dir's basename, minus a `plugin-` prefix).
+`--fragment` skips the shared `Context` + external-types blocks (multi-namespace
+trees declare those once, in the base namespace).
 
 `--external <ns>:<pkg>:Type,Type,…` declares ambient types pulled from
 an external npm package — typically `fcc` core types your plugin
@@ -144,26 +181,25 @@ export {};
 
 ## `loadFns.ts` — the assembler
 
-Each plugin needs exactly one `loadFns.ts` that imports every sibling
-default-export and assembles `ctx.fns.<ns>`. This is the **only** file
-inside the plugin where cross-file imports are allowed:
+Each namespace folder has exactly one `loadFns.ts` that imports every sibling
+default-export and assembles `ctx.fns.<ns>`. This is the **only** file in the
+namespace where cross-file imports are allowed (and it's auto-generated):
 
 ```ts
-// packages/plugin-site/src/loadFns.ts
+// src/core/loadFns.ts
 import htmlEscape from "./htmlEscape.ts";
 import titleOf from "./titleOf.ts";
 import layout from "./layout.ts";
 // … one import per fn file …
 
 export default function loadFns(ctx: Context): void {
-    (ctx.fns as any).site = {
-        htmlEscape, titleOf, layout, /* … */
-    };
+    (ctx.fns as any).core = { htmlEscape, titleOf, layout, /* … */ };
 }
 ```
 
-The plugin's `index.ts` (the Plugin object factory) calls `loadFns(ctx)`
-once at construction, then delegates every hook to `ctx.fns.<ns>.*`.
+`/src/loadAll.ts` calls every namespace's `loadFns(ctx)`; the plugin's
+`/src/index.ts` (the Plugin object factory) calls `loadAll(ctx)` once at
+construction, then delegates every hook to `ctx.fns.core.*`.
 
 ## `enable.ts` — the activation fn
 
@@ -185,16 +221,16 @@ export default function enable(ctx: Context, opts: types.site.SiteOpts = {}): vo
 
 `fcc dev` watches **source files** (the IG's `input/**`, plus any paths
 declared by plugins' `watchPaths()`). Edits there trigger incremental
-rebuilds in ~100 ms. Edits to **plugin code itself** (`packages/plugin-site/src/*.ts`,
+rebuilds in ~100 ms. Edits to **plugin code itself** (`src/**/*.ts`,
 `packages/fcc/src/*.ts`) require a manual `fcc dev` restart, because
 those modules are imported once at startup.
 
 A common workflow loop:
 
-1. Edit `packages/plugin-site/src/$render_StructureDefinition.ts`
-2. Kill + restart `fcc dev` (Ctrl+C, then re-run)
-3. `cdp.reload({ session: "uscore" })` from the REPL
-4. `cdp.screenshot(...)` to verify
+1. Edit a section/fn, e.g. `src/profile/$section_formalViews.ts`
+2. If you added/removed/renamed a file: `bash src/gentypes.sh`
+3. Kill + restart `fcc dev` (Ctrl+C, then re-run)
+4. `cdp.reload({ session: "fcc" })` + `cdp.screenshot(...)` to verify
 
 ## REPL workflow
 

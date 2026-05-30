@@ -26,8 +26,6 @@ declare global {
             enable: typeof import("./enable").default;
             featureOn: typeof import("./featureOn").default;
             formatCard: typeof import("./formatCard").default;
-            formatChips: typeof import("./formatChips").default;
-            formatPath: typeof import("./formatPath").default;
             handleHotUpdate: typeof import("./handleHotUpdate").default;
             htmlEscape: typeof import("./htmlEscape").default;
             humanType: typeof import("./humanType").default;
@@ -41,7 +39,6 @@ declare global {
             mergeTabs: typeof import("./mergeTabs").default;
             metaDl: typeof import("./metaDl").default;
             navActiveScript: typeof import("./navActiveScript").default;
-            notesBlock: typeof import("./notesBlock").default;
             notesFor: typeof import("./notesFor").default;
             order: typeof import("./order").default;
             pageHeader: typeof import("./pageHeader").default;
@@ -53,7 +50,6 @@ declare global {
             renderResourceJsonPage: typeof import("./renderResourceJsonPage").default;
             renderSidebarGroup: typeof import("./renderSidebarGroup").default;
             resolveFn: typeof import("./resolveFn").default;
-            sdCompanionPages: typeof import("./sdCompanionPages").default;
             sectionDefaults: typeof import("./sectionDefaults").default;
             sectionHeader: typeof import("./sectionHeader").default;
             sectionsFor: typeof import("./sectionsFor").default;
@@ -63,7 +59,6 @@ declare global {
             tabLinks: typeof import("./tabLinks").default;
             tabsFor: typeof import("./tabsFor").default;
             tagBindingStrength: typeof import("./tagBindingStrength").default;
-            tagMS: typeof import("./tagMS").default;
             titleOf: typeof import("./titleOf").default;
             topBar: typeof import("./topBar").default;
             urlVersionStrip: typeof import("./urlVersionStrip").default;

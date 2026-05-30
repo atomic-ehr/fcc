@@ -2,7 +2,7 @@ import { test, expect } from "bun:test";
 import loadAll from "../loadAll.ts";
 
 // Local harness — *.test.ts files are excluded from the build, so importing
-// loadFns to assemble ctx.fns.site is fine. Kept tiny + inline per the
+// loadAll to assemble ctx.fns.<ns> is fine. Kept tiny + inline per the
 // one-fn-per-file convention (no shared helper module to avoid gentypes noise).
 const mk = () => { const c: any = { state: {}, fns: {}, bundle: { resources: new Map(), byCanonical: new Map() } }; loadAll(c); c.fns.core.enable(c, { opts: {} }); return c; };
 

@@ -11,9 +11,8 @@ import displayFor from "./displayFor.ts";
 import renderValueSetJsonPage from "./renderValueSetJsonPage.ts";
 import valueSetUsage from "./valueSetUsage.ts";
 import vsCld from "./vsCld.ts";
-import vsCompanionPages from "./vsCompanionPages.ts";
 import vsExpand from "./vsExpand.ts";
 
 export default function loadFns(ctx: Context): void {
-    (ctx.fns as any).terminology = { $section_cld, $section_concepts, $section_csReferences, $section_expansion, $section_vsReferences, codeSystemUsage, conceptTable, displayFor, renderValueSetJsonPage, valueSetUsage, vsCld, vsCompanionPages, vsExpand };
+    (ctx.fns as any).terminology = { $section_cld, $section_concepts, $section_csReferences, $section_expansion, $section_vsReferences, codeSystemUsage, conceptTable, displayFor, renderValueSetJsonPage, valueSetUsage, vsCld, vsExpand };
 }
