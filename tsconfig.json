@@ -22,6 +22,7 @@
     "paths": {
       "fcc": ["./src/engine/engine.ts"],
       "fcc/json": ["./src/json/json.ts"],
+      "fcc/pages": ["./src/pages/pages.ts"],
       "fcc/fsh": ["./src/fsh/fsh.ts"],
       "fcc/ts": ["./src/ts/ts.ts"],
       "fcc/snapshot": ["./src/snapshot/snapshot.ts"],

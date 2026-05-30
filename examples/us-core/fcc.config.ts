@@ -1,5 +1,6 @@
 import { defineConfig } from "fcc";
 import json      from "fcc/json";
+import pages     from "fcc/pages";
 import snapshot  from "fcc/snapshot";
 import narrative from "fcc/narrative";
 import validator, { structural, schema, fhirpathConstraints } from "fcc/validator";
@@ -37,8 +38,9 @@ export default defineConfig({
   },
 
   sources: [
-    { dir: "../../vendor/us-core/input/resources", loader: json() },
-    { dir: "../../vendor/us-core/input/examples",  loader: json() },
+    { dir: "../../vendor/us-core/input/resources",   loader: json() },
+    { dir: "../../vendor/us-core/input/examples",    loader: json() },
+    { dir: "../../vendor/us-core/input/pagecontent", loader: pages() },  // .md → Page resources
   ],
 
   plugins: [

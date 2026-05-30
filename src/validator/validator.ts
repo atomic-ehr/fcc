@@ -87,6 +87,7 @@ async function perResource(
 // ── shared helpers ───────────────────────────────────────────────────────────
 
 const CONFORMANCE = new Set([
+  "Page",   // non-FHIR (markdown page resource) — skip in instance validators
   "StructureDefinition", "ValueSet", "CodeSystem", "CapabilityStatement",
   "SearchParameter", "ImplementationGuide", "OperationDefinition", "ConceptMap",
   "NamingSystem", "CompartmentDefinition", "StructureMap", "GraphDefinition",

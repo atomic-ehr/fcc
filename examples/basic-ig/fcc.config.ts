@@ -1,6 +1,7 @@
 import { defineConfig } from "fcc";
 import ts        from "fcc/ts";
 import fsh       from "fcc/fsh";
+import pages     from "fcc/pages";
 import snapshot  from "fcc/snapshot";
 import narrative from "fcc/narrative";
 import validator from "fcc/validator";
@@ -30,6 +31,7 @@ export default defineConfig({
     { dir: "input/profiles",    loader: ts()  },
     { dir: "input/examples",    loader: ts()  },
     { dir: "input/fsh",         loader: fsh() },
+    { dir: "input/pagecontent", loader: pages() },   // .md → Page resources
   ],
 
   plugins: [

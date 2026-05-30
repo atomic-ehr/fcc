@@ -2,6 +2,7 @@ import type { Plugin } from "fcc";
 
 export default function narrative(_opts: unknown = {}): Plugin {
   return (hooks) => hooks.transform((_ctx, { resource: r }) => {
+    if (r.resourceType === "Page") return null;               // not a FHIR resource
     const d = r.data as Record<string, unknown>;
     if (d.text) return null;
     const display =

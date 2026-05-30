@@ -3,7 +3,7 @@ export default function renderArtifacts(ctx: Context, _opts: {} = {}): string {
     const examples: types.fcc.Resource[] = [];
     const split = ctx.fns.site_core.featureOn(ctx, { name: "splitExtensions" });
     for (const r of ctx.bundle.resources.values()) {
-        if (r.resourceType === "ImplementationGuide") continue;
+        if (r.resourceType === "ImplementationGuide" || r.resourceType === "Page") continue;
         if ((r.data as { __wasExample?: boolean }).__wasExample) { examples.push(r); continue; }
         // Split StructureDefinition into Profiles vs Extensions, like IG Publisher.
         const key = (split && r.resourceType === "StructureDefinition" && (r.data as { type?: string }).type === "Extension")

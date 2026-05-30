@@ -10,6 +10,7 @@
   "exports": {
     ".": "./src/engine/engine.ts",
     "./json": "./src/json/json.ts",
+    "./pages": "./src/pages/pages.ts",
     "./fsh": "./src/fsh/fsh.ts",
     "./ts": "./src/ts/ts.ts",
     "./snapshot": "./src/snapshot/snapshot.ts",

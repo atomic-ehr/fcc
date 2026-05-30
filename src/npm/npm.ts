@@ -27,6 +27,7 @@ export default function npm(opts: Opts = { emitUnpacked: true }): Plugin {
       };
 
       for (const r of bundle.resources.values()) {
+        if (r.resourceType === "Page") continue;                 // not a FHIR resource
         const filename = `${r.resourceType}-${(r.data.id as string) ?? r.id.split("/").pop()}.json`;
         const bytes = enc.encode(JSON.stringify(r.data, null, 2) + "\n");
         resourceFiles.push({ path: `package/${filename}`, bytes });

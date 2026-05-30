@@ -25,6 +25,7 @@ export type SourceRef =
   | { kind: "fsh"; path: string; symbol: string }
   | { kind: "json"; path: string }
   | { kind: "yaml"; path: string }
+  | { kind: "md"; path: string }
   | { kind: "package"; pkg: string; version: string; path: string }
   | { kind: "virtual"; producer: string };
 

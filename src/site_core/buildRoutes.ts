@@ -22,21 +22,25 @@ export default async function buildRoutes(
 ): Promise<{ routes: Map<string, Route>; notesCount: number }> {
     const pctx = opts.pluginCtx;
     const o = (ctx.state.site ?? {}) as types.site_core.SiteOpts;
-    const pagecontent = o.pagecontent ?? "input/pagecontent";
     const introNotes  = o.introNotes  ?? "input/intro-notes";
 
     // Warm the shared Shiki highlighter once so the (sync) markdown pipeline can
     // highlight fenced code blocks during the renders below.
     await ctx.fns.site_md.warmHighlighter(ctx);
 
-    // Pagecontent pages + auto ref-links ([Page Title] → slug.html).
-    const pages = await ctx.fns.site_artifacts.loadPagecontent(ctx, { projectRoot: pctx.config.projectRoot, dir: pagecontent });
+    // Pages are Page resources in the graph (loaded by fcc/pages). Build the
+    // pagecontent list + landing from them; ref-links ([Page Title] → slug.html).
+    const pageResources = pctx.byType.Page;
+    const pages = pageResources
+        .filter(r => (r.data as { role?: string }).role === "page")
+        .map(r => r.data as { slug: string; title: string; md: string });
     if (!ctx.state.site) ctx.state.site = {};
     const refs = ((ctx.state.site as any).refLinkMap ?? {}) as Record<string, string>;
     for (const p of pages) if (p.title && !(p.title in refs)) refs[p.title] = `${p.slug}.html`;
     (ctx.state.site as any).refLinkMap = refs;
 
-    const landingHtml = await ctx.fns.site_artifacts.renderLanding(ctx, { projectRoot: pctx.config.projectRoot, pagecontent });
+    const landing = pageResources.find(r => (r.data as { role?: string }).role === "landing");
+    const landingHtml = landing ? ctx.fns.site_md.mdToHtml(ctx, { md: (landing.data as { md: string }).md }) : "";
 
     // Per-resource intro/notes (cached in state across an incremental pass).
     const cached = (ctx.state.site as any)?.notesCache as Map<string, { intro?: string; notes?: string }> | null | undefined;
@@ -53,8 +57,11 @@ export default async function buildRoutes(
     routes.set("index.html",     { id: null, contentType: "text/html", render: () => ctx.fns.site_artifacts.renderIndex(ctx, { landingHtml }) });
     routes.set("artifacts.html", { id: null, contentType: "text/html", render: () => ctx.fns.site_artifacts.renderArtifacts(ctx) });
     routes.set("style.css",      { id: null, contentType: "text/css",  render: () => css });
-    for (const p of pages) {
-        routes.set(`${p.slug}.html`, { id: null, contentType: "text/html", render: () => ctx.fns.site_artifacts.renderPage(ctx, p) });
+    for (const r of pageResources) {
+        const d = r.data as { slug: string; title: string; md: string; role: string };
+        if (d.role !== "page") continue;
+        // id = the Page resource id → editing one .md re-renders only that page.
+        routes.set(`${d.slug}.html`, { id: r.id, contentType: "text/html", render: () => ctx.fns.site_artifacts.renderPage(ctx, { slug: d.slug, title: d.title, md: d.md }) });
     }
 
     // QA / validation report — only when the fcc/validator plugin populated it.
@@ -70,7 +77,7 @@ export default async function buildRoutes(
     // resource and all its companions as a unit. Changing that breaks companion
     // incremental correctness.
     for (const r of pctx.resources.values()) {
-        if (r.resourceType === "ImplementationGuide") continue;
+        if (r.resourceType === "ImplementationGuide" || r.resourceType === "Page") continue;
         const href = ctx.fns.site_core.pageHref(ctx, { resource: r });
         routes.set(href, { id: r.id, contentType: "text/html", render: () => ctx.fns.site_core.renderResource(ctx, { resource: r }) });
 

@@ -10,7 +10,7 @@ export default function igResource(_opts: { pagecontent?: string } = {}): Plugin
       if (existing) ctx.resources.delete(existing.id);
 
       const resources = [...ctx.resources.values()].filter(
-        r => r.resourceType !== "ImplementationGuide",
+        r => r.resourceType !== "ImplementationGuide" && r.resourceType !== "Page",
       );
 
       const ig: Resource["data"] = {
