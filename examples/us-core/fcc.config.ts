@@ -3,7 +3,7 @@ import json      from "fcc/json";
 import snapshot  from "fcc/snapshot";
 import narrative from "fcc/narrative";
 import validate  from "fcc/validate";
-import validator from "fcc/validator";
+import validator, { fhirpathConstraints } from "fcc/validator";
 import igRes     from "fcc/ig-resource";
 import npm       from "fcc/npm";
 import site      from "fcc/site";
@@ -50,8 +50,13 @@ export default defineConfig({
     // fcc v0 doesn't resolve them across packages yet, so "strict" produces a
     // wall of unresolved-ref warnings — keep validation on "lite".
     validate({ profiles: "lite" }),
-    // Schema validation (examples against profiles + canonicals) → errors.html.
-    validator({ packagesDir: "../../vendor/us-core/input-cache/.fhir/packages" }),
+    // Schema validation (examples against profiles + canonicals) + FHIRPath
+    // invariant checks (@atomic-ehr/fhirpath) → errors.html. Runs after snapshot/
+    // (constraints are read from generated snapshots).
+    validator({
+      packagesDir: "../../vendor/us-core/input-cache/.fhir/packages",
+      validators: [fhirpathConstraints()],
+    }),
     igRes({ pagecontent: "../../vendor/us-core/input/pagecontent" }),
     npm(),
     site({

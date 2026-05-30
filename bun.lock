@@ -5,6 +5,7 @@
     "": {
       "name": "fcc",
       "dependencies": {
+        "@atomic-ehr/fhirpath": "^0.1.4",
         "@atomic-ehr/fhirschema": "github:atomic-ehr/fhirschema#v2",
         "fsh-sushi": "^3.19.0",
         "shiki": "^4.1.0",
@@ -18,7 +19,13 @@
     },
   },
   "packages": {
+    "@atomic-ehr/fhir-canonical-manager": ["@atomic-ehr/fhir-canonical-manager@0.0.11", "", { "peerDependencies": { "typescript": "^5" }, "bin": { "fcm": "dist/cli/index.js" } }, "sha512-BaAYcvHJWQ3uvWr77lZ20XWZ3EtxEbuEhPPpiwlpEWwrCUAnx+xYf4BZicIE7tHe3uBG5uP1XLk6ZQ30edLf5A=="],
+
+    "@atomic-ehr/fhirpath": ["@atomic-ehr/fhirpath@0.1.4", "", { "dependencies": { "@atomic-ehr/fhir-canonical-manager": "^0.0.11", "@atomic-ehr/fhirschema": "^0.0.2", "@atomic-ehr/ucum": "^0.2.5", "fast-xml-parser": "~5.3.9" }, "peerDependencies": { "typescript": "^5" } }, "sha512-A26knB2XGfCiu6vXAfYyusxToxHwdIddRLrkpjrYlI/qZssjspHULQLzANvLVlsQW5uPpOF+bloXIv0r3qOpSQ=="],
+
     "@atomic-ehr/fhirschema": ["@atomic-ehr/fhirschema@github:atomic-ehr/fhirschema#09b0288", { "peerDependencies": { "typescript": "^5" } }, "atomic-ehr-fhirschema-09b0288", "sha512-7lj+9ilE2w+z4+6s1qMmLSiKnBeOTtIrgsbuoNap/X8G0le5VV+VJO/a43nCwcaGRdvwos0+aNSHqmnqAJvZuA=="],
+
+    "@atomic-ehr/ucum": ["@atomic-ehr/ucum@0.2.5", "", { "peerDependencies": { "typescript": "^5" } }, "sha512-AJG6RiSubIzQ1zcJosDQOJ8hXZVIWff09q8JN9Yvsi+1npPeRCLAREOOR16SNJLaGzXEDtYc8N8jhEWRA3BtXA=="],
 
     "@colors/colors": ["@colors/colors@1.6.0", "", {}, "sha512-Ir+AOibqzrIsL6ajt3Rz3LskB7OiMVHqltZmspbW/TJuTVuyOMirVqAkjfY6JISiLHgyNqicAC8AyHHGzNd/dA=="],
 
@@ -155,6 +162,8 @@
     "fast-fifo": ["fast-fifo@1.3.2", "", {}, "sha512-/d9sfos4yxzpwkDkuN7k2SqFKtYNmCTzgfEpz82x34IM9/zc8KGxQoXg1liNC/izpRM/MBdt44Nmx41ZWqk+FQ=="],
 
     "fast-uri": ["fast-uri@3.1.2", "", {}, "sha512-rVjf7ArG3LTk+FS6Yw81V1DLuZl1bRbNrev6Tmd/9RaroeeRRJhAt7jg/6YFxbvAQXUCavSoZhPPj6oOx+5KjQ=="],
+
+    "fast-xml-parser": ["fast-xml-parser@5.3.9", "", { "dependencies": { "strnum": "^2.1.2" }, "bin": { "fxparser": "src/cli/cli.js" } }, "sha512-zU0KUuO9U+fLGduTDdxQ6qsQLIxRg4EK5AMduwBNGNCSfCGRSbNS7OpH343NFQlLDg1jxoH68JSbOPAGksIGvg=="],
 
     "fecha": ["fecha@4.2.3", "", {}, "sha512-OP2IUU6HeYKJi3i0z4A19kHMQoLVs4Hc+DPqqxI2h/DPZHTm/vjsfC6P0b4jCMy14XizLBqvndQ+UilD7707Jw=="],
 
@@ -326,6 +335,8 @@
 
     "stringify-entities": ["stringify-entities@4.0.4", "", { "dependencies": { "character-entities-html4": "^2.0.0", "character-entities-legacy": "^3.0.0" } }, "sha512-IwfBptatlO+QCJUo19AqvrPNqlVMpW9YEL2LIVY+Rpv2qsjCGxaDLNRgeGsQWJhfItebuJhsGSLjaBbNSQ+ieg=="],
 
+    "strnum": ["strnum@2.3.0", "", {}, "sha512-ums3KNd42PGyx5xaoVTO1mjU1bH3NpY4vsrVlnv9PNGqQj8wd7rJ6nEypLrJ7z5vxK5RP0yMLo6J/Gsm62DI5Q=="],
+
     "supports-color": ["supports-color@7.2.0", "", { "dependencies": { "has-flag": "^4.0.0" } }, "sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw=="],
 
     "tar": ["tar@7.5.15", "", { "dependencies": { "@isaacs/fs-minipass": "^4.0.0", "chownr": "^3.0.0", "minipass": "^7.1.2", "minizlib": "^3.1.0", "yallist": "^5.0.0" } }, "sha512-dzGK0boVlC4W5QFuQN1EFSl3bIDYsk7Tj40U6eIBnK2k/8ml7TZ5agbI5j5+qnoVcAA+rNtBml8SEiLxZpNqRQ=="],
@@ -391,6 +402,8 @@
     "yaml": ["yaml@1.10.3", "", {}, "sha512-vIYeF1u3CjlhAFekPPAk2h/Kv4T3mAkMox5OymRiJQB0spDP10LHvt+K7G9Ny6NuuMAb25/6n1qyUjAcGNf/AA=="],
 
     "zwitch": ["zwitch@2.0.4", "", {}, "sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A=="],
+
+    "@atomic-ehr/fhirpath/@atomic-ehr/fhirschema": ["@atomic-ehr/fhirschema@0.0.2", "", { "peerDependencies": { "typescript": "^5" } }, "sha512-OA4CVjTUEdw43Efg5I5rj95je4GC3lRiLM/kUqadcK3Po24vnINUsB8YdOP/F3ffdUYKQcJ+z09sWQVeAC2z/A=="],
 
     "axios/https-proxy-agent": ["https-proxy-agent@5.0.1", "", { "dependencies": { "agent-base": "6", "debug": "4" } }, "sha512-dFcAjpTQFgoLMzC2VwU+C/CbS7uRL0lWmxDITmqm7C+7F0Odmj6s9l6alZc6AELXhrnggM2CeWSXHGOdX2YtwA=="],
 

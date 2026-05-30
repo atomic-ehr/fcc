@@ -22,9 +22,10 @@
     "./site": "./src/site/index.ts"
   },
   "dependencies": {
-    "shiki": "^4.1.0",
+    "@atomic-ehr/fhirpath": "^0.1.4",
+    "@atomic-ehr/fhirschema": "github:atomic-ehr/fhirschema#v2",
     "fsh-sushi": "^3.19.0",
-    "@atomic-ehr/fhirschema": "github:atomic-ehr/fhirschema#v2"
+    "shiki": "^4.1.0"
   },
   "devDependencies": {
     "@types/bun": "latest"

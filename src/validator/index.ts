@@ -125,20 +125,72 @@ export default function validator(opts: Opts = {}): Plugin {
   };
 }
 
-function toIssue(ctx: PluginContext, r: { id: string; resourceType: string; data: unknown }, i: any, validatorName: string): ValidatorIssue {
+// Common per-resource fields for an issue (id/title/href).
+function resourceBase(r: { id: string; resourceType: string; data: unknown }): Pick<ValidatorIssue, "rid" | "rt" | "fhirId" | "title" | "href"> {
   const d = r.data as Record<string, unknown>;
   const fhirId = (d.id as string | undefined) ?? r.id.split("/").pop() ?? r.id;
   const title = (d.title as string | undefined) ?? (d.name as string | undefined) ?? fhirId;
-  void ctx;
+  return { rid: r.id, rt: r.resourceType, fhirId, title, href: `${r.resourceType}-${fhirId}.html` };
+}
+
+function toIssue(_ctx: PluginContext, r: { id: string; resourceType: string; data: unknown }, i: any, validatorName: string): ValidatorIssue {
   return {
-    rid: r.id, rt: r.resourceType, fhirId, title,
-    href: `${r.resourceType}-${fhirId}.html`,
+    ...resourceBase(r),
     severity: (i.severity ?? "error") as ValidatorIssue["severity"],
     code: String(i.code ?? "?"),
     path: Array.isArray(i.path) ? i.path.join(".") : String(i.path ?? ""),
     message: i.message ? String(i.message) : undefined,
     expected: i.expected !== undefined ? JSON.stringify(i.expected) : undefined,
     got: i.got !== undefined ? JSON.stringify(i.got) : undefined,
+    validator: validatorName,
+  };
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Pluggable FHIRPath-constraint validator. Drop into `validator({ validators:
+// [fhirpathConstraints()] })`. Evaluates each profile's element `constraint[]`
+// (collected from the generated snapshot) against the instance via the async
+// @atomic-ehr/fhirpath engine. This is a SEPARATE pass (not fhirschema's sync
+// `fhirpath` hook, which the async engine can't satisfy). Conservative: only an
+// explicit `[false]` result is flagged; unsupported FHIRPath functions and
+// non-boolean results are skipped, keeping the noise low.
+
+export function fhirpathConstraints(opts: { quiet?: boolean } = {}): (ctx: PluginContext) => Promise<ValidatorIssue[]> {
+  return async (ctx) => {
+    const { evaluate } = await import("@atomic-ehr/fhirpath");
+    const issues: ValidatorIssue[] = [];
+
+    for (const r of ctx.resources.values()) {
+      if (CONFORMANCE.has(r.resourceType)) continue;
+      const d = r.data as any;
+      for (const purl of ((d.meta?.profile as string[] | undefined) ?? []).map(stripVer)) {
+        const sd = ctx.byUrl(purl);
+        const elements = (sd?.data as any)?.snapshot?.element as any[] | undefined;
+        if (!elements) continue;                                  // need a snapshot (run fcc/snapshot first)
+        const rootType = (sd!.data as any).type ?? r.resourceType;
+
+        for (const el of elements) {
+          const rel = el.path === rootType ? null : el.path.slice(rootType.length + 1);
+          if (rel && /[[:]/.test(rel)) continue;                  // skip choice[x] / slice paths
+          for (const c of (el.constraint ?? [])) {
+            if (!c.expression) continue;
+            let nodes: unknown[];
+            try { nodes = rel ? await evaluate(rel, { input: d }) : [d]; } catch { continue; }
+            for (const node of nodes) {
+              let res: unknown;
+              try { res = await evaluate(c.expression, { input: node, variables: { resource: d, rootResource: d, context: node } }); }
+              catch { continue; }                                  // unsupported fn → skip (don't flag)
+              if (Array.isArray(res) && res.length === 1 && res[0] === false) {
+                issues.push({ ...resourceBase(r), severity: c.severity === "warning" ? "warning" : "error", code: String(c.key), path: el.path, message: String(c.human ?? c.expression), validator: "fhirpath" });
+                break;                                             // one violation per constraint per resource
+              }
+            }
+          }
+        }
+      }
+    }
+    if (!opts.quiet) ctx.warn({ severity: "info", source: "fcc/validator", message: `fhirpath constraints: ${issues.length} violation(s)` });
+    return issues;
   };
 }
 
