@@ -203,40 +203,31 @@ export interface PluginContext {
   read(path: string): Promise<string>;
 }
 
-// Anything a hook returns; the runner awaits it. Almost every hook is async.
-type Async<T = void> = T | Promise<T>;
 export type WatchPath = { path: string; recursive?: boolean };
 
-/**
- * The hook registry — Emacs `add-hook` style. A plugin is a function that
- * registers one or more functions into these named slots; the runner runs each
- * slot's functions (in registration = config order) at the matching lifecycle
- * point. Every registered function may be async.
- */
-// Every hook fn follows the house signature: `ctx` first, a single options
-// object second (uniform with the flat-ns fns). Hooks with no payload take no
-// second arg.
-export interface Hooks {
-  buildStart(fn: (ctx: PluginContext) => Async): void;
-  transform(fn: (ctx: PluginContext, opts: { resource: Resource }) => Async<Resource | null | void>): void;
-  beforeSnapshot(fn: (ctx: PluginContext, opts: { resource: Resource }) => Async): void;
-  afterSnapshot(fn: (ctx: PluginContext, opts: { resource: Resource }) => Async): void;
-  beforeValidate(fn: (ctx: PluginContext) => Async): void;
-  afterValidate(fn: (ctx: PluginContext) => Async): void;
-  generateBundle(fn: (ctx: PluginContext, opts: { bundle: Bundle }) => Async): void;
-  writeBundle(fn: (ctx: PluginContext, opts: { bundle: Bundle }) => Async): void;
-  buildEnd(fn: (ctx: PluginContext, opts: { err?: Error }) => Async): void;
-  closeBundle(fn: (ctx: PluginContext) => Async): void;
-  /** Dev: extend/narrow the invalidation set for a changed file. */
-  handleHotUpdate(fn: (ctx: PluginContext, opts: { hot: HotUpdateContext }) => Async): void;
-  /** Dev: extra paths the watcher should observe (markdown, includes, assets). */
-  watchPaths(fn: (ctx: PluginContext) => Async<WatchPath[]>): void;
-}
+/** The lifecycle stage a step runs at. */
+export type HookName =
+  | "buildStart" | "transform" | "beforeSnapshot" | "afterSnapshot"
+  | "beforeValidate" | "afterValidate" | "generateBundle" | "writeBundle"
+  | "buildEnd" | "closeBundle" | "handleHotUpdate" | "watchPaths";
 
 /**
- * A plugin: a function that registers hook functions. No object, no methods —
- * `(hooks) => { hooks.afterValidate(fn); hooks.writeBundle(fn); … }`. Called
- * once at startup; the registered functions then run on every (incremental)
- * build, closing over the plugin's own state.
+ * EVERY framework function is `fn(ctx, config, opts)`:
+ *   - `ctx`    — the one world/build context (always first);
+ *   - `config` — the step's static configuration (the descriptor, as data);
+ *   - `opts`   — the per-call payload ({ resource } / { bundle } / { hot } / {}).
+ * Always may be async; the runner awaits the result.
  */
-export type Plugin = (hooks: Hooks) => void;
+export type StepFn = (ctx: PluginContext, config: Record<string, unknown>, opts: any) => unknown;
+
+/**
+ * A pipeline step — a descriptor: a hook stage + its fn + its config inline.
+ * No setup, no factory closures — config is plain inspectable data, and the only
+ * functions are `fn(ctx, config, opts)`.
+ *
+ *   { hook: "afterValidate", fn: snapshot, packagesDir }
+ */
+export type Step = { hook: HookName; fn: StepFn } & Record<string, unknown>;
+
+/** A plugin is one step or a list of steps (a helper that binds opts → config). */
+export type Plugin = Step | Step[];

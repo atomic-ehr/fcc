@@ -1,7 +1,10 @@
-import type { Plugin, Resource } from "fcc";
+import type { Plugin, PluginContext, Resource } from "fcc";
 
-export default function igResource(_opts: { pagecontent?: string } = {}): Plugin {
-  return (hooks) => hooks.beforeValidate(async (ctx) => {
+export default function igResource(opts: { pagecontent?: string } = {}): Plugin {
+  return [{ hook: "beforeValidate", fn: igResourceFn, ...opts }];
+}
+
+async function igResourceFn(ctx: PluginContext, _config: Record<string, unknown>, _opts: Record<string, never>): Promise<void> {
       const cfg = ctx.config;
       const igId = cfg.id;
       // Always recompute so the IG.definition.resource list stays in sync
@@ -51,7 +54,6 @@ export default function igResource(_opts: { pagecontent?: string } = {}): Plugin
         source: { kind: "virtual", producer: "fcc/ig-resource" },
         meta: {},
       });
-  });
 }
 
 function pascalize(s: string): string {

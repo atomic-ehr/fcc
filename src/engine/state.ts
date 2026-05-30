@@ -1,24 +1,23 @@
-import type { Bundle, Diagnostic, EmittedFile, Hooks, Issue, Plugin, Resource, ResolvedConfig, Target } from "./types.ts";
+import type { Bundle, Diagnostic, EmittedFile, HookName, Issue, Plugin, Resource, ResolvedConfig, StepFn, Target } from "./types.ts";
 
-// The collected hook slots — one function list per lifecycle stage. Plugins
-// register into these once at startup (collectHooks); the runner runs them.
-export type HookSlots = {
-  [K in keyof Hooks]: Parameters<Hooks[K]>[0][];
-};
+// A hook fn bound to its config (from the descriptor). The runner calls
+// `fn(ctx, config, opts)`.
+export type Bound = { fn: StepFn; config: Record<string, unknown> };
+export type HookSlots = Record<HookName, Bound[]>;
 
-const HOOK_NAMES: (keyof Hooks)[] = [
+const HOOK_NAMES: HookName[] = [
   "buildStart", "transform", "beforeSnapshot", "afterSnapshot",
   "beforeValidate", "afterValidate", "generateBundle", "writeBundle",
   "buildEnd", "closeBundle", "handleHotUpdate", "watchPaths",
 ];
 
-/** Run each plugin's registration function, collecting hook fns into slots. */
+/** Flatten the plugin/step descriptors into per-stage slots (in config order). */
 export function collectHooks(plugins: Plugin[]): HookSlots {
   const slots = Object.fromEntries(HOOK_NAMES.map(n => [n, []])) as HookSlots;
-  const reg = Object.fromEntries(
-    HOOK_NAMES.map(n => [n, (fn: unknown) => { (slots[n] as unknown[]).push(fn); }]),
-  ) as unknown as Hooks;
-  for (const plugin of plugins) plugin(reg);
+  for (const p of plugins) {
+    const steps = Array.isArray(p) ? p : [p];
+    for (const step of steps) slots[step.hook].push({ fn: step.fn, config: step });
+  }
   return slots;
 }
 

@@ -102,7 +102,7 @@ async function runTargetFull(cfg: ResolvedConfig, ts: TargetState, hooks: HookSl
 
   const ctx = makeContext(cfg, ts, null);
 
-  for (const fn of hooks.buildStart) await fn(ctx);
+  for (const { fn, config } of hooks.buildStart) await fn(ctx, config, {});
 
   // Discover and load every file from every source
   for (const src of cfg.sources) {
@@ -116,15 +116,15 @@ async function runTargetFull(cfg: ResolvedConfig, ts: TargetState, hooks: HookSl
 
   await runTransform(ts, hooks, ctx);
 
-  for (const fn of hooks.beforeSnapshot) for (const r of [...ts.resources.values()]) await fn(ctx, { resource: r });
-  for (const fn of hooks.afterSnapshot)  for (const r of [...ts.resources.values()]) await fn(ctx, { resource: r });
-  for (const fn of hooks.beforeValidate) await fn(ctx);
-  for (const fn of hooks.afterValidate)  await fn(ctx);
+  for (const { fn, config } of hooks.beforeSnapshot) for (const r of [...ts.resources.values()]) await fn(ctx, config, { resource: r });
+  for (const { fn, config } of hooks.afterSnapshot)  for (const r of [...ts.resources.values()]) await fn(ctx, config, { resource: r });
+  for (const { fn, config } of hooks.beforeValidate) await fn(ctx, config, {});
+  for (const { fn, config } of hooks.afterValidate)  await fn(ctx, config, {});
 
   await finalize(cfg, ts, hooks, ctx);
 
-  for (const fn of hooks.buildEnd)    await fn(ctx, {});
-  for (const fn of hooks.closeBundle) await fn(ctx);
+  for (const { fn, config } of hooks.buildEnd)    await fn(ctx, config, {});
+  for (const { fn, config } of hooks.closeBundle) await fn(ctx, config, {});
 }
 
 // ---------------------------------------------------------------------------
@@ -147,7 +147,7 @@ async function runTargetIncremental(cfg: ResolvedConfig, ts: TargetState, change
   // Step 2: call handleHotUpdate hooks to extend the set
   const ctx = makeContext(cfg, ts, invalidationSet);
   for (const f of changedFiles) {
-    for (const fn of hooks.handleHotUpdate) {
+    for (const { fn, config } of hooks.handleHotUpdate) {
       const hot: HotUpdateContext = {
         file: f,
         kind: "update",
@@ -155,7 +155,7 @@ async function runTargetIncremental(cfg: ResolvedConfig, ts: TargetState, change
         invalidate: (id) => invalidationSet.add(id),
         ctx,
       };
-      await fn(ctx, { hot });
+      await fn(ctx, config, { hot });
     }
   }
 
@@ -194,10 +194,10 @@ async function runTargetIncremental(cfg: ResolvedConfig, ts: TargetState, change
   await runTransform(ts, hooks, ctx);
 
   // Snapshot / validate as full passes for now (cheap)
-  for (const fn of hooks.beforeSnapshot) for (const r of [...ts.resources.values()]) await fn(ctx, { resource: r });
-  for (const fn of hooks.afterSnapshot)  for (const r of [...ts.resources.values()]) await fn(ctx, { resource: r });
-  for (const fn of hooks.beforeValidate) await fn(ctx);
-  for (const fn of hooks.afterValidate)  await fn(ctx);
+  for (const { fn, config } of hooks.beforeSnapshot) for (const r of [...ts.resources.values()]) await fn(ctx, config, { resource: r });
+  for (const { fn, config } of hooks.afterSnapshot)  for (const r of [...ts.resources.values()]) await fn(ctx, config, { resource: r });
+  for (const { fn, config } of hooks.beforeValidate) await fn(ctx, config, {});
+  for (const { fn, config } of hooks.afterValidate)  await fn(ctx, config, {});
 
   await finalize(cfg, ts, hooks, ctx);
 }
@@ -224,12 +224,12 @@ async function loadFile(src: Source, file: string, ts: TargetState, ctx: PluginC
 }
 
 async function runTransform(ts: TargetState, hooks: HookSlots, ctx: PluginContext) {
-  for (const fn of hooks.transform) {
+  for (const { fn, config } of hooks.transform) {
     const targetIds = ctx.changedIds
       ? [...ts.resources.values()].filter(r => ctx.changedIds!.has(r.id))
       : [...ts.resources.values()];
     for (const r of targetIds) {
-      const out = await fn(ctx, { resource: r });
+      const out = await fn(ctx, config, { resource: r });
       if (out && out !== r) {
         ts.resources.set(out.id, out);
         if (out.url) ts.byCanonical.set(out.url, out.id);
@@ -249,8 +249,8 @@ async function finalize(cfg: ResolvedConfig, ts: TargetState, hooks: HookSlots, 
   };
   ts.bundle = bundle;
 
-  for (const fn of hooks.generateBundle) await fn(ctx, { bundle });
-  for (const fn of hooks.writeBundle)    await fn(ctx, { bundle });
+  for (const { fn, config } of hooks.generateBundle) await fn(ctx, config, { bundle });
+  for (const { fn, config } of hooks.writeBundle)    await fn(ctx, config, { bundle });
 }
 
 // ---------------------------------------------------------------------------

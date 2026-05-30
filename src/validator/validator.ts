@@ -35,31 +35,33 @@ export type Validator = { fn: ValidatorFn } & Record<string, unknown>;
 type Opts = { validators?: Validator[]; quiet?: boolean };
 
 export default function validator(opts: Opts = {}): Plugin {
-  const validators = opts.validators ?? [{ fn: structural }];
-  return (hooks) => hooks.afterValidate(async (ctx) => {
-    const results = await Promise.all(validators.map(v =>
-      v.fn(ctx, v, {}).catch((e: Error) => {
-        ctx.warn({ severity: "warning", source: "fcc/validator", message: `validator threw: ${e.message}` });
-        return [] as ValidatorIssue[];
-      }),
-    ));
-    const all = results.flat();
+  return [{ hook: "afterValidate", fn: validateFn, validators: opts.validators ?? [{ fn: structural }], quiet: opts.quiet }];
+}
 
-    // Assemble the per-resource map — the world's ctx.issues.
-    ctx.issues.clear();
-    for (const i of all) (ctx.issues.get(i.rid) ?? ctx.issues.set(i.rid, []).get(i.rid)!).push(i);
+async function validateFn(ctx: PluginContext, config: Record<string, unknown>, _opts: Record<string, never>): Promise<void> {
+  const validators = (config.validators ?? []) as Validator[];
+  const results = await Promise.all(validators.map(v =>
+    v.fn(ctx, v, {}).catch((e: Error) => {
+      ctx.warn({ severity: "warning", source: "fcc/validator", message: `validator threw: ${e.message}` });
+      return [] as ValidatorIssue[];
+    }),
+  ));
+  const all = results.flat();
 
-    const errors = all.filter(i => i.severity === "error").length;
-    const warnings = all.filter(i => i.severity === "warning").length;
-    const resources = ctx.issues.size;
-    (ctx.shared as any).validate = { issues: all, summary: { errors, warnings, resources, total: all.length } };
-    if (!opts.quiet) {
-      ctx.warn({
-        severity: errors ? "warning" : "info", source: "fcc/validator",
-        message: `validated: ${errors} error(s), ${warnings} warning(s) across ${resources} resource(s) → errors.html`,
-      });
-    }
-  });
+  // Assemble the per-resource map — the world's ctx.issues.
+  ctx.issues.clear();
+  for (const i of all) (ctx.issues.get(i.rid) ?? ctx.issues.set(i.rid, []).get(i.rid)!).push(i);
+
+  const errors = all.filter(i => i.severity === "error").length;
+  const warnings = all.filter(i => i.severity === "warning").length;
+  const resources = ctx.issues.size;
+  (ctx.shared as any).validate = { issues: all, summary: { errors, warnings, resources, total: all.length } };
+  if (!config.quiet) {
+    ctx.warn({
+      severity: errors ? "warning" : "info", source: "fcc/validator",
+      message: `validated: ${errors} error(s), ${warnings} warning(s) across ${resources} resource(s) → errors.html`,
+    });
+  }
 }
 
 // ── per-resource incremental engine ──────────────────────────────────────────

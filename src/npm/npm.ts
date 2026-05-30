@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
-import type { Plugin } from "fcc";
+import type { Plugin, PluginContext, Bundle } from "fcc";
 import { tar } from "./tar.ts";
 
 type Opts = {
@@ -10,7 +10,10 @@ type Opts = {
 };
 
 export default function npm(opts: Opts = { emitUnpacked: true }): Plugin {
-  return (hooks) => hooks.writeBundle(async (ctx, { bundle }) => {
+  return [{ hook: "writeBundle", fn: npmFn, ...opts }];
+}
+
+async function npmFn(ctx: PluginContext, config: Record<string, unknown>, { bundle }: { bundle: Bundle }): Promise<void> {
       const outDir = resolve(ctx.config.projectRoot, ctx.target.out);
       await mkdir(outDir, { recursive: true });
 
@@ -59,7 +62,7 @@ export default function npm(opts: Opts = { emitUnpacked: true }): Plugin {
       ctx.emitFile({ path: tgzPath, bytes: gz });
 
       // 4. optional unpacked debug copy
-      if (opts.emitUnpacked) {
+      if (config.emitUnpacked) {
         for (const e of entries) {
           const full = join(outDir, e.path);
           await mkdir(dirname(full), { recursive: true });
@@ -67,7 +70,6 @@ export default function npm(opts: Opts = { emitUnpacked: true }): Plugin {
           ctx.emitFile({ path: full, bytes: e.bytes });
         }
       }
-  });
 }
 
 type IndexEntry = {
