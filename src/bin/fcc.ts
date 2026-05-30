@@ -81,7 +81,8 @@ async function main() {
       const pluginDirs: string[] = [];
       const wpTs = state.byTarget.get(target ?? "") ?? [...state.byTarget.values()][0];
       const wpCtx = wpTs ? makeContext(resolved, wpTs, null) : undefined;
-      if (wpCtx) for (const fn of state.hooks.watchPaths) {
+      const wpHooks = wpTs ? state.hooks.get(wpTs.target.name) : undefined;
+      if (wpCtx && wpHooks) for (const fn of wpHooks.watchPaths) {
         try { for (const e of (await fn(wpCtx)) ?? []) pluginDirs.push(e.path); }
         catch { /* hook opted out */ }
       }

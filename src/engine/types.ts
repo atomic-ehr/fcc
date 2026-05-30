@@ -45,6 +45,13 @@ export type Target = {
   fhir: string;
   out: string;
   flags?: Record<string, boolean | string>;
+  /**
+   * Per-target output pipeline (generators: site, npm, …). Runs in addition to
+   * the shared `cfg.plugins` (the data pipeline). Lets one source produce
+   * different artifacts per target — e.g. an npm-only target + several site
+   * targets for different FHIR versions.
+   */
+  plugins?: Plugin[];
 };
 
 export type Source = {

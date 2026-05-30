@@ -19,7 +19,8 @@
     "./ig-resource": "./src/ig-resource/ig-resource.ts",
     "./npm": "./src/npm/npm.ts",
     "./menu": "./src/menu/menu.ts",
-    "./site": "./src/site/site.ts"
+    "./site": "./src/site/site.ts",
+    "./presets": "./src/presets/presets.ts"
   },
   "dependencies": {
     "@atomic-ehr/fhirpath": "^0.1.4",

@@ -6,8 +6,8 @@ import narrative from "fcc/narrative";
 import validator, { structural, schema, fhirpathConstraints } from "fcc/validator";
 import igRes     from "fcc/ig-resource";
 import npm       from "fcc/npm";
-import site      from "fcc/site";
 import menu      from "fcc/menu";
+import { igSite } from "fcc/presets";
 
 // Points at the HL7/US-Core git submodule under vendor/us-core. The folder
 // layout matches the IG Publisher convention (input/resources, input/examples,
@@ -22,7 +22,10 @@ export default defineConfig({
   description: "US Core profiles built through the fcc plugin pipeline (from the HL7/US-Core git submodule).",
 
   targets: [
-    { name: "r4", fhir: "4.0.1", out: "dist/r4" },
+    // Output pipeline per target → one source, many artifacts. e.g. add
+    //   { name: "pkg", fhir: "4.0.1", out: "dist/pkg", plugins: [npm()] }  // package only
+    { name: "r4", fhir: "4.0.1", out: "dist/r4",
+      plugins: igSite({ introNotes: "../../vendor/us-core/input/intro-notes" }) },
   ],
 
   // Mirrors hl7.fhir.us.core sushi-config.yaml dependencies. fcc's igRes
@@ -43,13 +46,12 @@ export default defineConfig({
     { dir: "../../vendor/us-core/input/pagecontent", loader: pages() },  // .md → Page resources
   ],
 
+  // Shared DATA pipeline (loaders are in sources; these enrich/validate the graph).
+  // Output generators (site, npm) live in each target's `plugins` (above).
   plugins: [
     menu({ config: "../../vendor/us-core/sushi-config.yaml" }),
     snapshot({ packagesDir: "../../vendor/us-core/input-cache/.fhir/packages" }),
     narrative(),
-    // us-core has many cross-IG canonical references (smart-app-launch, sdc, ...).
-    // fcc v0 doesn't resolve them across packages yet, so "strict" produces a
-    // wall of unresolved-ref warnings — keep validation on "lite".
     // One validation plugin, composed of validator descriptors { fn, ...config }
     // → errors.html. Runs after snapshot (fhirpath reads generated snapshots).
     validator({ validators: [
@@ -58,10 +60,5 @@ export default defineConfig({
       { fn: fhirpathConstraints },                                                 // fhirpath invariants
     ] }),
     igRes({ pagecontent: "../../vendor/us-core/input/pagecontent" }),
-    npm(),
-    site({
-      pagecontent: "../../vendor/us-core/input/pagecontent",
-      introNotes:  "../../vendor/us-core/input/intro-notes",
-    }),
   ],
 });

@@ -65,15 +65,23 @@ export type TargetState = {
 export type BuildState = {
   cfg: ResolvedConfig;
   byTarget: Map<string, TargetState>;
-  hooks: HookSlots;
+  /**
+   * Per-target hook slots: each target collects the shared data pipeline
+   * (`cfg.plugins`) plus its own output pipeline (`target.plugins`). Collecting
+   * per target gives each its own plugin closures — so per-version caches don't
+   * leak across targets.
+   */
+  hooks: Map<string, HookSlots>;
 };
 
 export function createState(cfg: ResolvedConfig): BuildState {
   const byTarget = new Map<string, TargetState>();
+  const hooks = new Map<string, HookSlots>();
   for (const target of cfg.targets) {
     byTarget.set(target.name, freshTargetState(target));
+    hooks.set(target.name, collectHooks([...cfg.plugins, ...(target.plugins ?? [])]));
   }
-  return { cfg, byTarget, hooks: collectHooks(cfg.plugins) };
+  return { cfg, byTarget, hooks };
 }
 
 export function freshTargetState(target: Target): TargetState {

@@ -56,7 +56,7 @@ export async function runBuild(state: BuildState, filter?: string): Promise<Buil
     // reset target state on full build
     state.byTarget.set(ts.target.name, freshTargetState(ts.target));
     const fresh = state.byTarget.get(ts.target.name)!;
-    await runTargetFull(state.cfg, fresh, state.hooks);
+    await runTargetFull(state.cfg, fresh, state.hooks.get(ts.target.name)!);
     bundles.set(ts.target.name, fresh.bundle!);
     diagnostics.push(...fresh.diagnostics);
   }
@@ -79,7 +79,7 @@ export async function runIncremental(
   const bundles = new Map<string, Bundle>();
 
   for (const ts of targets) {
-    await runTargetIncremental(state.cfg, ts, changedFiles, state.hooks);
+    await runTargetIncremental(state.cfg, ts, changedFiles, state.hooks.get(ts.target.name)!);
     if (ts.bundle) bundles.set(ts.target.name, ts.bundle);
     diagnostics.push(...ts.diagnostics);
   }
