@@ -1,16 +1,37 @@
 {
-  "name": "fcc-monorepo",
+  "name": "fcc",
   "private": true,
   "type": "module",
-  "workspaces": [
-    "src",
-    "packages/*",
-    "examples/*"
-  ],
+  "bin": {
+    "fcc": "./src/bin/fcc.ts",
+    "fcc-repl": "./src/bin/repl.ts",
+    "fcc-gentypes": "./src/bin/gentypes.ts"
+  },
+  "exports": {
+    ".": "./src/engine/index.ts",
+    "./json": "./src/json/index.ts",
+    "./fsh": "./src/fsh/index.ts",
+    "./ts": "./src/ts/index.ts",
+    "./snapshot": "./src/snapshot/index.ts",
+    "./narrative": "./src/narrative/index.ts",
+    "./validate": "./src/validate/index.ts",
+    "./ig-resource": "./src/ig-resource/index.ts",
+    "./npm": "./src/npm/index.ts",
+    "./menu": "./src/menu/index.ts",
+    "./site": "./src/site/index.ts"
+  },
+  "dependencies": {
+    "shiki": "^4.1.0",
+    "fsh-sushi": "^3.19.0",
+    "@atomic-ehr/fhirschema": "github:atomic-ehr/fhirschema#v2"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "scripts": {
+    "postinstall": "bun build node_modules/@atomic-ehr/fhirschema/src/index.ts --outdir node_modules/@atomic-ehr/fhirschema/dist --target node >/dev/null 2>&1 || true"
   }
 }

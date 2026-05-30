@@ -9,32 +9,45 @@ Procedural TypeScript on Bun. Code is organized as flat namespaces of single-pur
 
 ## Where the code lives
 
-- **`/src/<namespace>/<fn>.ts`** — the IG-site renderer (`@fcc/plugin-site`),
-  split into cohesive namespaces, each a folder of fn-per-file modules:
-  `core` (chrome, layout, dispatch, tab/section registries, hooks, utils),
-  `md` (markdown pipeline + pluggable blocks + Shiki), `profile`
-  (StructureDefinition sections + element tables), `terminology` (ValueSet/
-  CodeSystem), `capability` (CapabilityStatement/SearchParameter), `narrative`
-  (generated narratives), `artifacts` (index/artifacts/landing pages).
-  Each namespace has its own `loadFns.ts` + `ctx_ns.d.ts`; `/src/loadAll.ts`
-  assembles them all; `/src/index.ts` is the plugin entry. **A future extension
-  = a new `/src/<namespace>/` folder + its `loadFns` + one line in `loadAll`.**
-- **`/packages/fcc`** — the core engine (CLI `bin/`, runner, loader, watcher).
-- **`/packages/plugin-*`** — the other plugins (menu, snapshot, validate, …),
-  each still a single flat namespace in its own `src/`.
+Everything is **one package** (`name: "fcc"`) under a single flat `/src/`.
+There is no `packages/` monorepo. Each top-level folder under `/src/` is a
+namespace; `package.json` `exports` + a tsconfig `paths` alias expose them:
+`fcc` → `/src/engine`, `fcc/<plugin>` → `/src/<plugin>/index.ts`.
+
+- **`/src/engine`** — the core engine, imported everywhere as `fcc` (CLI runner,
+  loader, watcher, define, authoring, state, version, repl, types).
+- **`/src/bin`** — CLI entry scripts (`fcc.ts`, `repl.ts`, `gentypes.ts`),
+  exposed as the `fcc` / `fcc-repl` / `fcc-gentypes` bins.
+- **`/src/cdp`** — CDP browser-control helpers (REPL `cdp.*`).
+- **`/src/<plugin>`** — each non-site plugin, one folder, imported as
+  `fcc/<plugin>`: `json` `fsh` `ts` `snapshot` `narrative` `validate`
+  `ig-resource` `npm` `menu`. Most are a single `index.ts`; `menu` is a flat
+  fn-per-file namespace (`ctx.fns.menu`).
+- **`/src/site` + `/src/site_*`** — the IG-site renderer (`fcc/site`). The entry
+  (`site/index.ts` + `site/loadAll.ts` + `site/gentypes.sh`) assembles seven
+  flat fn-per-file namespaces, each its own top-level folder with a `site_`
+  prefix: `site_core` (chrome, layout, dispatch, tab/section registries, hooks,
+  utils), `site_md` (markdown pipeline + pluggable blocks + Shiki),
+  `site_profile` (StructureDefinition sections + element tables),
+  `site_terminology` (ValueSet/CodeSystem), `site_capability`
+  (CapabilityStatement/SearchParameter), `site_narrative` (generated
+  narratives), `site_artifacts` (index/artifacts/landing pages). Each namespace
+  has its own `loadFns.ts` + `ctx_ns.d.ts`. **A future renderer namespace = a
+  new `/src/site_<name>/` folder + its `loadFns` + one line in `site/loadAll.ts`
+  + one line in `site/gentypes.sh`.**
 
 ## Hard rules
 
 - **No project imports.** Files inside a namespace MUST NOT `import` *any other
   project file*. Cross-file calls go through `ctx.fns.<ns>.<fn>(ctx, opts)` —
-  including across namespaces (e.g. a `profile` fn calls
-  `ctx.fns.core.htmlEscape(ctx, …)` or `ctx.fns.md.mdInline(ctx, …)`). Cross-file
-  types go through `types.<ns>.<Name>`. The single exception is `loadFns.ts`,
-  whose *only* job is to import every sibling default-export and assemble
-  `ctx.fns.<ns>`. Everywhere else, `import` is only allowed for external
+  including across namespaces (e.g. a `site_profile` fn calls
+  `ctx.fns.site_core.htmlEscape(ctx, …)` or `ctx.fns.site_md.mdInline(ctx, …)`).
+  Cross-file types go through `types.<ns>.<Name>`. The single exception is
+  `loadFns.ts`, whose *only* job is to import every sibling default-export and
+  assemble `ctx.fns.<ns>`. Everywhere else, `import` is only allowed for external
   libraries (`shiki`, `node:fs/promises`, `fcc`, etc.).
 
-- **String-keyed dispatch crosses namespaces via `ctx.fns.core.resolveFn`.**
+- **String-keyed dispatch crosses namespaces via `ctx.fns.site_core.resolveFn`.**
   Registries that reference a fn by bare name (tab `render`/`avail`, section ids
   → `$section_<id>`, block `render`) resolve it across all loaded namespaces
   with `resolveFn({ key })` — fn names are globally unique, so it's
@@ -71,17 +84,17 @@ Inside a plugin's `src/` directory:
 | `ctx_ns.d.ts`          | Ambient registry: `Context`, `FnsRegistry`, `types.*` namespaces.       |
 | `<hookName>.ts`        | Auto-registered as that fcc lifecycle hook (e.g. `writeBundle.ts`).     |
 | `$type_<Name>.ts`      | Type-only file. Scanner skips. Hoisted via `ctx_ns.d.ts`.               |
-| `$section_<id>.ts`     | `@fcc/site` one Content-page section. `(ctx,{resource}) → {title,id,html}\|null`. Ordered per resourceType by `sectionDefaults`/`sectionsFor`; rendered by `renderCanonical`. |
-| `$tab_<id>.ts`         | `@fcc/site` project escape-hatch tab renderer (referenced from a `tabDefaults` override). |
-| `$block_<class>.ts`    | `@fcc/site` custom kramdown-block renderer (referenced from `blockDefaults`/`site({blocks})`). |
-| `$avail_<name>.ts`     | `@fcc/site` tab/section availability predicate `(ctx,{resource}) → boolean`. |
-| `$render_<RT>.ts`      | Generic per-resourceType renderer dispatch family (other plugins). `@fcc/site` uses `renderCanonical` + `$section_` instead. |
-| `$loader_<ext>.ts`     | `@fcc/loader-*` per-extension loader.                                   |
-| `$rule_<name>.ts`      | `@fcc/validate` per-lint-rule (one rule = one file).                    |
-| `$narrative_<RT>.ts`   | `@fcc/narrative` per-resourceType narrative generator.                  |
+| `$section_<id>.ts`     | `fcc/site` one Content-page section. `(ctx,{resource}) → {title,id,html}\|null`. Ordered per resourceType by `sectionDefaults`/`sectionsFor`; rendered by `renderCanonical`. |
+| `$tab_<id>.ts`         | `fcc/site` project escape-hatch tab renderer (referenced from a `tabDefaults` override). |
+| `$block_<class>.ts`    | `fcc/site` custom kramdown-block renderer (referenced from `blockDefaults`/`site({blocks})`). |
+| `$avail_<name>.ts`     | `fcc/site` tab/section availability predicate `(ctx,{resource}) → boolean`. |
+| `$render_<RT>.ts`      | Generic per-resourceType renderer dispatch family (other plugins). `fcc/site` uses `renderCanonical` + `$section_` instead. |
+| `$loader_<ext>.ts`     | the loader plugins (`json`/`fsh`/`ts`) per-extension loader.                                   |
+| `$rule_<name>.ts`      | `fcc/validate` per-lint-rule (one rule = one file).                    |
+| `$narrative_<RT>.ts`   | `fcc/narrative` per-resourceType narrative generator.                  |
 | `$ext_<slug>.ts`       | Handler for one specific FHIR extension URL.                            |
 | `$emit_<format>.ts`    | One output-format emitter (`$emit_npm.ts`, `$emit_xml.ts`).             |
-| `$page_<slug>.ts`      | `@fcc/site` code-defined site page.                                     |
+| `$page_<slug>.ts`      | `fcc/site` code-defined site page.                                     |
 | `$cmd_<name>.ts`       | Contributes a `fcc <name>` CLI subcommand.                              |
 | `$watch_<glob>.ts`     | Declarative watch pattern.                                              |
 | `$asset_<glob>.ts`     | Static asset source declaration.                                        |
@@ -95,13 +108,13 @@ Inside a plugin's `src/` directory:
 ## File template
 
 ```ts
-// src/profile/myHelper.ts  (a fn in the `profile` namespace)
+// src/site_profile/myHelper.ts  (a fn in the `site_profile` namespace)
 // Cross-file types via `types.*`. Cross-file fns via `ctx.fns.<ns>.*`.
 // No `import` from sibling files.
 
 export default async function myHelper(ctx: Context, opts: { resource: types.fcc.Resource }): Promise<string> {
-    const title = ctx.fns.core.titleOf(ctx, { resource: opts.resource });   // cross-ns
-    const safe  = ctx.fns.core.htmlEscape(ctx, { s: title });
+    const title = ctx.fns.site_core.titleOf(ctx, { resource: opts.resource });   // cross-ns
+    const safe  = ctx.fns.site_core.htmlEscape(ctx, { s: title });
     return `<h1>${safe}</h1>`;
 }
 ```
@@ -115,16 +128,16 @@ not hand-edit. After adding, renaming, or removing files, regenerate **every**
 namespace:
 
 ```sh
-bash src/gentypes.sh        # @fcc/site: core (base) + the 6 --fragment namespaces
+bash src/site/gentypes.sh   # site_core (base) + the 6 --fragment site_* namespaces
 ```
 
-`src/gentypes.sh` runs `core` as the **base** (declares `Context` + the `fcc`
-external types once) and the rest with **`--fragment`** (each only augments
-`FnsRegistry.<ns>` + `types.<ns>`). For a single-namespace plugin, call the tool
-directly:
+`src/site/gentypes.sh` runs `site_core` as the **base** (declares `Context` +
+the `fcc` external types once) and the rest with **`--fragment`** (each only
+augments `FnsRegistry.<ns>` + `types.<ns>`). For a single-namespace plugin (e.g.
+`menu`), call the tool directly:
 
 ```sh
-bun packages/fcc/bin/gentypes.ts <srcDir> --ns <name> \
+bun src/bin/gentypes.ts <srcDir> --ns <name> \
   --external 'fcc:fcc:Bundle,Resource,ResolvedConfig,Target,Plugin,PluginContext,HotUpdateContext'
 ```
 
@@ -207,8 +220,8 @@ Reads plugin opts and writes them to `ctx.state.<ns>` so other fns can
 read defaults without a closure:
 
 ```ts
-// packages/plugin-site/src/enable.ts
-export default function enable(ctx: Context, opts: types.site.SiteOpts = {}): void {
+// src/site_core/enable.ts
+export default function enable(ctx: Context, opts: types.site_core.SiteOpts = {}): void {
     ctx.state.site = {
         pagecontent: opts.pagecontent ?? "input/pagecontent",
         introNotes:  opts.introNotes  ?? "input/intro-notes",
@@ -221,14 +234,14 @@ export default function enable(ctx: Context, opts: types.site.SiteOpts = {}): vo
 
 `fcc dev` watches **source files** (the IG's `input/**`, plus any paths
 declared by plugins' `watchPaths()`). Edits there trigger incremental
-rebuilds in ~100 ms. Edits to **plugin code itself** (`src/**/*.ts`,
-`packages/fcc/src/*.ts`) require a manual `fcc dev` restart, because
-those modules are imported once at startup.
+rebuilds in ~100 ms. Edits to **plugin code itself** (anything under `src/**`)
+require a manual `fcc dev` restart, because those modules are imported once at
+startup.
 
 A common workflow loop:
 
-1. Edit a section/fn, e.g. `src/profile/$section_formalViews.ts`
-2. If you added/removed/renamed a file: `bash src/gentypes.sh`
+1. Edit a section/fn, e.g. `src/site_profile/$section_formalViews.ts`
+2. If you added/removed/renamed a file: `bash src/site/gentypes.sh`
 3. Kill + restart `fcc dev` (Ctrl+C, then re-run)
 4. `cdp.reload({ session: "fcc" })` + `cdp.screenshot(...)` to verify
 
@@ -239,10 +252,10 @@ A common workflow loop:
 `<projectRoot>/.fcc/repl-port`. Iterate via:
 
 ```bash
-bun packages/fcc/bin/repl.ts 'state.cfg.id'
-bun packages/fcc/bin/repl.ts 'T().resources.size'
-bun packages/fcc/bin/repl.ts 'await cdp.navigate({ path: "/StructureDefinition-us-core-patient.html", session: "uscore" })'
-bun packages/fcc/bin/repl.ts 'await cdp.screenshot({ session: "uscore", path: "/tmp/x.png" })'
+bun src/bin/repl.ts 'state.cfg.id'
+bun src/bin/repl.ts 'T().resources.size'
+bun src/bin/repl.ts 'await cdp.navigate({ path: "/StructureDefinition-us-core-patient.html", session: "uscore" })'
+bun src/bin/repl.ts 'await cdp.screenshot({ session: "uscore", path: "/tmp/x.png" })'
 ```
 
 The REPL is the *first* place to test a change: navigate, screenshot,
@@ -250,7 +263,7 @@ read DOM, mutate state, re-render — all without restarting the build.
 
 ## CDP helpers
 
-`packages/fcc/src/cdp/` — flat-ns helpers wrapping the local CDP REST
+`src/cdp/` — flat-ns helpers wrapping the local CDP REST
 server at `localhost:2229` (see `~/.claude/skills/cdp`). Available in
 REPL scope as `cdp.*`:
 

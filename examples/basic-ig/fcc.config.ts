@@ -1,12 +1,12 @@
 import { defineConfig } from "fcc";
-import ts        from "@fcc/plugin-ts";
-import fsh       from "@fcc/plugin-fsh";
-import snapshot  from "@fcc/plugin-snapshot";
-import narrative from "@fcc/plugin-narrative";
-import validate  from "@fcc/plugin-validate";
-import igRes     from "@fcc/plugin-ig-resource";
-import npm       from "@fcc/plugin-npm";
-import site      from "@fcc/plugin-site";
+import ts        from "fcc/ts";
+import fsh       from "fcc/fsh";
+import snapshot  from "fcc/snapshot";
+import narrative from "fcc/narrative";
+import validate  from "fcc/validate";
+import igRes     from "fcc/ig-resource";
+import npm       from "fcc/npm";
+import site      from "fcc/site";
 
 export default defineConfig({
   id:        "org.example.basic",

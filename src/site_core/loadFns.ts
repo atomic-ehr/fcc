@@ -1,0 +1,58 @@
+// Auto-assembled: imports every core fn and registers ctx.fns.site_core.
+// The only file in this namespace allowed to import siblings.
+import $avail_notExample from "./$avail_notExample.ts";
+import dataTable from "./dataTable.ts";
+import linkGrid from "./linkGrid.ts";
+import $section_description from "./$section_description.ts";
+import $section_notes from "./$section_notes.ts";
+import buildInfoBanner from "./buildInfoBanner.ts";
+import bytes from "./bytes.ts";
+import canonicalMeta from "./canonicalMeta.ts";
+import canonicalResource from "./canonicalResource.ts";
+import canonicalTabStrip from "./canonicalTabStrip.ts";
+import companionPages from "./companionPages.ts";
+import enable from "./enable.ts";
+import featureOn from "./featureOn.ts";
+import formatCard from "./formatCard.ts";
+import handleHotUpdate from "./handleHotUpdate.ts";
+import htmlEscape from "./htmlEscape.ts";
+import humanType from "./humanType.ts";
+import idOf from "./idOf.ts";
+import introBlock from "./introBlock.ts";
+import jsonBlock from "./jsonBlock.ts";
+import layout from "./layout.ts";
+import linkCanonical from "./linkCanonical.ts";
+import linkType from "./linkType.ts";
+import loadIntroNotes from "./loadIntroNotes.ts";
+import mergeTabs from "./mergeTabs.ts";
+import metaDl from "./metaDl.ts";
+import navActiveScript from "./navActiveScript.ts";
+import notesFor from "./notesFor.ts";
+import order from "./order.ts";
+import pageHeader from "./pageHeader.ts";
+import pageHref from "./pageHref.ts";
+import pillType from "./pillType.ts";
+import renderBreadcrumb from "./renderBreadcrumb.ts";
+import renderCanonical from "./renderCanonical.ts";
+import renderResource from "./renderResource.ts";
+import renderResourceJsonPage from "./renderResourceJsonPage.ts";
+import renderSidebarGroup from "./renderSidebarGroup.ts";
+import resolveFn from "./resolveFn.ts";
+import sectionDefaults from "./sectionDefaults.ts";
+import sectionHeader from "./sectionHeader.ts";
+import sectionsFor from "./sectionsFor.ts";
+import shortLabel from "./shortLabel.ts";
+import sidebar from "./sidebar.ts";
+import tabDefaults from "./tabDefaults.ts";
+import tabLinks from "./tabLinks.ts";
+import tabsFor from "./tabsFor.ts";
+import tagBindingStrength from "./tagBindingStrength.ts";
+import titleOf from "./titleOf.ts";
+import topBar from "./topBar.ts";
+import urlVersionStrip from "./urlVersionStrip.ts";
+import watchPaths from "./watchPaths.ts";
+import writeBundle from "./writeBundle.ts";
+
+export default function loadFns(ctx: Context): void {
+    (ctx.fns as any).site_core = { dataTable, linkGrid, $avail_notExample, $section_description, $section_notes, buildInfoBanner, bytes, canonicalMeta, canonicalResource, canonicalTabStrip, companionPages, enable, featureOn, formatCard, handleHotUpdate, htmlEscape, humanType, idOf, introBlock, jsonBlock, layout, linkCanonical, linkType, loadIntroNotes, mergeTabs, metaDl, navActiveScript, notesFor, order, pageHeader, pageHref, pillType, renderBreadcrumb, renderCanonical, renderResource, renderResourceJsonPage, renderSidebarGroup, resolveFn, sectionDefaults, sectionHeader, sectionsFor, shortLabel, sidebar, tabDefaults, tabLinks, tabsFor, tagBindingStrength, titleOf, topBar, urlVersionStrip, watchPaths, writeBundle };
+}

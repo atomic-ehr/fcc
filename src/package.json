@@ -1,9 +1,0 @@
-{
-  "name": "@fcc/plugin-site",
-  "version": "0.0.1",
-  "type": "module",
-  "main": "./index.ts",
-  "exports": { ".": "./index.ts" },
-  "peerDependencies": { "fcc": "*" },
-  "dependencies": { "shiki": "^4.1.0" }
-}

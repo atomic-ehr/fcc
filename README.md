@@ -49,17 +49,17 @@ Then either run the small example…
 
 ```sh
 cd examples/basic-ig
-bun ../../packages/fcc/bin/fcc.ts info       # resolved config + plugin chain
-bun ../../packages/fcc/bin/fcc.ts build      # full build for all targets
-bun ../../packages/fcc/bin/fcc.ts dev        # watch mode + REPL
+bun ../../src/bin/fcc.ts info       # resolved config + plugin chain
+bun ../../src/bin/fcc.ts build      # full build for all targets
+bun ../../src/bin/fcc.ts dev        # watch mode + REPL
 ```
 
 …or the realistic one against US Core (443 resources, R4):
 
 ```sh
 cd examples/us-core
-bun ../../packages/fcc/bin/fcc.ts build      # ~300 ms full build
-bun ../../packages/fcc/bin/fcc.ts dev        # ~100 ms incremental
+bun ../../src/bin/fcc.ts build      # ~300 ms full build
+bun ../../src/bin/fcc.ts dev        # ~100 ms incremental
 ```
 
 The us-core build produces 444 HTML pages under `dist/r4/site/` plus a
@@ -72,18 +72,22 @@ bun --bun -e 'Bun.serve({port: 4321, fetch: r => new Response(Bun.file("." + new
 
 ## What's in the box
 
-| Package                       | Role                                                                              |
-| ----------------------------- | --------------------------------------------------------------------------------- |
-| `fcc`                         | Core: types, runner, watcher, **REPL**, CDP helpers, `fcc` + `fcc-repl` + `fcc-gentypes` CLIs |
-| `@fcc/plugin-ts`              | `.ts` source loader (profile / valueSet / codeSystem / example / capability)      |
-| `@fcc/plugin-fsh`             | `.fsh` source loader, wraps `fsh-sushi`                                           |
-| `@fcc/plugin-json`            | `.json` source loader (drop-in for IG-Publisher-style `input/resources/*.json`)   |
-| `@fcc/plugin-snapshot`        | Snapshot pass (v0: no-op + diagnostic)                                            |
-| `@fcc/plugin-narrative`       | Auto-fills `Resource.text.div`                                                    |
-| `@fcc/plugin-validate`        | Lite validation: resourceType / id / url / dupes / unresolved refs                |
-| `@fcc/plugin-ig-resource`     | Synthesises the `ImplementationGuide` resource                                    |
-| `@fcc/plugin-npm`             | FHIR NPM `package.tgz` emitter (pure-Bun USTAR + gzip)                            |
-| `@fcc/plugin-site`            | Browsable HTML site, Tailwind-CDN, IG-Publisher-resembling layout — **refactored to flat fn-per-file with `ctx.fns` hot-reload** |
+Everything is one package (`fcc`) under a flat `src/`. The engine is imported as
+`fcc`; each plugin namespace as `fcc/<name>`.
+
+| Namespace          | Role                                                                              |
+| ------------------ | --------------------------------------------------------------------------------- |
+| `fcc` (`src/engine`) | Core: types, runner, watcher, **REPL**, CDP helpers, `fcc` + `fcc-repl` + `fcc-gentypes` CLIs |
+| `fcc/ts`           | `.ts` source loader (profile / valueSet / codeSystem / example / capability)      |
+| `fcc/fsh`          | `.fsh` source loader, wraps `fsh-sushi`                                           |
+| `fcc/json`         | `.json` source loader (drop-in for IG-Publisher-style `input/resources/*.json`)   |
+| `fcc/snapshot`     | Snapshot generation via `@atomic-ehr/fhirschema` — merges each differential against its base-definition chain into a full `snapshot.element[]` |
+| `fcc/narrative`    | Auto-fills `Resource.text.div`                                                    |
+| `fcc/validate`     | Lite validation: resourceType / id / url / dupes / unresolved refs                |
+| `fcc/ig-resource`  | Synthesises the `ImplementationGuide` resource                                    |
+| `fcc/npm`          | FHIR NPM `package.tgz` emitter (pure-Bun USTAR + gzip)                            |
+| `fcc/menu`         | Reads `sushi-config.yaml` menu → top-bar nav                                      |
+| `fcc/site` (`src/site` + `src/site_*`) | Browsable HTML site, Tailwind-CDN, IG-Publisher-resembling layout — flat fn-per-file across seven `site_*` namespaces with `ctx.fns` hot-reload |
 
 ## Examples
 
@@ -98,9 +102,9 @@ bun --bun -e 'Bun.serve({port: 4321, fetch: r => new Response(Bun.file("." + new
 `<projectRoot>/.fcc/repl-port`. Connect from any shell:
 
 ```sh
-bun packages/fcc/bin/repl.ts 'state.cfg.id'
-bun packages/fcc/bin/repl.ts 'T().resources.size'
-bun packages/fcc/bin/repl.ts '(() => {
+bun src/bin/repl.ts 'state.cfg.id'
+bun src/bin/repl.ts 'T().resources.size'
+bun src/bin/repl.ts '(() => {
   const out = {};
   for (const r of T().resources.values()) out[r.resourceType] = (out[r.resourceType]||0) + 1;
   return out;
@@ -112,8 +116,8 @@ The eval scope has `state`, `cfg`, `T(name?)` (target shortcut), and
 
 ```sh
 # drive the rendered site from the REPL
-bun packages/fcc/bin/repl.ts 'await cdp.navigate({ path: "/StructureDefinition-us-core-patient.html", session: "uscore" })'
-bun packages/fcc/bin/repl.ts 'await cdp.screenshot({ session: "uscore", path: "/tmp/x.png" })'
+bun src/bin/repl.ts 'await cdp.navigate({ path: "/StructureDefinition-us-core-patient.html", session: "uscore" })'
+bun src/bin/repl.ts 'await cdp.screenshot({ session: "uscore", path: "/tmp/x.png" })'
 ```
 
 This requires a CDP server at `localhost:2229` (see [the `cdp` skill][cdp]
@@ -171,26 +175,25 @@ errors, the dependency graph builds itself.
 
 ### Plugin convention: flat namespace, fn-per-file
 
-New plugins (and the rewrite of `@fcc/site`) follow a strict procedural
-style ported from [workspaces-template]. **Each file inside a plugin is
+New plugins (and the `fcc/site` renderer) follow a strict procedural
+style ported from [workspaces-template]. **Each file inside a namespace is
 a single function**; everything else is reached through `ctx.fns.<ns>`
 and `types.<ns>.*` — no project imports across files.
 
 ```
-@fcc/site/src/
+src/site_core/                  ← the renderer's chrome/dispatch namespace
   enable.ts                     ← reads opts → ctx.state.site
-  loadFns.ts                    ← ONLY file that imports siblings; builds ctx.fns.site
-  ctx_ns.d.ts                   ← auto-gen ambient: Context, FnsRegistry, types.site.*
+  loadFns.ts                    ← ONLY file that imports siblings; builds ctx.fns.site_core
+  ctx_ns.d.ts                   ← auto-gen ambient: Context, FnsRegistry, types.site_core.*
   writeBundle.ts                ← Plugin hook
   handleHotUpdate.ts            ← Plugin hook
   watchPaths.ts                 ← Plugin hook
-  layout.ts                     ← ctx.fns.site.layout(ctx, { title, content, … })
-  $render_StructureDefinition.ts  ← per-resourceType renderer dispatch
-  $render_ValueSet.ts
-  $render_CodeSystem.ts
-  $render_default.ts
-  $type_RenderCtx.ts            ← type-only, scanner hoists to `types.site.RenderCtx`
+  layout.ts                     ← ctx.fns.site_core.layout(ctx, { title, content, … })
+  renderCanonical.ts            ← dispatches per-resourceType $section_* renderers
+  $section_description.ts       ← one Content-page section
+  $type_RenderCtx.ts            ← type-only, scanner hoists to `types.site_core.RenderCtx`
   …
+src/site/                       ← the plugin entry: index.ts + loadAll.ts + gentypes.sh
 ```
 
 | Prefix              | Role                                                            |
@@ -207,8 +210,11 @@ and `types.<ns>.*` — no project imports across files.
 Regenerate the ambient `ctx_ns.d.ts` after adding or removing files:
 
 ```sh
-bun packages/fcc/bin/gentypes.ts packages/plugin-site/src \
-  --ns site \
+bash src/site/gentypes.sh        # regenerates all seven site_* namespaces
+
+# …or one namespace directly (e.g. the menu plugin):
+bun src/bin/gentypes.ts src/menu \
+  --ns menu \
   --external 'fcc:fcc:Bundle,Resource,ResolvedConfig,Target,Plugin,PluginContext,HotUpdateContext'
 ```
 
@@ -222,14 +228,14 @@ See [`CLAUDE.md`](./CLAUDE.md) for the rules in full.
 - [x] Multi-target builds with `when()` preprocessing
 - [x] Watch mode with incremental rebuilds (file→resources source map + reverse-deps closure)
 - [x] **REPL over `fcc dev`** (`POST /repl`) + `cdp.*` helpers in scope
-- [x] **fn-per-file / `ctx.fns` plugin convention** (rolled out in `@fcc/site`)
+- [x] **fn-per-file / `ctx.fns` plugin convention** (rolled out in `fcc/site`)
 - [x] **`fcc-gentypes`** — auto-generated ambient `Context`, `FnsRegistry`, `types.*`
 - [x] Per-resource intro/notes MD support (`input/intro-notes/<RT>-<id>-{intro,notes}.md`)
 - [x] IG-Publisher-resembling HTML site (Tailwind CDN, numbered sections, tabs, tree-icons, Flags column)
 - [x] HL7/US-Core as a submodule example, structural match with IG Publisher
 - [ ] Snapshot generation (currently differential only; can shell out to `validator.jar`)
 - [ ] Strict validation against core spec
-- [ ] `@fcc/plugin-include` for Liquid-ish `{% include x.html foo="bar" %}` in pagecontent
+- [ ] `fcc/include` for Liquid-ish `{% include x.html foo="bar" %}` in pagecontent
 - [ ] Backport remaining plugins (snapshot / narrative / validate / ig-resource / npm) to flat-ns
 - [ ] Codegen plugins: TS types, OpenAPI, JSON Schema
 - [ ] Cross-IG canonical resolution (smart-app-launch, sdc, …)

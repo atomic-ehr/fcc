@@ -1,12 +1,12 @@
 import { defineConfig } from "fcc";
-import json      from "@fcc/plugin-json";
-import snapshot  from "@fcc/plugin-snapshot";
-import narrative from "@fcc/plugin-narrative";
-import validate  from "@fcc/plugin-validate";
-import igRes     from "@fcc/plugin-ig-resource";
-import npm       from "@fcc/plugin-npm";
-import site      from "@fcc/plugin-site";
-import menu      from "@fcc/plugin-menu";
+import json      from "fcc/json";
+import snapshot  from "fcc/snapshot";
+import narrative from "fcc/narrative";
+import validate  from "fcc/validate";
+import igRes     from "fcc/ig-resource";
+import npm       from "fcc/npm";
+import site      from "fcc/site";
+import menu      from "fcc/menu";
 
 // Points at the HL7/US-Core git submodule under vendor/us-core. The folder
 // layout matches the IG Publisher convention (input/resources, input/examples,
@@ -43,7 +43,7 @@ export default defineConfig({
 
   plugins: [
     menu({ config: "../../vendor/us-core/sushi-config.yaml" }),
-    snapshot(),
+    snapshot({ packagesDir: "../../vendor/us-core/input-cache/.fhir/packages" }),
     narrative(),
     // us-core has many cross-IG canonical references (smart-app-launch, sdc, ...).
     // fcc v0 doesn't resolve them across packages yet, so "strict" produces a
