@@ -15,6 +15,7 @@
     "./snapshot": "./src/snapshot/index.ts",
     "./narrative": "./src/narrative/index.ts",
     "./validate": "./src/validate/index.ts",
+    "./validator": "./src/validator/index.ts",
     "./ig-resource": "./src/ig-resource/index.ts",
     "./npm": "./src/npm/index.ts",
     "./menu": "./src/menu/index.ts",

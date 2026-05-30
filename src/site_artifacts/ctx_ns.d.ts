@@ -8,6 +8,7 @@ declare global {
             loadPagecontent: typeof import("./loadPagecontent").default;
             pageToc: typeof import("./pageToc").default;
             renderArtifacts: typeof import("./renderArtifacts").default;
+            renderErrors: typeof import("./renderErrors").default;
             renderIndex: typeof import("./renderIndex").default;
             renderLanding: typeof import("./renderLanding").default;
             renderPage: typeof import("./renderPage").default;
@@ -16,6 +17,8 @@ declare global {
 
     namespace types {
         namespace site_artifacts {
+            type ValidationIssue = import("./$type_ValidationIssue").ValidationIssue;
+            type ValidationReport = import("./$type_ValidationReport").ValidationReport;
         }
     }
 }

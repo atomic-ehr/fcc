@@ -84,6 +84,7 @@ Everything is one package (`fcc`) under a flat `src/`. The engine is imported as
 | `fcc/snapshot`     | Snapshot generation via `@atomic-ehr/fhirschema` — merges each differential against its base-definition chain into a full `snapshot.element[]` |
 | `fcc/narrative`    | Auto-fills `Resource.text.div`                                                    |
 | `fcc/validate`     | Lite validation: resourceType / id / url / dupes / unresolved refs                |
+| `fcc/validator`    | Schema validation via `@atomic-ehr/fhirschema` (examples vs profiles + canonicals) → QA `errors.html`; extensible (fhirpath/terminology) |
 | `fcc/ig-resource`  | Synthesises the `ImplementationGuide` resource                                    |
 | `fcc/npm`          | FHIR NPM `package.tgz` emitter (pure-Bun USTAR + gzip)                            |
 | `fcc/menu`         | Reads `sushi-config.yaml` menu → top-bar nav                                      |

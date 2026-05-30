@@ -156,8 +156,27 @@ the watcher is single-flight).
 
 ## 7. Validation (current + planned)
 
-Today snapshot/narrative/validate run as **full passes** each rebuild ("cheap for
-now"). As sample/profile validation grows this won't scale, so the planned model
+Two validation plugins, both **explicitly enabled** in `fcc.config.ts`:
+
+- **`fcc/validate`** — lite structural lint (resourceType / id / url / dupes /
+  unresolved refs).
+- **`fcc/validator`** — schema validation via `@atomic-ehr/fhirschema`. It builds
+  a FHIRSchema registry from the in-bundle SDs + the FHIR package cache (R4 core +
+  declared deps, same source as `fcc/snapshot`), then:
+  - **examples / instances** → validated against their `meta.profile[]` (and base
+    resourceType); the resolver walks the base chain.
+  - **canonicals** → each StructureDefinition must `translate()` to a FHIRSchema.
+
+  Results are written to `ctx.shared.validate` as a structured report; the site
+  renders it as **`errors.html`** (a QA page à la IG Publisher's `qa.html`) and
+  shows a QA chip in the top bar. The page appears only when the plugin is
+  enabled. **Extensible**: pass extra standalone `validators`, and wire
+  fhirschema's pluggable `fhirpath` / `terminology` / `referenceResolver`
+  evaluators — both are skipped when absent, which is why FHIRPath-constraint,
+  terminology and some slicing/choice-type checks are currently limited (the page
+  is labelled experimental).
+
+These run as **full passes** in `afterValidate` for now. The planned scaling model
 is **tiered**:
 
 - **structural / cheap** checks run inline on the invalidation closure (blocking,
@@ -178,5 +197,7 @@ is **tiered**:
 | Plugin `watchPaths` wired into dev | **done** |
 | snapshot generation (`@atomic-ehr/fhirschema`) | **done** (`src/snapshot`) |
 | FSH compile in a Worker (non-blocking dev) | **done** (`src/fsh/worker.ts`) |
+| Schema validator (examples + canonicals) → `errors.html` | **done** (`src/validator`, experimental) |
+| FHIRPath / terminology evaluators wired into the validator | planned |
 | Tiered (background) validation over SSE | planned |
 | Fine-grained per-page render cache (hash×cycle) | planned (lazy render makes it optional) |

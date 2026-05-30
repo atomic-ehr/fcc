@@ -57,6 +57,13 @@ export default async function buildRoutes(
         routes.set(`${p.slug}.html`, { id: null, contentType: "text/html", render: () => ctx.fns.site_artifacts.renderPage(ctx, p) });
     }
 
+    // QA / validation report — only when the fcc/validator plugin populated it.
+    const report = (pctx.shared as any).validate as types.site_artifacts.ValidationReport | undefined;
+    if (report) {
+        routes.set("errors.html", { id: null, contentType: "text/html", render: () => ctx.fns.site_artifacts.renderErrors(ctx, { report }) });
+        (ctx.state as any).validateSummary = report.summary;   // for the topBar QA chip
+    }
+
     // resource pages + companion tabs (tabsFor is cheap — no render here).
     // Every companion route carries the PARENT resource's id (not null, not a
     // unique id) so the incremental write-gate in writeBundle skips/rewrites a

@@ -3,6 +3,7 @@ import json      from "fcc/json";
 import snapshot  from "fcc/snapshot";
 import narrative from "fcc/narrative";
 import validate  from "fcc/validate";
+import validator from "fcc/validator";
 import igRes     from "fcc/ig-resource";
 import npm       from "fcc/npm";
 import site      from "fcc/site";
@@ -49,6 +50,8 @@ export default defineConfig({
     // fcc v0 doesn't resolve them across packages yet, so "strict" produces a
     // wall of unresolved-ref warnings — keep validation on "lite".
     validate({ profiles: "lite" }),
+    // Schema validation (examples against profiles + canonicals) → errors.html.
+    validator({ packagesDir: "../../vendor/us-core/input-cache/.fhir/packages" }),
     igRes({ pagecontent: "../../vendor/us-core/input/pagecontent" }),
     npm(),
     site({

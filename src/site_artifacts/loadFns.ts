@@ -4,10 +4,11 @@ import artifactTable from "./artifactTable.ts";
 import loadPagecontent from "./loadPagecontent.ts";
 import pageToc from "./pageToc.ts";
 import renderArtifacts from "./renderArtifacts.ts";
+import renderErrors from "./renderErrors.ts";
 import renderIndex from "./renderIndex.ts";
 import renderLanding from "./renderLanding.ts";
 import renderPage from "./renderPage.ts";
 
 export default function loadFns(ctx: Context): void {
-    (ctx.fns as any).site_artifacts = { artifactTable, loadPagecontent, pageToc, renderArtifacts, renderIndex, renderLanding, renderPage };
+    (ctx.fns as any).site_artifacts = { artifactTable, loadPagecontent, pageToc, renderArtifacts, renderErrors, renderIndex, renderLanding, renderPage };
 }
