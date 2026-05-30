@@ -274,6 +274,7 @@ export function makeContext(cfg: ResolvedConfig, ts: TargetState, changedIds: Se
         return m;
       },
     }) as Record<string, Map<string, Resource>>,
+    issues: ts.issues,
     changedIds,
     cycle: ts.cycle,
     dev: cfg.dev === true,

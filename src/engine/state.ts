@@ -1,4 +1,4 @@
-import type { Bundle, Diagnostic, EmittedFile, Hooks, Plugin, Resource, ResolvedConfig, Target } from "./types.ts";
+import type { Bundle, Diagnostic, EmittedFile, Hooks, Issue, Plugin, Resource, ResolvedConfig, Target } from "./types.ts";
 
 // The collected hook slots — one function list per lifecycle stage. Plugins
 // register into these once at startup (collectHooks); the runner runs them.
@@ -42,6 +42,10 @@ export type TargetState = {
   // reverse deps: canonical url -> set of resource ids referencing it
   reverseCanonical: Map<string, Set<string>>;
 
+  // validation results, per resource (the world's `issues`); survives rebuilds
+  // so validators can reuse unchanged entries (incremental validation).
+  issues: Map<string, Issue[]>;
+
   // output
   diagnostics: Diagnostic[];
   emitted: EmittedFile[];
@@ -81,6 +85,7 @@ export function freshTargetState(target: Target): TargetState {
     fileToResources: new Map(),
     resourceToFiles: new Map(),
     reverseCanonical: new Map(),
+    issues: new Map(),
     diagnostics: [],
     emitted: [],
     cycle: 0,

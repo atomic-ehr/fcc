@@ -7,6 +7,19 @@ export type Diagnostic = {
   source?: string;
 };
 
+/**
+ * A per-resource validation result, stored in `ctx.issues`. Producers (the
+ * validator plugin) attach richer fields (code, path, validator, href, …);
+ * this is the minimal shape consumers can rely on.
+ */
+export type Issue = {
+  severity: "error" | "warning" | "information";
+  code: string;
+  message?: string;
+  path?: string;
+  [k: string]: unknown;
+};
+
 export type SourceRef =
   | { kind: "ts"; path: string }
   | { kind: "fsh"; path: string; symbol: string }
@@ -127,6 +140,9 @@ export interface PluginContext {
   byType: Record<string, Resource[]>;
   /** Live typed canonical index — `ctx.canonicals.StructureDefinition` → `Map<url, Resource>`. */
   canonicals: Record<string, Map<string, Resource>>;
+
+  /** Validation results, per resource — the world's `issues` (e.g. the QA page reads this). */
+  issues: Map<string, Issue[]>;
 
   /**
    * Cross-plugin shared state, keyed by plugin namespace.

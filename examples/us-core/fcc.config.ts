@@ -48,12 +48,12 @@ export default defineConfig({
     // us-core has many cross-IG canonical references (smart-app-launch, sdc, ...).
     // fcc v0 doesn't resolve them across packages yet, so "strict" produces a
     // wall of unresolved-ref warnings — keep validation on "lite".
-    // One validation plugin, composed of validators → errors.html. Runs after
-    // snapshot (fhirpath constraints are read from generated snapshots).
+    // One validation plugin, composed of validator descriptors { fn, ...config }
+    // → errors.html. Runs after snapshot (fhirpath reads generated snapshots).
     validator({ validators: [
-      structural(),                                                            // lite lint
-      schema({ packagesDir: "../../vendor/us-core/input-cache/.fhir/packages" }), // fhirschema
-      fhirpathConstraints(),                                                   // fhirpath invariants
+      { fn: structural },                                                          // lite lint
+      { fn: schema, packagesDir: "../../vendor/us-core/input-cache/.fhir/packages" }, // fhirschema
+      { fn: fhirpathConstraints },                                                 // fhirpath invariants
     ] }),
     igRes({ pagecontent: "../../vendor/us-core/input/pagecontent" }),
     npm(),

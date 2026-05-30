@@ -2,18 +2,23 @@ import { translate, validate as fsValidate } from "@atomic-ehr/fhirschema";
 import type { Plugin, PluginContext } from "fcc";
 import { resolve as resolvePath } from "node:path";
 
-// The validation plugin (explicitly enabled). It is a thin runner: it executes a
-// composable list of `Validator` functions, merges their issues into one report
-// at ctx.shared.validate (the site renders it as errors.html with a top-bar QA
-// chip), and emits a summary. Every check is a validator — compose them:
+// The validation plugin (explicitly enabled). It runs a composed list of
+// validators and writes their results into `ctx.issues` (per resource — the
+// world's validation state, rendered as errors.html with a top-bar QA chip).
 //
-//   validator()                                   // default: [structural()]
-//   validator({ validators: [structural(), schema({ packagesDir }), fhirpathConstraints()] })
+// A validator is a DESCRIPTOR — a function plus its config as plain data:
 //
-// Built-in validators:
-//   structural()          — lite lint (resourceType/id/url/dupes/unresolved refs), no cache needed
-//   schema()              — @atomic-ehr/fhirschema: examples vs profiles + canonicals translate
-//   fhirpathConstraints() — @atomic-ehr/fhirpath: element constraint[] invariants
+//   validator({ validators: [
+//     { fn: structural },
+//     { fn: schema, packagesDir: "…/.fhir/packages" },
+//     { fn: fhirpathConstraints },
+//   ] })
+//
+// The house signature is `fn(ctx, config, opts)`: `ctx` is the world (+ scratch
+// state in `ctx.shared`), `config` is the descriptor's static data, `opts` is the
+// per-call payload ({} here). Because config is data (not a closure), per-resource
+// caches live in `ctx.shared`, gated by `ctx.changedIds` → incremental validation:
+// only the changed closure is re-validated, the rest reused.
 
 export type ValidatorIssue = {
   rid: string; rt: string; fhirId: string; title: string; href: string;
@@ -22,37 +27,61 @@ export type ValidatorIssue = {
   validator: string;
 };
 
-/**
- * A validator produces issues for the current build. **Always async** — almost
- * every real check is (terminology servers, FHIRPath, reference resolution,
- * network), so the framework commits to one async contract. Validators are
- * independent (read-only over the graph), so the plugin runs them in parallel.
- */
-export type Validator = (ctx: PluginContext) => Promise<ValidatorIssue[]>;
+/** A validator function: `(ctx, config, opts) => issues`. Always async. */
+export type ValidatorFn = (ctx: PluginContext, config: Record<string, unknown>, opts: Record<string, never>) => Promise<ValidatorIssue[]>;
+/** A validator descriptor — the fn plus its config, spread inline. */
+export type Validator = { fn: ValidatorFn } & Record<string, unknown>;
 
 type Opts = { validators?: Validator[]; quiet?: boolean };
 
 export default function validator(opts: Opts = {}): Plugin {
-  const validators = opts.validators ?? [structural()];
+  const validators = opts.validators ?? [{ fn: structural }];
   return (hooks) => hooks.afterValidate(async (ctx) => {
-      const results = await Promise.all(validators.map(v =>
-        v(ctx).catch((e: Error) => {
-          ctx.warn({ severity: "warning", source: "fcc/validator", message: `validator threw: ${e.message}` });
-          return [] as ValidatorIssue[];
-        }),
-      ));
-      const issues = results.flat();
-      const errors = issues.filter(i => i.severity === "error").length;
-      const warnings = issues.filter(i => i.severity === "warning").length;
-      const resources = new Set(issues.map(i => i.rid)).size;
-      (ctx.shared as any).validate = { issues, summary: { errors, warnings, resources, total: issues.length } };
-      if (!opts.quiet) {
-        ctx.warn({
-          severity: errors ? "warning" : "info", source: "fcc/validator",
-          message: `validated: ${errors} error(s), ${warnings} warning(s) across ${resources} resource(s) → errors.html`,
-        });
-      }
+    const results = await Promise.all(validators.map(v =>
+      v.fn(ctx, v, {}).catch((e: Error) => {
+        ctx.warn({ severity: "warning", source: "fcc/validator", message: `validator threw: ${e.message}` });
+        return [] as ValidatorIssue[];
+      }),
+    ));
+    const all = results.flat();
+
+    // Assemble the per-resource map — the world's ctx.issues.
+    ctx.issues.clear();
+    for (const i of all) (ctx.issues.get(i.rid) ?? ctx.issues.set(i.rid, []).get(i.rid)!).push(i);
+
+    const errors = all.filter(i => i.severity === "error").length;
+    const warnings = all.filter(i => i.severity === "warning").length;
+    const resources = ctx.issues.size;
+    (ctx.shared as any).validate = { issues: all, summary: { errors, warnings, resources, total: all.length } };
+    if (!opts.quiet) {
+      ctx.warn({
+        severity: errors ? "warning" : "info", source: "fcc/validator",
+        message: `validated: ${errors} error(s), ${warnings} warning(s) across ${resources} resource(s) → errors.html`,
+      });
+    }
   });
+}
+
+// ── per-resource incremental engine ──────────────────────────────────────────
+// Reuse cached issues for unchanged resources; recompute only the changed
+// closure; evict dropped. The cache lives in ctx.shared (persists across builds).
+async function perResource(
+  ctx: PluginContext,
+  cacheKey: string,
+  targets: R[],
+  compute: (r: R) => ValidatorIssue[] | Promise<ValidatorIssue[]>,
+): Promise<ValidatorIssue[]> {
+  const cache = (((ctx.shared as any)[cacheKey] ??= new Map<string, ValidatorIssue[]>())) as Map<string, ValidatorIssue[]>;
+  const changed = ctx.changedIds;
+  const out: ValidatorIssue[] = [];
+  for (const r of targets) {
+    if (changed && !changed.has(r.id) && cache.has(r.id)) { out.push(...cache.get(r.id)!); continue; }
+    const issues = await compute(r);
+    cache.set(r.id, issues);
+    out.push(...issues);
+  }
+  for (const id of [...cache.keys()]) if (!ctx.resources.has(id)) cache.delete(id);   // evict dropped
+  return out;
 }
 
 // ── shared helpers ───────────────────────────────────────────────────────────
@@ -70,7 +99,6 @@ const CANONICAL_TYPES = new Set([
 ]);
 
 const stripVer = (u: string) => u.split("|")[0]!;
-// fhirschema resolves both bare resourceTypes ("Patient") and full canonicals.
 const normRef = (ref: string) => {
   const u = stripVer(ref);
   return u.includes("://") ? u : `http://hl7.org/fhir/StructureDefinition/${u}`;
@@ -94,129 +122,109 @@ function mkIssue(r: R, f: { severity: ValidatorIssue["severity"]; code: string; 
   };
 }
 
-// ── structural(): lite lint, no FHIR package cache needed ────────────────────
+// ── structural — lite lint; global (dup checks need the whole set), cheap, full ─
 
-export function structural(): Validator {
-  return async (ctx) => {
-    const issues: ValidatorIssue[] = [];
-    const seenIds = new Map<string, string>();
-    const seenUrls = new Map<string, string>();
-    for (const r of ctx.resources.values()) {
-      const d = r.data as Record<string, unknown>;
-      const id = d.id as string | undefined;
-      const rt = r.resourceType;
-      const push = (severity: ValidatorIssue["severity"], code: string, message: string) => issues.push(mkIssue(r, { severity, code, message }, "structural"));
-      if (!rt) { push("error", "no-resourceType", "resource has no resourceType"); continue; }
-      if (!id) push("error", "no-id", "resource has no id");
-      const idKey = `${rt}/${id}`;
-      if (seenIds.has(idKey)) push("error", "duplicate-id", `duplicate id ${idKey} (also declared by ${seenIds.get(idKey)})`);
-      else seenIds.set(idKey, r.id);
-      const url = d.url as string | undefined;
-      if (CANONICAL_TYPES.has(rt) && !url) push("error", "missing-url", `${rt} requires a canonical url`);
-      if (url) {
-        if (seenUrls.has(url)) push("error", "duplicate-url", `duplicate canonical url ${url} (also ${seenUrls.get(url)})`);
-        else seenUrls.set(url, r.id);
-      }
-      for (const ref of r.deps) {
-        if (!ctx.byUrl(ref) && !/^https?:\/\//.test(ref)) push("warning", "unresolved-ref", `unresolved canonical reference ${ref}`);
-      }
+export async function structural(ctx: PluginContext, _config: Record<string, unknown>, _opts: Record<string, never>): Promise<ValidatorIssue[]> {
+  const issues: ValidatorIssue[] = [];
+  const seenIds = new Map<string, string>();
+  const seenUrls = new Map<string, string>();
+  for (const r of ctx.resources.values()) {
+    const d = r.data as Record<string, unknown>;
+    const id = d.id as string | undefined;
+    const rt = r.resourceType;
+    const push = (severity: ValidatorIssue["severity"], code: string, message: string) => issues.push(mkIssue(r, { severity, code, message }, "structural"));
+    if (!rt) { push("error", "no-resourceType", "resource has no resourceType"); continue; }
+    if (!id) push("error", "no-id", "resource has no id");
+    const idKey = `${rt}/${id}`;
+    if (seenIds.has(idKey)) push("error", "duplicate-id", `duplicate id ${idKey} (also declared by ${seenIds.get(idKey)})`);
+    else seenIds.set(idKey, r.id);
+    const url = d.url as string | undefined;
+    if (CANONICAL_TYPES.has(rt) && !url) push("error", "missing-url", `${rt} requires a canonical url`);
+    if (url) {
+      if (seenUrls.has(url)) push("error", "duplicate-url", `duplicate canonical url ${url} (also ${seenUrls.get(url)})`);
+      else seenUrls.set(url, r.id);
     }
-    return issues;
-  };
+    for (const ref of r.deps) {
+      if (!ctx.byUrl(ref) && !/^https?:\/\//.test(ref)) push("warning", "unresolved-ref", `unresolved canonical reference ${ref}`);
+    }
+  }
+  return issues;
 }
 
-// ── schema(): @atomic-ehr/fhirschema structural validation ───────────────────
+// ── schema — @atomic-ehr/fhirschema; per-resource, incremental ───────────────
 
-export function schema(opts: { packagesDir?: string } = {}): Validator {
-  let baseIndex: Map<string, any> | null = null;            // cached across rebuilds
-  return async (ctx) => {
-    const base = await loadBaseIndex(ctx, opts.packagesDir, baseIndex);
-    baseIndex = base;
-    const sdByUrl = new Map(base);                          // in-bundle SDs override base packages
-    for (const r of ctx.resources.values()) {
-      if (r.resourceType === "StructureDefinition" && (r.data as any)?.url) sdByUrl.set((r.data as any).url, r.data);
-    }
-    const schemaCache = new Map<string, any>();
-    const resolveSchema = (ref: string) => {
-      const url = normRef(ref);
-      if (schemaCache.has(url)) return schemaCache.get(url);
-      const sd = sdByUrl.get(url);
-      let s: any; try { s = sd ? translate(sd) : undefined; } catch { s = undefined; }
-      schemaCache.set(url, s);
-      return s;
-    };
-    const vctx = { resolve: resolveSchema };
-
-    const issues: ValidatorIssue[] = [];
-    // instances against their profile(s) (+ base resourceType, resolved internally)
-    for (const r of ctx.resources.values()) {
-      if (CONFORMANCE.has(r.resourceType)) continue;
-      const d = r.data as any;
-      const schemas = ((d.meta?.profile as string[] | undefined) ?? []).map(stripVer).map(resolveSchema).filter(Boolean);
-      let res: any; try { res = fsValidate(vctx, schemas, d, { strict: false }); } catch { continue; }
-      for (const i of res?.issues ?? []) {
-        issues.push(mkIssue(r, {
-          severity: (i.severity ?? "error"), code: String(i.code ?? "?"),
-          path: Array.isArray(i.path) ? i.path.join(".") : String(i.path ?? ""),
-          message: i.message, expected: i.expected, got: i.got,
-        }, "schema"));
-      }
-    }
-    // canonicals: each StructureDefinition must translate to a FHIRSchema
-    for (const r of ctx.resources.values()) {
-      if (r.resourceType !== "StructureDefinition") continue;
-      try { translate(r.data as any); }
-      catch (e) { issues.push(mkIssue(r, { severity: "error", code: "translate", message: `StructureDefinition does not translate: ${(e as Error).message}` }, "schema")); }
-    }
-    return issues;
+export async function schema(ctx: PluginContext, config: Record<string, unknown>, _opts: Record<string, never>): Promise<ValidatorIssue[]> {
+  const base = await loadBaseIndex(ctx, config.packagesDir as string | undefined);
+  const sdByUrl = new Map(base);
+  for (const r of ctx.byType.StructureDefinition) if ((r.data as any)?.url) sdByUrl.set((r.data as any).url, r.data);
+  const tcache = new Map<string, any>();
+  const resolveSchema = (ref: string) => {
+    const url = normRef(ref);
+    if (tcache.has(url)) return tcache.get(url);
+    const sd = sdByUrl.get(url);
+    let s: any; try { s = sd ? translate(sd) : undefined; } catch { s = undefined; }
+    tcache.set(url, s);
+    return s;
   };
+  const vctx = { resolve: resolveSchema };
+
+  const targets = [...ctx.resources.values()].filter(r => !CONFORMANCE.has(r.resourceType) || r.resourceType === "StructureDefinition");
+  return perResource(ctx, "__vc_schema", targets, (r) => {
+    if (r.resourceType === "StructureDefinition") {
+      try { translate(r.data as any); return []; }
+      catch (e) { return [mkIssue(r, { severity: "error", code: "translate", message: `StructureDefinition does not translate: ${(e as Error).message}` }, "schema")]; }
+    }
+    const d = r.data as any;
+    const schemas = ((d.meta?.profile as string[] | undefined) ?? []).map(stripVer).map(resolveSchema).filter(Boolean);
+    let res: any; try { res = fsValidate(vctx, schemas, d, { strict: false }); } catch { return []; }
+    return (res?.issues ?? []).map((i: any) => mkIssue(r, {
+      severity: (i.severity ?? "error"), code: String(i.code ?? "?"),
+      path: Array.isArray(i.path) ? i.path.join(".") : String(i.path ?? ""),
+      message: i.message, expected: i.expected, got: i.got,
+    }, "schema"));
+  });
 }
 
-// ── fhirpathConstraints(): @atomic-ehr/fhirpath invariant checks ─────────────
-// The engine is async-only (can't satisfy fhirschema's sync `fhirpath` hook), so
-// this is a separate pass. Reads element constraint[] from the generated snapshot
-// (run fcc/snapshot first). Conservative: only an explicit [false] is flagged.
+// ── fhirpathConstraints — @atomic-ehr/fhirpath invariants; per-resource, incremental ─
 
-export function fhirpathConstraints(opts: { quiet?: boolean } = {}): Validator {
-  return async (ctx) => {
-    const { evaluate } = await import("@atomic-ehr/fhirpath");
+export async function fhirpathConstraints(ctx: PluginContext, _config: Record<string, unknown>, _opts: Record<string, never>): Promise<ValidatorIssue[]> {
+  const { evaluate } = await import("@atomic-ehr/fhirpath");
+  const instances = [...ctx.resources.values()].filter(r => !CONFORMANCE.has(r.resourceType));
+  return perResource(ctx, "__vc_fhirpath", instances, async (r) => {
     const issues: ValidatorIssue[] = [];
-    for (const r of ctx.resources.values()) {
-      if (CONFORMANCE.has(r.resourceType)) continue;
-      const d = r.data as any;
-      for (const purl of ((d.meta?.profile as string[] | undefined) ?? []).map(stripVer)) {
-        const sd = ctx.byUrl(purl);
-        const elements = (sd?.data as any)?.snapshot?.element as any[] | undefined;
-        if (!elements) continue;
-        const rootType = (sd!.data as any).type ?? r.resourceType;
-        for (const el of elements) {
-          const rel = el.path === rootType ? null : el.path.slice(rootType.length + 1);
-          if (rel && /[[:]/.test(rel)) continue;             // skip choice[x] / slice paths
-          for (const c of (el.constraint ?? [])) {
-            if (!c.expression) continue;
-            let nodes: unknown[];
-            try { nodes = rel ? await evaluate(rel, { input: d }) : [d]; } catch { continue; }
-            for (const node of nodes) {
-              let res: unknown;
-              try { res = await evaluate(c.expression, { input: node, variables: { resource: d, rootResource: d, context: node } }); }
-              catch { continue; }                            // unsupported fn → skip
-              if (Array.isArray(res) && res.length === 1 && res[0] === false) {
-                issues.push(mkIssue(r, { severity: c.severity === "warning" ? "warning" : "error", code: String(c.key), path: el.path, message: String(c.human ?? c.expression) }, "fhirpath"));
-                break;
-              }
+    const d = r.data as any;
+    for (const purl of ((d.meta?.profile as string[] | undefined) ?? []).map(stripVer)) {
+      const sd = ctx.byUrl(purl);
+      const elements = (sd?.data as any)?.snapshot?.element as any[] | undefined;
+      if (!elements) continue;
+      const rootType = (sd!.data as any).type ?? r.resourceType;
+      for (const el of elements) {
+        const rel = el.path === rootType ? null : el.path.slice(rootType.length + 1);
+        if (rel && /[[:]/.test(rel)) continue;
+        for (const c of (el.constraint ?? [])) {
+          if (!c.expression) continue;
+          let nodes: unknown[];
+          try { nodes = rel ? await evaluate(rel, { input: d }) : [d]; } catch { continue; }
+          for (const node of nodes) {
+            let res: unknown;
+            try { res = await evaluate(c.expression, { input: node, variables: { resource: d, rootResource: d, context: node } }); }
+            catch { continue; }
+            if (Array.isArray(res) && res.length === 1 && res[0] === false) {
+              issues.push(mkIssue(r, { severity: c.severity === "warning" ? "warning" : "error", code: String(c.key), path: el.path, message: String(c.human ?? c.expression) }, "fhirpath"));
+              break;
             }
           }
         }
       }
     }
-    if (!opts.quiet) ctx.warn({ severity: "info", source: "fcc/validator", message: `fhirpath constraints: ${issues.length} violation(s)` });
     return issues;
-  };
+  });
 }
 
-// Index base StructureDefinitions from the FHIR package cache (R4 core + each
-// declared dependency at its version) — same source the snapshot plugin uses.
-async function loadBaseIndex(ctx: PluginContext, packagesDir: string | undefined, cached: Map<string, any> | null): Promise<Map<string, any>> {
+// Index base StructureDefinitions from the FHIR package cache. Cached in
+// ctx.shared (the validator fns are stateless — config is data, state is in ctx).
+async function loadBaseIndex(ctx: PluginContext, packagesDir: string | undefined): Promise<Map<string, any>> {
+  const cached = (ctx.shared as any).__vc_baseIndex as Map<string, any> | undefined;
   if (cached) return cached;
   const m = new Map<string, any>();
   const dir = resolvePath(ctx.config.projectRoot, packagesDir ?? "input-cache/.fhir/packages");
@@ -233,5 +241,6 @@ async function loadBaseIndex(ctx: PluginContext, packagesDir: string | undefined
       }
     } catch { /* package absent */ }
   }
+  (ctx.shared as any).__vc_baseIndex = m;
   return m;
 }
