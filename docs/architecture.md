@@ -1,260 +1,250 @@
-# fcc — build & incremental architecture
+# fcc — architecture
 
-How fcc turns IG source artifacts (`.json` / `.fsh` / `.ts` / `.md`) into a FHIR
-package + a browsable site, and how it rebuilds **incrementally** when an artifact
-changes. This is the "hybrid" model: a precise dependency graph for the *data*
-layer, lazy on-demand rendering for the *view* layer in dev, and full precompute
-for prod.
-
-```
-                        ┌──────────────── BuildState (survives rebuilds) ───────────────┐
- sources                │  resources  byCanonical                                        │
- input/resources/*.json │  fileToResources ⇄ resourceToFiles   reverseCanonical (deps)  │
- input/examples/*.json  │  shared (cross-plugin)                                          │
- input/*.fsh   ─loaders─▶  ───────────────────────────────────────────────────────────  │
- input/**/*.ts          │  transform → snapshot → narrative → validate → generateBundle  │
- pagecontent/*.md       │                                          └ writeBundle (site)  │
-                        └────────────────────────────────────────────────────────────────┘
-                                       │ prod: precompute to dist/         │ dev: lazy render
-                                       ▼                                   ▼
-                                 dist/<target>/site/*.html        Bun.serve + SSE live-reload
-```
+How fcc turns IG source artifacts into FHIR packages + browsable sites, and how
+it rebuilds **incrementally**. This document describes the **target** architecture
+we are refactoring toward; a Status table (§10) marks what is done, in progress,
+or planned, and §11 is the refactoring plan.
 
 ## 0. The model in one breath
 
-Four ideas carry the whole system — each is the *simple* answer to one concern,
-and together they're the *flexible* part:
+Everything flows through a single in-memory world, `ctx`. Sources are loaded into
+it, enriched in place, projected out of it:
 
-- **One graph.** Every source becomes a resource in a `BuildState` that survives
-  rebuilds; canonical references form a dependency graph. A changed file →
-  invalidate its transitive closure → re-run only that. One algorithm for all
-  incrementality (§3).
+```
+  sources ──Loaders──▶  ctx (the world)  ──Generators──▶ artifacts
+  (.json .fsh .ts .md)   ├ resources       (npm, site, nav, QA report)
+                         ├ canonicals.<RT>        ▲
+                         ├ byType.<RT>            │ read
+                         ├ issues (validation)    │
+                         └ (one dependency graph) │
+                              ▲   Transformers · Validators · Views
+                              └── enrich resources / write results back into ctx
+```
+
+Five ideas carry it — each the *simple* answer to one concern, together the
+*flexible* whole:
+
+- **Everything is a resource.** Source files — FHIR resources, **markdown pages**,
+  examples, the menu — are all loaded into one resource graph in `ctx`. One graph,
+  one provenance map, one incremental algorithm. Non-FHIR resource types (`Page`,
+  …) are simply filtered out of FHIR-facing consumers.
+- **`ctx` is the world.** Resources, typed canonical indexes, validation results,
+  computed navigation — all live in `ctx`. Producers read `ctx` and write back
+  into `ctx`; nothing passes data sideways.
 - **One renderer, two deliveries.** A single route table renders any page; prod
-  precomputes it to `dist/`, dev renders it on demand from memory + live-reloads
-  (§5). No dev/prod drift.
-- **Plugins are functions that register functions** (Emacs `add-hook` style). A
-  plugin is `(hooks) => { hooks.afterValidate(fn); hooks.writeBundle(fn); … }` —
-  no object, no methods. Every registered fn may be async (the runner awaits all).
-  They never import one another — they meet at the resource graph and
-  `ctx.shared.<ns>` handoffs (menu→site, validator→site). Run order = config order,
-  so adding/removing/reordering a plugin is a one-line edit.
-- **Composition over configuration.** Where a concern has many variants, it's a
-  *list you compose*, not flags — most visibly validation: one plugin running
-  `[structural(), schema(), fhirpathConstraints(), …]`, each an async validator (§7).
+  precomputes to `dist/`, dev renders on demand from `ctx` + SSE live-reload.
+- **Plugins are functions that register functions** (Emacs `add-hook`). They meet
+  only at `ctx`; never import one another. Order = config order.
+- **Composition over configuration.** Many-variant concerns are lists you compose
+  (`validators: [...]`, a target's `pipeline: [...]`), not flags.
 
-**The four extension points** (add capability without touching the engine):
+## 1. The six layers
 
-| Want to… | Add a… | Lives in |
-|----------|--------|----------|
-| read a new source file type | **Loader** (`{ extensions, load, invalidate? }`) | `src/<lang>` (json/fsh/ts) |
-| transform / generate / emit | **Plugin** (a `(hooks) => void` registering hook fns) | `src/<name>/<name>.ts` |
-| add a validation check | **Validator** (async `(ctx) => Promise<issues>`) | `validator({ validators: […] })` |
-| change the site | **renderer namespace / `$`-dispatch file** | `src/site_*` |
+Every plugin/function is one of six kinds. The first three *fill/enrich* `ctx`;
+the last three *project* `ctx` into artifacts.
 
-## 1. Data model (`src/engine/state.ts`)
+| Layer | Role | Pure? | Runs |
+|-------|------|-------|------|
+| **Loaders** | source file → resource(s) in `ctx` (FHIR, `Page`, menu, examples) | — | on load + on file change |
+| **Transformers** | enrich a resource (narrative, snapshot) | *local* pure, or *global* (needs graph) | local: lazy/per-resource · global: after load |
+| **Validators** | read `ctx` → write `issues` back into `ctx` | (read-only over graph) | after load, over the changed closure |
+| **Views** | project a resource into a representation (snapshot/diff/json tabs, companion files) | pure `(ctx, { resource })` | lazy, at render time |
+| **Generators** | assemble a whole artifact from `ctx` (site route table, npm tarball, nav, QA page) | reads `ctx` | per output target |
+| **Renderers** | leaf fns composing a page from views + chrome (`$section_*`, `layout`, …) | pure | lazy, at render time |
 
-A `BuildState` holds one `TargetState` per output target. It **survives between
-incremental rebuilds** in watch mode (cleared only on a full build). Each
-`TargetState` carries the resource graph plus the indexes that make incremental
-invalidation precise:
+**Transformer timing** is by *data dependency*, not difficulty:
+- *local* (resource → itself, e.g. `narrative`): depends only on the resource —
+  can run lazily / per-changed-resource.
+- *global* (e.g. `snapshot` needs the base-definition chain; `ig-resource` needs
+  all resources): runs after the load phase. "Needs context" ≠ "needs a full
+  re-run" — it needs the current full `ctx` (in memory) but only recomputes the
+  changed closure (§4).
 
-| Index | Maps | Used for |
-|-------|------|----------|
-| `resources` | id → `Resource` | the graph itself |
-| `byCanonical` | canonical url → id | resolve refs by URL |
-| `fileToResources` | source file → ids it produced | seed invalidation from a changed file |
-| `resourceToFiles` | id → source files | find files to re-load |
-| `reverseCanonical` | canonical url → ids that **reference** it | the dependency graph |
-| `shared` | plugin ns → arbitrary | cross-plugin handoffs (e.g. `shared.site.render`, `shared.menu`) |
+## 2. `ctx` — the single world
 
-`reverseCanonical` is built by `populateDeps` → `collectCanonicals`, which walks
-each resource's data for canonical-bearing fields (`url`, `baseDefinition`,
-`system`, `valueSet`, `profile`, `targetProfile`, `instantiatesCanonical`,
-`derivedFrom`).
+`ctx` (the build `PluginContext`) carries the graph plus typed, derived indexes,
+maintained incrementally on every `indexResource`/`dropResource`:
 
-## 2. Build pipeline (`src/engine/runner.ts`)
-
-At startup, `collectHooks(cfg.plugins)` runs each plugin once — they push their
-functions into the hook slots (`state.hooks`). A full build (`runTargetFull`)
-then runs each slot, in registration = config order, at its stage:
-
-```
-buildStart
-  → load every source file via its loader      (loadFile → indexResource)
-  → resolveExamples + populateDeps
-  → transform        (per resource)
-  → beforeSnapshot / afterSnapshot
-  → beforeValidate / afterValidate              (e.g. fcc/snapshot generates snapshots here)
-  → generateBundle / writeBundle                (e.g. fcc/site, fcc/npm emit output)
-  → buildEnd / closeBundle
+```ts
+ctx.resources                          // Map<id, Resource> — the graph
+ctx.canonicals.StructureDefinition     // Map<url, Resource> — typed per resourceType
+ctx.canonicals.ValueSet                //   (autocomplete; no string queries)
+ctx.byType.Patient                     // Resource[] — instances of a type
+ctx.byType.Page                        // markdown pages, also resources
+ctx.issues                             // Map<resourceId, Issue[]> — validation results
+ctx.shared.<ns>                        // cross-plugin handoffs (menu → site, …)
 ```
 
-Order within a slot is **config order** (no `enforce` flag) — list `site()` last
-so its `writeBundle` runs after the other emitters and after the data is fully
-shaped. Every hook fn may be async; the runner awaits each.
+There is **one** `ctx` (the engine `PluginContext` and the site's flat-ns
+`Context` are being unified — §10/§11). `ctx.fns.<ns>.<fn>(ctx, opts)` is the
+flat-namespace call surface; cross-file types via `types.<ns>.<Name>`.
 
-## 3. Incremental rebuild (`runTargetIncremental`)
+## 3. Pipelines: one source → many artifacts
 
-Given the set of changed files, fcc rebuilds the **minimum closure**:
+The pipeline splits into a **data pipeline** (shared) and an **output pipeline**
+(per target):
 
-1. **Seed** — changed files → resource ids they produced (`fileToResources`).
-2. **Closure** — `transitiveDependents(seedIds)` walks `reverseCanonical`: every
-   resource that (transitively) references a seed is invalidated.
-3. **`handleHotUpdate` hooks** extend the set (see §4).
-4. **Loader `invalidate`** extends it (FSH drops the whole tank — see §6).
-5. **Drop** invalidated resources from all indexes; **re-load** their files.
-6. `resolveExamples` + `populateDeps`; **re-transform** only `changedIds`.
-7. snapshot / validate run (today as full passes — see §7); `writeBundle`.
+- **Data pipeline** — Loaders → Transformers → Validators. Builds the shared
+  `ctx`. It is shared across all targets of the *same FHIR version* (snapshots
+  and validation are version-specific).
+- **Output pipeline** — Generators, chosen *per target*. Each target reads its
+  data `ctx` and emits its artifact set.
 
-The site's `writeBundle` honors `changedIds`: resource pages whose id is not in
-the set are skipped; chrome/aggregate pages (index, artifacts, menu) are always
-re-emitted.
+```ts
+targets: [
+  { name: "npm",     fhir: "4.0.1", pipeline: [npm()] },        // package only
+  { name: "site-r4", fhir: "4.0.1", pipeline: igSite() },       // three sites,
+  { name: "site-r5", fhir: "5.0.0", pipeline: igSite() },       //  one per version
+]
+```
 
-## 4. Dependency graph: canonical edges + soft edges
+"Three sites for three versions" = three data `ctx`s, each with a site generator;
+"npm only" = one data `ctx` + the npm generator. **Presets** (`igPublisherPipeline()`)
+package the IG-Publisher-equivalent layer list; everything is configured in code.
 
-`reverseCanonical` captures **canonical-URL** references, which already gives the
-right invalidation for most cases — e.g. editing a profile invalidates every
-example that conforms to it (the example's `meta.profile` → profile url → the
-example is a dependent), so those examples re-validate and re-render.
+## 4. Incrementality — one graph, one closure rule
 
-Some **view-level** dependencies aren't canonical edges and are added explicitly
-in `src/site_core/handleHotUpdate.ts`:
+The whole system is **one dependency graph**, and incrementality is a single rule
+applied to every layer:
 
-- **sample → profile.** A changed example only *references* its profile, so the
-  graph would re-render the example but not the **profile page** whose "Examples"
-  section lists it. The hook invalidates the example's profile(s) so that section
-  stays correct on incremental prod rebuilds.
-- **`*-intro.md` / `*-notes.md` → resource.** A markdown note for `Foo/bar`
-  invalidates resource `Foo/bar` and clears the notes cache.
+> Every node in `ctx` has *provenance* (the source files / other nodes it derives
+> from) and *dependents* (who reads it). A changed source invalidates the
+> transitive closure of dependents; only the producers of that closure re-run, in
+> layer order.
 
-> Aggregate pages (artifacts index, landing, menu) are always re-emitted, so
-> "a new resource appeared in the index" needs no explicit edge.
+Concretely, on `state.ts`'s `TargetState` (survives rebuilds):
 
-## 5. Dev vs prod: one renderer, two delivery modes
+| Index | Maps | Purpose |
+|-------|------|---------|
+| `fileToResources` ⇄ `resourceToFiles` | source file ⇄ resource ids | seed the closure from a changed file (any kind — FHIR or `Page`) |
+| `reverseCanonical` | canonical url → ids referencing it | the dependency graph |
+| `canonicals.<RT>` / `byType.<RT>` | typed indexes | derived; kept in sync on add/drop |
 
-`ResolvedConfig.dev` / `PluginContext.dev` is `true` under `fcc dev`. The site's
-render layer is a **single route table** (`src/site_core/buildRoutes.ts`) used by
-both modes — there is exactly one renderer, so dev and prod output are identical.
+`runIncremental`:
+1. **Seed** — changed files → resource ids (`fileToResources`).
+2. **Closure** — `transitiveDependents(seed)` over `reverseCanonical`.
+3. **`handleHotUpdate`** + **loader `invalidate`** extend it (soft/view edges, FSH whole-tank).
+4. **Drop** invalidated; **re-load** their files; re-`populateDeps`.
+5. **Re-transform** only the closure; **re-validate** only the closure (replace those `ctx.issues` entries).
+6. Generators emit only the closure (prod) — or nothing (dev, lazy).
 
-`buildRoutes` enumerates **every** output path as a *lazy* thunk **without
-rendering**: resource pages (`pageHref`), companion tabs + raw side-cars (from
-`tabsFor` — cheap, no render), `index.html` / `artifacts.html` / `style.css`, and
-each pagecontent page. It also does the per-build setup every render depends on
-(Shiki warm-up, pagecontent + ref-links, intro/notes, menu).
+Per layer:
+- **Loaders** — a changed `.md` invalidates exactly its `Page` resource (provenance), not the whole site.
+- **Transformers** — *global* ones (snapshot) are covered by the closure: editing profile P invalidates derived profiles via `baseDefinition` edges, so their snapshots regenerate; *local* ones touch only the changed resource.
+- **Validators** — re-validate the closure; `ctx.issues` keeps unchanged entries. The QA page reads the whole map → always fresh.
+- **Views / Renderers** — pure, memoizable by `(resourceId, cycle)`; lazy in dev.
+- **Generators** — *per-resource* (a page per resource): re-emit only changed (route table gated by `changedIds`). *Aggregate* (nav/index/npm/QA): re-run when their input set's closure is non-empty; cheap ones (index/nav) always, expensive ones (npm tarball) gated.
 
-`writeBundle` then:
+**Why dev is nearly free:** generators are **lazy** — they render from `ctx` on
+request. An edit updates the data `ctx` (closure only) and the watcher broadcasts
+an SSE reload; the browser re-requests the viewed page, which renders fresh from
+the current `ctx`. Aggregate sections (a profile's "Examples", the nav) are
+correct automatically because they read `ctx` at render time. Prod (precompute)
+is the only place a generator needs to know *what* to re-emit.
 
-- **always** publishes `pctx.shared.site.render(path)` — a lazy renderer that
-  resolves one route and renders it from the current in-memory graph;
-- **prod** (`dev:false`): walks the table and writes every route to
-  `dist/<target>/site/`, honoring `changedIds` (incremental);
-- **dev** (`dev:true`): writes **nothing** to disk — returns after publishing the
-  renderer. The dev server serves from memory.
+## 5. Dev vs prod delivery (one renderer)
 
-### Dev server (`src/engine/devServer.ts`)
+The view layer is a single **route table** (`site_core/buildRoutes`) used by both
+modes — one renderer, so output is identical:
 
-`fcc dev` starts a `Bun.serve` that:
+- it enumerates every output path as a *lazy* render thunk (resource pages,
+  companion tabs + raw side-cars, `index`/`artifacts`/`errors`/`style.css`,
+  `Page` resources) without rendering;
+- `writeBundle` publishes `ctx.shared.site.render(path)` for the dev server, and
+  in **prod** writes every route to `dist/` (honoring `changedIds`); in **dev**
+  writes nothing.
 
-- renders each request **on demand** via `state.byTarget.get(t).shared.site.render(path)`
-  — latency is "render one page" (~ms), independent of IG size, and aggregates
-  are always fresh because they render from the current graph;
-- exposes `GET /__fcc/events` (SSE) and injects a tiny client into every HTML
-  response; after each (incremental) rebuild the watcher calls
-  `dev.broadcastReload()` and the browser reloads automatically. No external
-  static server, no manual refresh.
+**Dev server** (`src/engine/devServer.ts`): `Bun.serve` renders each request on
+demand from `ctx`, and pushes a live-reload over SSE (`/__fcc/events`) after every
+rebuild. `fcc dev` watches `cfg.sources` + `fcc.config.ts` + plugin `watchPaths`.
 
-### Watching
+## 6. Plugins = hooks (Emacs `add-hook`)
 
-`fcc dev` watches `cfg.sources` dirs + `fcc.config.ts` **plus every path returned
-by each plugin's `watchPaths(cfg)`** — that's how non-resource markdown
-(`pagecontent`, `intro-notes`) is picked up. The watcher (`src/engine/watcher.ts`)
-debounces (80 ms) and is single-flight (coalesces edits during a rebuild).
+A plugin is a function `(hooks) => { hooks.afterValidate(fn); hooks.writeBundle(fn); … }`
+— no object, no methods. `collectHooks(cfg.plugins)` runs each once into hook
+slots (`state.hooks`); the runner runs each slot, in config order, at its stage:
 
-## 6. FSH (`src/fsh`)
+```
+buildStart  transform  beforeSnapshot  afterSnapshot
+beforeValidate  afterValidate  generateBundle  writeBundle
+handleHotUpdate  buildEnd  closeBundle  watchPaths
+```
 
-`fsh-sushi` compiles the whole FSH tank in one call (cross-references between
-Aliases/Profiles/Instances must resolve together) and exposes **no per-file
-source map**. So the FSH loader caches one compiled batch per target and, on any
-`.fsh` change, `invalidate` drops the batch and invalidates every FSH-produced
-resource. Non-FSH resources are untouched.
-
-That compile is multi-second and CPU-bound, so it runs **off the main thread** in
-a persistent `Worker` (`src/fsh/worker.ts`). `await`-ing the worker yields the
-event loop, so during a recompile the dev server keeps serving the last-good
-graph — verified: requests return in <1 ms while a ~2 s FSH recompile is in
-flight. The heavy `fsh-sushi` module is imported **only** in the worker, never on
-the main thread. The worker is `ref`'d while a compile is pending and `unref`'d
-when idle, so `fcc build` exits cleanly and `fcc dev` keeps it warm. One worker
-with id-correlated requests suffices because builds are sequential (per target;
-the watcher is single-flight).
+Every hook fn is `(ctx, opts)` — `ctx` first, a single options object second
+(`transform(ctx, { resource })`, `writeBundle(ctx, { bundle })`, …); no-payload
+hooks take just `(ctx)`. Loaders are not hooks — they are declared on
+`cfg.sources[].loader` as `{ extensions, load(ctx, { file }), invalidate? }`.
+Every hook fn may be async; the runner awaits all.
 
 ## 7. Validation — one plugin, composable validators
 
-There is **one** validation plugin, `fcc/validator` (explicitly enabled). It is a
-thin runner: it executes a **list of `Validator` functions**, merges their issues
-into one report at `ctx.shared.validate`, and emits a summary. Every check is a
-validator — you compose them, which is the whole extensibility story ("just drop
-in more validators"):
+One plugin, `fcc/validator`, runs a composed list of async validators and writes
+one report into `ctx` (rendered as `errors.html`, à la IG-Publisher `qa.html`):
 
 ```ts
-type Validator = (ctx) => Promise<ValidatorIssue[]>   // always async; run in parallel
-
-validator()                                  // default: [structural()]
-validator({ validators: [
-  structural(),                              // lite lint — no package cache needed
-  schema({ packagesDir }),                   // @atomic-ehr/fhirschema
-  fhirpathConstraints(),                     // @atomic-ehr/fhirpath
-  myCustomValidator(),                       // your own (ctx) => issues
-] })
+validator({ validators: [structural(), schema({ packagesDir }), fhirpathConstraints()] })
 ```
 
-Built-in validators:
+- `structural()` — lite lint (resourceType/id/url/dupes/refs), no cache.
+- `schema()` — `@atomic-ehr/fhirschema`: instances vs profiles + canonicals translate.
+- `fhirpathConstraints()` — `@atomic-ehr/fhirpath`: element `constraint[]` invariants (read from snapshots).
+- `Validator = (ctx) => Promise<issues>` — async; the plugin runs them in parallel.
 
-- **`structural()`** — lite lint: resourceType / id / canonical url / duplicate
-  id+url / unresolved refs. No FHIR package cache required, so it's the safe
-  default.
-- **`schema()`** — `@atomic-ehr/fhirschema`. Builds a FHIRSchema registry from the
-  in-bundle SDs + the FHIR package cache (R4 core + declared deps, same source as
-  `fcc/snapshot`); validates **instances** against their `meta.profile[]` (+ base
-  type, walking the chain) and that every **StructureDefinition** `translate()`s.
-- **`fhirpathConstraints()`** — `@atomic-ehr/fhirpath`. Evaluates each profile's
-  element `constraint[]` invariants (read from the generated snapshot — run
-  `fcc/snapshot` first) against the instance. The engine is async-only and can't
-  satisfy fhirschema's *synchronous* `fhirpath` hook, so it is a **separate
-  async pass** — the canonical reason validators are a list rather than one call.
-  Conservative: only an explicit `[false]` is flagged; unsupported FHIRPath
-  functions and non-boolean results are skipped, keeping noise low (us-core: ~20
-  named `us-core-*` invariants, no generic `ele-1`/`dom-*` noise).
+## 8. FSH off-thread
 
-The report is rendered by the site as **`errors.html`** (a QA page à la IG
-Publisher's `qa.html`) with a top-bar QA chip; both appear only when the plugin
-is enabled. Schema validation is **experimental** — terminology and some
-slicing/choice-type checks are limited until those evaluators are wired in, so
-the page is labelled as such.
+`fsh-sushi` compiles the whole FSH tank in one multi-second call with no per-file
+source map, so it runs in a persistent **Worker** (`src/fsh/worker.ts`) — the dev
+loop stays responsive (<1 ms requests during a ~2 s recompile). `ref` while a
+compile is pending, `unref` when idle.
 
-These run as **full passes** in `afterValidate` for now. The planned scaling model
-is **tiered**:
+## 9. Engine map
 
-- **structural / cheap** checks run inline on the invalidation closure (blocking,
-  incremental) — they already have the `changedIds` set available;
-- **heavy** validation (full FHIR validator, terminology) runs as a **background
-  pass** whose results stream to the browser over the existing SSE channel, so
-  editing stays snappy. Validation reuses the same dependency graph: changing a
-  profile invalidates (re-validates) its conforming examples via `reverseCanonical`.
+```
+src/engine/  runner (collectHooks + run slots; full + incremental) · state (graph + indexes)
+             watcher (debounced, single-flight) · devServer (lazy + SSE)
+             types · define · authoring · repl · version  →  exported as `fcc`
+src/bin/     fcc · repl · gentypes CLIs
+src/<loader> json · fsh · ts · pages(planned)            (cfg.sources[].loader)
+src/<plugin> snapshot · narrative · validator · ig-resource · npm · menu   (hooks)
+src/site*    site + seven site_* flat-ns renderer namespaces                (hooks)
+```
 
-## 8. Status
+## 10. Status
 
 | Area | State |
 |------|-------|
-| Dependency-graph incremental (data) | **done** (`runIncremental` + indexes) |
-| sample→profile / md→resource soft edges | **done** (`handleHotUpdate`) |
-| Single route table, prod/dev parity | **done** (`buildRoutes`) |
-| Dev lazy render + SSE live-reload | **done** (`devServer` + `fcc dev`) |
-| Plugin `watchPaths` wired into dev | **done** |
-| snapshot generation (`@atomic-ehr/fhirschema`) | **done** (`src/snapshot`) |
-| FSH compile in a Worker (non-blocking dev) | **done** (`src/fsh/worker.ts`) |
-| Unified validator (composable validators) → `errors.html` | **done** (`src/validator`) |
-| `structural()` / `schema()` (fhirschema) / `fhirpathConstraints()` (fhirpath) | **done** (experimental) |
-| Terminology evaluator wired into `schema()` | planned |
-| Tiered (background) validation over SSE | planned |
-| Fine-grained per-page render cache (hash×cycle) | planned (lazy render makes it optional) |
+| Dependency-graph incremental (resources) | **done** (`runIncremental` + indexes) |
+| Emacs-hook plugins, `(ctx, opts)` everywhere, async-first | **done** |
+| One renderer (route table), dev lazy + SSE live-reload | **done** |
+| snapshot (`fhirschema`), FSH worker | **done** |
+| Validator: `structural` / `schema` / `fhirpathConstraints` → `errors.html` | **done** |
+| **Everything-is-a-resource: pages as `Page` resources via a loader** | **planned** (§11) |
+| **Typed `ctx.canonicals.<RT>` / `ctx.byType.<RT>`** | **planned** |
+| **Incremental validators (gate by `changedIds`); `ctx.issues` map** | **planned** |
+| **Data pipeline vs per-target output pipeline; presets** | **planned** |
+| **Unify the two `ctx` objects (engine + site) into one** | **planned** |
+
+## 11. Refactoring plan
+
+Ordered by increasing risk; each step ships green (builds + tests) on its own.
+
+1. **Typed indexes.** Add `ctx.canonicals.<RT>` (Map<url,Resource>) and
+   `ctx.byType.<RT>` (Resource[]); maintain them in `indexResource`/`dropResource`.
+   Migrate `byUrl`/`query` call sites opportunistically. *Low risk; immediate DX +
+   foundation for views/validators.*
+2. **Incremental validators.** Move results to `ctx.issues: Map<id, Issue[]>`; gate
+   each validator by `changedIds` (re-validate only the closure, merge). QA page
+   reads the whole map. *Uses the existing graph.*
+3. **Pages as resources.** A `pages()` loader turns pagecontent/landing/intro-notes
+   `.md` into `Page` resources. Filter `Page` out of FHIR consumers (npm,
+   ig-resource, validator, snapshot, narrative, artifacts). `buildRoutes` reads
+   `ctx.byType.Page`; pagecontent dir becomes a source (auto-watched). Soft edge
+   intro/notes-`Page` → target resource page via `handleHotUpdate`. *Better
+   incrementality; the "everything is a resource" core.*
+4. **Menu as a resource / generator** reading `ctx` (same shape).
+5. **Data vs output pipeline.** Split `cfg.plugins` into shared data plugins +
+   per-target `pipeline` (generators); add `igPublisherPipeline()` / `igSite()`
+   presets. Enables "npm-only" / "3 sites". *Config-surface change.*
+6. **Unify `ctx`.** Merge the site's internal flat-ns `Context` into the engine
+   `PluginContext` so there is one `ctx` carrying `fns` + the world. *Largest;
+   last.*
