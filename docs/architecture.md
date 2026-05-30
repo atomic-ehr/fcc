@@ -20,6 +20,35 @@ for prod.
                                  dist/<target>/site/*.html        Bun.serve + SSE live-reload
 ```
 
+## 0. The model in one breath
+
+Four ideas carry the whole system — each is the *simple* answer to one concern,
+and together they're the *flexible* part:
+
+- **One graph.** Every source becomes a resource in a `BuildState` that survives
+  rebuilds; canonical references form a dependency graph. A changed file →
+  invalidate its transitive closure → re-run only that. One algorithm for all
+  incrementality (§3).
+- **One renderer, two deliveries.** A single route table renders any page; prod
+  precomputes it to `dist/`, dev renders it on demand from memory + live-reloads
+  (§5). No dev/prod drift.
+- **Plugins meet at the graph, never each other.** A plugin is just lifecycle
+  hooks. They never import one another — they communicate through the resource
+  graph and `ctx.shared.<ns>` handoffs (menu→site, validator→site). Decoupled, so
+  any plugin is addable/removable in isolation.
+- **Composition over configuration.** Where a concern has many variants, it's a
+  *list you compose*, not flags — most visibly validation: one plugin running
+  `[structural(), schema(), fhirpathConstraints(), …]` (§7).
+
+**The four extension points** (add capability without touching the engine):
+
+| Want to… | Add a… | Lives in |
+|----------|--------|----------|
+| read a new source file type | **Loader** (`{ extensions, load, invalidate? }`) | `src/<lang>` (json/fsh/ts) |
+| transform / generate / emit | **Plugin** (lifecycle hooks) | `src/<name>` |
+| add a validation check | **Validator** (`(ctx) => issues`) | `validator({ validators: […] })` |
+| change the site | **renderer namespace / `$`-dispatch file** | `src/site_*` |
+
 ## 1. Data model (`src/engine/state.ts`)
 
 A `BuildState` holds one `TargetState` per output target. It **survives between
@@ -154,27 +183,49 @@ when idle, so `fcc build` exits cleanly and `fcc dev` keeps it warm. One worker
 with id-correlated requests suffices because builds are sequential (per target;
 the watcher is single-flight).
 
-## 7. Validation (current + planned)
+## 7. Validation — one plugin, composable validators
 
-Two validation plugins, both **explicitly enabled** in `fcc.config.ts`:
+There is **one** validation plugin, `fcc/validator` (explicitly enabled). It is a
+thin runner: it executes a **list of `Validator` functions**, merges their issues
+into one report at `ctx.shared.validate`, and emits a summary. Every check is a
+validator — you compose them, which is the whole extensibility story ("just drop
+in more validators"):
 
-- **`fcc/validate`** — lite structural lint (resourceType / id / url / dupes /
-  unresolved refs).
-- **`fcc/validator`** — schema validation via `@atomic-ehr/fhirschema`. It builds
-  a FHIRSchema registry from the in-bundle SDs + the FHIR package cache (R4 core +
-  declared deps, same source as `fcc/snapshot`), then:
-  - **examples / instances** → validated against their `meta.profile[]` (and base
-    resourceType); the resolver walks the base chain.
-  - **canonicals** → each StructureDefinition must `translate()` to a FHIRSchema.
+```ts
+type Validator = (ctx) => ValidatorIssue[] | Promise<ValidatorIssue[]>
 
-  Results are written to `ctx.shared.validate` as a structured report; the site
-  renders it as **`errors.html`** (a QA page à la IG Publisher's `qa.html`) and
-  shows a QA chip in the top bar. The page appears only when the plugin is
-  enabled. **Extensible**: pass extra standalone `validators`, and wire
-  fhirschema's pluggable `fhirpath` / `terminology` / `referenceResolver`
-  evaluators — both are skipped when absent, which is why FHIRPath-constraint,
-  terminology and some slicing/choice-type checks are currently limited (the page
-  is labelled experimental).
+validator()                                  // default: [structural()]
+validator({ validators: [
+  structural(),                              // lite lint — no package cache needed
+  schema({ packagesDir }),                   // @atomic-ehr/fhirschema
+  fhirpathConstraints(),                     // @atomic-ehr/fhirpath
+  myCustomValidator(),                       // your own (ctx) => issues
+] })
+```
+
+Built-in validators:
+
+- **`structural()`** — lite lint: resourceType / id / canonical url / duplicate
+  id+url / unresolved refs. No FHIR package cache required, so it's the safe
+  default.
+- **`schema()`** — `@atomic-ehr/fhirschema`. Builds a FHIRSchema registry from the
+  in-bundle SDs + the FHIR package cache (R4 core + declared deps, same source as
+  `fcc/snapshot`); validates **instances** against their `meta.profile[]` (+ base
+  type, walking the chain) and that every **StructureDefinition** `translate()`s.
+- **`fhirpathConstraints()`** — `@atomic-ehr/fhirpath`. Evaluates each profile's
+  element `constraint[]` invariants (read from the generated snapshot — run
+  `fcc/snapshot` first) against the instance. The engine is async-only and can't
+  satisfy fhirschema's *synchronous* `fhirpath` hook, so it is a **separate
+  async pass** — the canonical reason validators are a list rather than one call.
+  Conservative: only an explicit `[false]` is flagged; unsupported FHIRPath
+  functions and non-boolean results are skipped, keeping noise low (us-core: ~20
+  named `us-core-*` invariants, no generic `ele-1`/`dom-*` noise).
+
+The report is rendered by the site as **`errors.html`** (a QA page à la IG
+Publisher's `qa.html`) with a top-bar QA chip; both appear only when the plugin
+is enabled. Schema validation is **experimental** — terminology and some
+slicing/choice-type checks are limited until those evaluators are wired in, so
+the page is labelled as such.
 
 These run as **full passes** in `afterValidate` for now. The planned scaling model
 is **tiered**:
@@ -197,7 +248,8 @@ is **tiered**:
 | Plugin `watchPaths` wired into dev | **done** |
 | snapshot generation (`@atomic-ehr/fhirschema`) | **done** (`src/snapshot`) |
 | FSH compile in a Worker (non-blocking dev) | **done** (`src/fsh/worker.ts`) |
-| Schema validator (examples + canonicals) → `errors.html` | **done** (`src/validator`, experimental) |
-| FHIRPath / terminology evaluators wired into the validator | planned |
+| Unified validator (composable validators) → `errors.html` | **done** (`src/validator`) |
+| `structural()` / `schema()` (fhirschema) / `fhirpathConstraints()` (fhirpath) | **done** (experimental) |
+| Terminology evaluator wired into `schema()` | planned |
 | Tiered (background) validation over SSE | planned |
 | Fine-grained per-page render cache (hash×cycle) | planned (lazy render makes it optional) |

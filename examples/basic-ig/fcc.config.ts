@@ -3,7 +3,7 @@ import ts        from "fcc/ts";
 import fsh       from "fcc/fsh";
 import snapshot  from "fcc/snapshot";
 import narrative from "fcc/narrative";
-import validate  from "fcc/validate";
+import validator from "fcc/validator";
 import igRes     from "fcc/ig-resource";
 import npm       from "fcc/npm";
 import site      from "fcc/site";
@@ -35,7 +35,7 @@ export default defineConfig({
   plugins: [
     snapshot(),
     narrative(),
-    validate({ profiles: "strict" }),
+    validator(),                               // default: [structural()] lite lint
     igRes({ pagecontent: "input/pagecontent" }),
     npm(),
     site({ pagecontent: "input/pagecontent" }),

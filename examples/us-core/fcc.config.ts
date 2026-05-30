@@ -2,8 +2,7 @@ import { defineConfig } from "fcc";
 import json      from "fcc/json";
 import snapshot  from "fcc/snapshot";
 import narrative from "fcc/narrative";
-import validate  from "fcc/validate";
-import validator, { fhirpathConstraints } from "fcc/validator";
+import validator, { structural, schema, fhirpathConstraints } from "fcc/validator";
 import igRes     from "fcc/ig-resource";
 import npm       from "fcc/npm";
 import site      from "fcc/site";
@@ -49,14 +48,13 @@ export default defineConfig({
     // us-core has many cross-IG canonical references (smart-app-launch, sdc, ...).
     // fcc v0 doesn't resolve them across packages yet, so "strict" produces a
     // wall of unresolved-ref warnings — keep validation on "lite".
-    validate({ profiles: "lite" }),
-    // Schema validation (examples against profiles + canonicals) + FHIRPath
-    // invariant checks (@atomic-ehr/fhirpath) → errors.html. Runs after snapshot/
-    // (constraints are read from generated snapshots).
-    validator({
-      packagesDir: "../../vendor/us-core/input-cache/.fhir/packages",
-      validators: [fhirpathConstraints()],
-    }),
+    // One validation plugin, composed of validators → errors.html. Runs after
+    // snapshot (fhirpath constraints are read from generated snapshots).
+    validator({ validators: [
+      structural(),                                                            // lite lint
+      schema({ packagesDir: "../../vendor/us-core/input-cache/.fhir/packages" }), // fhirschema
+      fhirpathConstraints(),                                                   // fhirpath invariants
+    ] }),
     igRes({ pagecontent: "../../vendor/us-core/input/pagecontent" }),
     npm(),
     site({

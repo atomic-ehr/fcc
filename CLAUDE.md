@@ -7,6 +7,29 @@ alwaysApply: true
 
 Procedural TypeScript on Bun. Code is organized as flat namespaces of single-purpose functions, hot-reloadable through a per-build `ctx`. There is a live REPL over the dev server for inspecting and driving builds.
 
+## Architecture in one breath
+
+Full write-up in [`docs/architecture.md`](docs/architecture.md). Four ideas, four
+extension points — keep changes within this grain:
+
+- **One graph.** Sources → resources in a `BuildState` that survives rebuilds;
+  canonical refs form a dependency graph. A changed file invalidates its
+  transitive closure → only that re-runs. One incrementality algorithm.
+- **One renderer, two deliveries.** A single route table (`site_core/buildRoutes`)
+  renders any page; `fcc build` precomputes to `dist/`, `fcc dev` renders on
+  demand from memory + SSE live-reload. No dev/prod drift.
+- **Plugins meet at the graph, never each other.** A plugin = lifecycle hooks;
+  they communicate via the resource graph + `ctx.shared.<ns>` handoffs
+  (menu→site, validator→site), never by importing one another.
+- **Composition over configuration.** Many-variant concerns are a *list you
+  compose*, not flags — e.g. `validator({ validators: [structural(), schema(),
+  fhirpathConstraints()] })`; each validator is `(ctx) => issues`.
+
+Extend by adding: a **Loader** (`{extensions, load, invalidate?}`, new file type),
+a **Plugin** (lifecycle hooks), a **Validator** (`(ctx) => issues`, into
+`validator({ validators })`), or a **renderer namespace / `$`-dispatch file**
+(`src/site_*`).
+
 ## Where the code lives
 
 Everything is **one package** (`name: "fcc"`) under a single flat `/src/`.
@@ -90,7 +113,7 @@ Inside a plugin's `src/` directory:
 | `$avail_<name>.ts`     | `fcc/site` tab/section availability predicate `(ctx,{resource}) → boolean`. |
 | `$render_<RT>.ts`      | Generic per-resourceType renderer dispatch family (other plugins). `fcc/site` uses `renderCanonical` + `$section_` instead. |
 | `$loader_<ext>.ts`     | the loader plugins (`json`/`fsh`/`ts`) per-extension loader.                                   |
-| `$rule_<name>.ts`      | `fcc/validate` per-lint-rule (one rule = one file).                    |
+| `$rule_<name>.ts`      | (legacy) per-lint-rule file. `fcc/validator` now composes plain `Validator` (`(ctx) => issues`) functions — `structural()` / `schema()` / `fhirpathConstraints()` — passed via `validator({ validators: [...] })`. |
 | `$narrative_<RT>.ts`   | `fcc/narrative` per-resourceType narrative generator.                  |
 | `$ext_<slug>.ts`       | Handler for one specific FHIR extension URL.                            |
 | `$emit_<format>.ts`    | One output-format emitter (`$emit_npm.ts`, `$emit_xml.ts`).             |

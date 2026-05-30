@@ -83,12 +83,22 @@ Everything is one package (`fcc`) under a flat `src/`. The engine is imported as
 | `fcc/json`         | `.json` source loader (drop-in for IG-Publisher-style `input/resources/*.json`)   |
 | `fcc/snapshot`     | Snapshot generation via `@atomic-ehr/fhirschema` — merges each differential against its base-definition chain into a full `snapshot.element[]` |
 | `fcc/narrative`    | Auto-fills `Resource.text.div`                                                    |
-| `fcc/validate`     | Lite validation: resourceType / id / url / dupes / unresolved refs                |
-| `fcc/validator`    | Schema validation via `@atomic-ehr/fhirschema` (examples vs profiles + canonicals) → QA `errors.html`; extensible (fhirpath/terminology) |
+| `fcc/validator`    | Runs a composable list of validators → QA `errors.html`: `structural()` (lite lint), `schema()` (`@atomic-ehr/fhirschema`), `fhirpathConstraints()` (`@atomic-ehr/fhirpath`), or your own |
 | `fcc/ig-resource`  | Synthesises the `ImplementationGuide` resource                                    |
 | `fcc/npm`          | FHIR NPM `package.tgz` emitter (pure-Bun USTAR + gzip)                            |
 | `fcc/menu`         | Reads `sushi-config.yaml` menu → top-bar nav                                      |
 | `fcc/site` (`src/site` + `src/site_*`) | Browsable HTML site, Tailwind-CDN, IG-Publisher-resembling layout — flat fn-per-file across seven `site_*` namespaces with `ctx.fns` hot-reload |
+
+## Architecture
+
+Four ideas, four extension points — see [`docs/architecture.md`](./docs/architecture.md):
+
+- **One graph** — sources become resources in a `BuildState` that survives rebuilds; a changed file invalidates its dependency closure, so rebuilds are incremental.
+- **One renderer, two deliveries** — prod precomputes pages to `dist/`; `fcc dev` renders them on demand from memory and live-reloads the browser over SSE.
+- **Plugins meet at the graph, never each other** — decoupled via the resource graph + `ctx.shared.<ns>` handoffs.
+- **Composition over configuration** — e.g. validation is one plugin running a list you compose: `validator({ validators: [structural(), schema(), fhirpathConstraints()] })`.
+
+Extend by adding a **loader** (new file type), a **plugin** (lifecycle hook), a **validator** (`(ctx) => issues`), or a **renderer namespace** (`src/site_*`). FSH compiles off-thread in a Worker so dev never blocks.
 
 ## Examples
 
