@@ -144,9 +144,15 @@ source map**. So the FSH loader caches one compiled batch per target and, on any
 `.fsh` change, `invalidate` drops the batch and invalidates every FSH-produced
 resource. Non-FSH resources are untouched.
 
-**Planned:** move `fshToFhir` into a `Worker` so the multi-second whole-tank
-recompile doesn't block the dev loop; the main loop keeps serving the last-good
-graph and patches it when the worker returns.
+That compile is multi-second and CPU-bound, so it runs **off the main thread** in
+a persistent `Worker` (`src/fsh/worker.ts`). `await`-ing the worker yields the
+event loop, so during a recompile the dev server keeps serving the last-good
+graph — verified: requests return in <1 ms while a ~2 s FSH recompile is in
+flight. The heavy `fsh-sushi` module is imported **only** in the worker, never on
+the main thread. The worker is `ref`'d while a compile is pending and `unref`'d
+when idle, so `fcc build` exits cleanly and `fcc dev` keeps it warm. One worker
+with id-correlated requests suffices because builds are sequential (per target;
+the watcher is single-flight).
 
 ## 7. Validation (current + planned)
 
@@ -171,6 +177,6 @@ is **tiered**:
 | Dev lazy render + SSE live-reload | **done** (`devServer` + `fcc dev`) |
 | Plugin `watchPaths` wired into dev | **done** |
 | snapshot generation (`@atomic-ehr/fhirschema`) | **done** (`src/snapshot`) |
-| FSH in a Worker | planned |
+| FSH compile in a Worker (non-blocking dev) | **done** (`src/fsh/worker.ts`) |
 | Tiered (background) validation over SSE | planned |
 | Fine-grained per-page render cache (hash×cycle) | planned (lazy render makes it optional) |

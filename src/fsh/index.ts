@@ -1,5 +1,4 @@
 import { readFile } from "node:fs/promises";
-import { fshToFhir } from "fsh-sushi/dist/run/FshToFhir.js";
 import type { Loader, LoadOutput, PluginContext, Resource } from "fcc";
 
 type Opts = {
@@ -8,14 +7,69 @@ type Opts = {
 };
 
 type Batch = Map<string, { resources: Array<Record<string, unknown>> }>;
+type WorkerOut = { fhir: Array<Record<string, unknown>>; errors: Array<{ message: string }>; warnings: Array<{ message: string }> };
+
+// ---------------------------------------------------------------------------
+// Lazy persistent compile worker. fsh-sushi compiles the whole tank in one
+// (multi-second, CPU-bound) call; running it on the main thread freezes the dev
+// loop. The worker runs it off-thread — `await` yields the event loop so the
+// dev server keeps serving the last-good graph while a rebuild is in flight.
+// The heavy fsh-sushi module is imported only in worker.ts, never on the main
+// thread. Builds are sequential (per target, and the watcher is single-flight),
+// so one worker with id-correlated requests is enough.
+
+let worker: Worker | null = null;
+let seq = 0;
+const pending = new Map<number, { resolve: (v: WorkerOut) => void; reject: (e: Error) => void }>();
+
+type Reffable = { ref?: () => void; unref?: () => void };
+
+// Keep the process alive only while a compile is in flight: ref on post, unref
+// when the last pending reply arrives. (A persistent unref'd worker would let
+// `fcc build` exit mid-compile; a persistent ref'd one would stop it exiting
+// after the build.)
+function idleIfDone(w: Worker) { if (pending.size === 0) (w as Reffable).unref?.(); }
+
+function ensureWorker(): Worker {
+  if (worker) return worker;
+  const w = new Worker(new URL("./worker.ts", import.meta.url).href, { type: "module" });
+  w.addEventListener("message", (e: MessageEvent) => {
+    const m = e.data as { id: number; ok: boolean; error?: string } & WorkerOut;
+    const p = pending.get(m.id);
+    if (!p) return;
+    pending.delete(m.id);
+    idleIfDone(w);
+    if (m.ok) p.resolve(m);
+    else p.reject(new Error(m.error ?? "fsh worker error"));
+  });
+  w.addEventListener("error", (e: ErrorEvent) => {
+    for (const p of pending.values()) p.reject(new Error(e.message || "fsh worker crashed"));
+    pending.clear();
+    try { w.terminate(); } catch { /* already gone */ }
+    if (worker === w) worker = null;                 // next compile re-spawns
+  });
+  worker = w;
+  (w as Reffable).unref?.();                          // start idle — don't hold the process
+  return w;
+}
+
+function compileInWorker(input: string[], opts: Record<string, unknown>): Promise<WorkerOut> {
+  const id = ++seq;
+  const w = ensureWorker();
+  (w as Reffable).ref?.();                            // busy — keep the process alive until the reply
+  return new Promise<WorkerOut>((resolve, reject) => {
+    pending.set(id, { resolve, reject });
+    w.postMessage({ id, input, opts });
+  });
+}
 
 /**
  * FSH source plugin.
  *
  * Sushi expects to see all .fsh in one call so cross-references between
- * Aliases, Profiles, Instances etc. resolve. We batch the compile and
- * keep one cached batch per target. On a watched .fsh change we drop
- * the cache so the next load re-compiles.
+ * Aliases, Profiles, Instances etc. resolve. We batch the compile (off-thread,
+ * see above) and keep one cached batch per target. On a watched .fsh change we
+ * drop the cache so the next load re-compiles.
  */
 export default function fsh(opts: Opts = {}): Loader {
   // Per-target compile cache, keyed by `${target.name}|${canonical}|${version}`.
@@ -27,12 +81,12 @@ export default function fsh(opts: Opts = {}): Loader {
 
     async load(file, ctx): Promise<LoadOutput | null> {
       const key = batchKey(ctx);
-      let pending = batches.get(key);
-      if (!pending) {
-        pending = compileBatch(ctx, opts);
-        batches.set(key, pending);
+      let pendingBatch = batches.get(key);
+      if (!pendingBatch) {
+        pendingBatch = compileBatch(ctx, opts);
+        batches.set(key, pendingBatch);
       }
-      const compiled = await pending;
+      const compiled = await pendingBatch;
       const bucket = compiled.get(file);
       if (!bucket) return null;
       return { resources: bucket.resources.map(d => toResource(d, file)) };
@@ -66,12 +120,9 @@ async function compileBatch(ctx: PluginContext, opts: Opts): Promise<Batch> {
   }
   if (fshFiles.length === 0) return new Map();
 
-  const sources = await Promise.all(
-    fshFiles.map(async (path) => ({ path, text: await readFile(path, "utf8") })),
-  );
-  const input = sources.map(s => s.text);
+  const input = await Promise.all(fshFiles.map(path => readFile(path, "utf8")));
 
-  const result = await fshToFhir(input, {
+  const result = await compileInWorker(input, {
     canonical: ctx.config.canonical,
     version: ctx.config.version,
     fhirVersion: ctx.target.fhir,
@@ -86,7 +137,7 @@ async function compileBatch(ctx: PluginContext, opts: Opts): Promise<Batch> {
   // first .fsh in the dir so incremental rebuilds invalidate the whole batch.
   const bucket = fshFiles[0]!;
   const map: Batch = new Map();
-  map.set(bucket, { resources: result.fhir as Array<Record<string, unknown>> });
+  map.set(bucket, { resources: result.fhir });
   return map;
 }
 
