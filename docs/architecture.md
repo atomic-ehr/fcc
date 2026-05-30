@@ -218,15 +218,16 @@ src/site*    site + seven site_* flat-ns renderer namespaces                (hoo
 | One renderer (route table), dev lazy + SSE live-reload | **done** |
 | snapshot (`fhirschema`), FSH worker | **done** |
 | Validator: `structural` / `schema` / `fhirpathConstraints` → `errors.html` | **done** |
-| **Everything-is-a-resource: pages as `Page` resources via a loader** | **planned** (§11) |
-| **Typed `ctx.canonicals.<RT>` / `ctx.byType.<RT>`** | **planned** |
-| **Incremental validators (gate by `changedIds`); `ctx.issues` map** | **planned** |
-| **Data pipeline vs per-target output pipeline; presets** | **planned** |
-| **Unify the two `ctx` objects (engine + site) into one** | **planned** |
+| Typed `ctx.canonicals.<RT>` / `ctx.byType.<RT>` | **done** (Proxies over the graph) |
+| Incremental validators (descriptors, gate by `changedIds`); `ctx.issues` map | **done** |
+| Everything-is-a-resource: pagecontent pages as `Page` resources via a loader | **done** (intro/notes ⏳) |
+| Data pipeline vs per-target output pipeline (`Target.plugins`); `igSite()` preset | **done** |
+| Unify the two `ctx` objects (engine + site) into one | **deferred** (§11, mostly aesthetic) |
 
 ## 11. Refactoring plan
 
 Ordered by increasing risk; each step ships green (builds + tests) on its own.
+**Steps 1–4 are done** (✅); step 5 (and the menu sub-step) is deferred (⏳).
 
 1. **Typed indexes.** Add `ctx.canonicals.<RT>` (Map<url,Resource>) and
    `ctx.byType.<RT>` (Resource[]); maintain them in `indexResource`/`dropResource`.
@@ -241,10 +242,20 @@ Ordered by increasing risk; each step ships green (builds + tests) on its own.
    `ctx.byType.Page`; pagecontent dir becomes a source (auto-watched). Soft edge
    intro/notes-`Page` → target resource page via `handleHotUpdate`. *Better
    incrementality; the "everything is a resource" core.*
-4. **Menu as a resource / generator** reading `ctx` (same shape).
-5. **Data vs output pipeline.** Split `cfg.plugins` into shared data plugins +
-   per-target `pipeline` (generators); add `igPublisherPipeline()` / `igSite()`
-   presets. Enables "npm-only" / "3 sites". *Config-surface change.*
-6. **Unify `ctx`.** Merge the site's internal flat-ns `Context` into the engine
-   `PluginContext` so there is one `ctx` carrying `fns` + the world. *Largest;
-   last.*
+   ✅ Done (steps 1–3). Intro/notes stay on the site's `loadIntroNotes` path for
+   now (⏳ a small follow-up — convert them to `Page` resources too).
+4. **Data vs output pipeline.** ✅ Done. `Target.plugins?` (output generators) run
+   per target in addition to the shared `cfg.plugins` (data); hooks collected per
+   target; `fcc/presets` → `igSite()`. Enables "npm-only" / "3 sites". *(Menu as a
+   resource and a shared-data-`ctx` across same-version targets remain ⏳.)*
+5. **Unify `ctx`.** ⏳ Deferred. Merge the site's internal flat-ns `Context` into
+   the engine `PluginContext` so there is one `ctx` carrying `fns` + the world.
+   *Largest; mostly aesthetic — needs reconciling `ctx.cfg`→`ctx.config`,
+   `ctx.bundle.resources`→`ctx.resources`, `ctx.state`→`ctx.shared` across the
+   whole site layer plus the generated ambient `Context` type. Best as a dedicated
+   focused effort.*
+
+Also generalizing the validator descriptor model (`{ fn, ...config }` +
+`fn(ctx, config, opts)`) to **all** plugins is possible (config becomes inspectable
+data everywhere, no factories), but it's marginal churn over the current
+`(hooks) => void` setup model — deferred.
