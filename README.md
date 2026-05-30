@@ -96,10 +96,10 @@ Four ideas, four extension points — see [`docs/architecture.md`](./docs/archit
 
 - **One graph** — sources become resources in a `BuildState` that survives rebuilds; a changed file invalidates its dependency closure, so rebuilds are incremental.
 - **One renderer, two deliveries** — prod precomputes pages to `dist/`; `fcc dev` renders them on demand from memory and live-reloads the browser over SSE.
-- **Plugins are functions that register functions** (Emacs `add-hook` style: `(hooks) => { hooks.afterValidate(fn); … }`) — async-first, decoupled via the resource graph + `ctx.shared.<ns>` handoffs.
+- **Plugins are step descriptors** `{ hook, fn, ...config }`; every function is `fn(ctx, config, opts)` — async-first, decoupled via the resource graph + `ctx.shared.<ns>` handoffs.
 - **Composition over configuration** — e.g. validation is one plugin running a list you compose: `validator({ validators: [structural(), schema(), fhirpathConstraints()] })`.
 
-Extend by adding a **loader** (new file type), a **plugin** (a `(hooks) => void` registering hook fns), a **validator** (async `(ctx) => Promise<issues>`), or a **renderer namespace** (`src/site_*`). FSH compiles off-thread in a Worker so dev never blocks.
+Extend by adding a **loader** (new file type), a **plugin** (a step descriptor `{ hook, fn, ...config }`), a **validator** (`{ fn, ...config }`), or a **renderer namespace** (`src/site_*`) — every function is `fn(ctx, config, opts)`. FSH compiles off-thread in a Worker so dev never blocks.
 
 ## Examples
 
@@ -172,10 +172,11 @@ errors, the dependency graph builds itself.
 1. **Sources** (`sources:` in `fcc.config.ts`) declare directories and
    their loader (`ts()`, `fsh()`, `json()`). Each source produces
    `Resource`s.
-2. **Plugins** are setup functions that register functions into hook slots
-   (Emacs `add-hook`): `buildStart`, `transform`, `before/afterSnapshot`,
-   `before/afterValidate`, `generateBundle`, `writeBundle`, `handleHotUpdate`,
-   `watchPaths`. Every registered fn may be async; run order = config order.
+2. **Plugins** are step descriptors `{ hook, fn, ...config }`; the runner calls
+   `fn(ctx, config, opts)` at the `hook` stage — `buildStart`, `transform`,
+   `before/afterSnapshot`, `before/afterValidate`, `generateBundle`,
+   `writeBundle`, `handleHotUpdate`, `watchPaths`. Every fn may be async; run
+   order = config order.
 3. **Resource graph**: every cross-reference is by **canonical URL**.
    The core builds five edge types (canonical refs, `meta.profile`,
    binding → ValueSet, VS → CodeSystem, package deps) and uses them

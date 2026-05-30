@@ -18,19 +18,22 @@ extension points — keep changes within this grain:
 - **One renderer, two deliveries.** A single route table (`site_core/buildRoutes`)
   renders any page; `fcc build` precomputes to `dist/`, `fcc dev` renders on
   demand from memory + SSE live-reload. No dev/prod drift.
-- **Plugins are functions that register functions (Emacs `add-hook` style).** A
-  plugin is `(hooks) => { hooks.afterValidate(fn); hooks.writeBundle(fn); … }` —
-  **no `Plugin` object, no methods**. There are no sync hooks-vs-async hooks: every
-  registered function may be async and the runner awaits it. Plugins never import
+- **Plugins are step descriptors; every function is `fn(ctx, config, opts)`.** A
+  plugin is one or more steps `{ hook, fn, ...config }` — the `fn` runs at that
+  lifecycle `hook` as `fn(ctx, config, opts)`: `ctx` (the one world), `config`
+  (the descriptor, as data), `opts` (per-call payload). No setup, no factory
+  closures — config is inspectable data, plugin state lives in `ctx.shared`. Every
+  fn may be async; the runner awaits it. Plugins never import
   one another — they meet at the resource graph + `ctx.shared.<ns>` handoffs
   (menu→site, validator→site). Run order = config order.
-- **Composition over configuration.** Many-variant concerns are a *list you
-  compose*, not flags — e.g. `validator({ validators: [structural(), schema(),
-  fhirpathConstraints()] })`; each validator is an **async** `(ctx) => Promise<issues>`.
+- **Composition over configuration.** Many-variant concerns are a *list of
+  descriptors you compose*, not flags — e.g. `validator({ validators: [{ fn: structural },
+  { fn: schema, packagesDir }, { fn: fhirpathConstraints }] })`; each validator is
+  `fn(ctx, config, opts)`.
 
-Extend by adding: a **Loader** (`{extensions, load, invalidate?}`, new file type),
-a **Plugin** (a `(hooks) => void` that registers hook fns), a **Validator**
-(async `(ctx) => Promise<issues>`, into `validator({ validators })`), or a
+Extend by adding: a **Loader** (`{extensions, load(ctx, {file}), invalidate?}`, new file type),
+a **Plugin** (a step descriptor `{ hook, fn, ...config }`, `fn(ctx, config, opts)`),
+a **Validator** (`{ fn, ...config }`, `fn(ctx, config, opts)`, into `validator({ validators })`), or a
 **renderer namespace / `$`-dispatch file** (`src/site_*`).
 
 ## Where the code lives
@@ -85,15 +88,15 @@ are named after what they export (procedural: functions + types). `package.json`
   nothing else. Filename = exported fn name. The file always
   `export default`s the fn.
 
-- **Fn signature — `(ctx, opts)` everywhere.** Every function takes `ctx`
-  first and, when it has parameters, a single `opts` object second:
-  `(ctx: Context, opts: SomeOpts) => Result`. This is uniform across **all**
-  layers — flat-ns fns (`htmlEscape(ctx, { s })`), **hook callbacks**
-  (`hooks.transform((ctx, { resource }) => …)`, `hooks.writeBundle((ctx, { bundle }) => …)`,
-  `hooks.afterValidate((ctx) => …)` when there's no payload), and **loaders**
-  (`load(ctx, { file })`, `invalidate(ctx, { files, invalidate })`). The only
-  things that aren't `(ctx, opts)` are the config-time constructors — the plugin
-  factory `snapshot(opts)`, the setup fn `(hooks) => void`, and engine
+- **Fn signature — `ctx` first, everywhere.** Every function takes `ctx` first.
+  - **Plugin/hook fns + validators** take three args, `fn(ctx, config, opts)`:
+    `ctx` (the world), `config` (the step descriptor's static data), `opts` (the
+    per-call payload — `{ resource }` / `{ bundle }` / `{ hot }` / `{}`).
+  - **Flat-ns fns + loaders** take `(ctx, opts)` (config is fixed at build time):
+    `htmlEscape(ctx, { s })`, `load(ctx, { file })`, `invalidate(ctx, { files, invalidate })`.
+
+  The only things without `ctx` are config-time helpers — the plugin/loader
+  factories (`snapshot(opts)` → a `Step[]`; `json(opts)` → a `Loader`) and engine
   entrypoints (`build`, `defineConfig`) — because no `ctx` exists yet. Opts is
   always an object. Async only where there's real IO.
 
@@ -116,7 +119,7 @@ Inside a plugin's `src/` directory:
 | `enable.ts`            | Plugin activation. Reads opts, writes them to `ctx.state.<ns>`.         |
 | `loadFns.ts`           | Only file allowed to import siblings. Assembles `ctx.fns.<ns>`.         |
 | `ctx_ns.d.ts`          | Ambient registry: `Context`, `FnsRegistry`, `types.*` namespaces.       |
-| `<hookName>.ts`        | A `site_core` fn named after a lifecycle hook (`writeBundle.ts`, `watchPaths.ts`, `handleHotUpdate.ts`); the `site/site.ts` entry registers `hooks.<name>(ctx ⇒ ctx.fns.site_core.<name>(…))`. |
+| `<hookName>.ts`        | A `site_core` fn named after a lifecycle hook (`writeBundle.ts`, `watchPaths.ts`, `handleHotUpdate.ts`); the `site/site.ts` entry's step `fn` delegates to `ctx.fns.site_core.<name>(ctx, …)`. |
 | `$type_<Name>.ts`      | Type-only file. Scanner skips. Hoisted via `ctx_ns.d.ts`.               |
 | `$section_<id>.ts`     | `fcc/site` one Content-page section. `(ctx,{resource}) → {title,id,html}\|null`. Ordered per resourceType by `sectionDefaults`/`sectionsFor`; rendered by `renderCanonical`. |
 | `$tab_<id>.ts`         | `fcc/site` project escape-hatch tab renderer (referenced from a `tabDefaults` override). |
@@ -245,9 +248,9 @@ export default function loadFns(ctx: Context): void {
 ```
 
 `/src/site/loadAll.ts` calls every namespace's `loadFns(ctx)`; the plugin entry
-`/src/site/site.ts` (the setup function) calls `loadAll(ctx)` once, then
-**registers** the fcc lifecycle hooks — `hooks.writeBundle(...)`,
-`hooks.watchPaths(...)`, `hooks.handleHotUpdate(...)` — each delegating to
+`/src/site/site.ts` returns three step descriptors (`writeBundle`, `watchPaths`,
+`handleHotUpdate`). Each step's `fn(ctx, config, opts)` lazily `attach`es
+`loadAll(ctx)` + opts (`enable`) onto the one build ctx, then delegates to
 `ctx.fns.site_core.*`.
 
 ## `enable.ts` — the activation fn
@@ -321,18 +324,19 @@ port for `navigate({ path })` = `process.env.SITE_PORT ?? 4321`.
 
 ## fcc plugin lifecycle
 
-A plugin is a setup function `(hooks) => void`. It registers zero or more
-functions into the hook slots (Emacs `add-hook`); the runner runs each slot, in
-config order, at the matching stage. Every registered fn may be async:
+A plugin is a step descriptor (or list of them) `{ hook, fn, ...config }`.
+`collectHooks` flattens them into per-stage slots; the runner runs each slot, in
+config order, calling `fn(ctx, config, opts)`. A factory binds opts → descriptors:
 
 ```ts
 export function snapshot(opts = {}): Plugin {
-  return (hooks) => hooks.afterValidate(async (ctx) => { /* … */ });
+  return [{ hook: "afterValidate", fn: snapshotFn, ...opts }];
 }
-// multi-hook: return (hooks) => { hooks.writeBundle(fn); hooks.watchPaths(fn); }
+async function snapshotFn(ctx, config, _opts) { /* … config.packagesDir … */ }
+// multi-step: return [{ hook: "writeBundle", fn: write, ...opts }, { hook: "watchPaths", fn: watch }]
 ```
 
-Hook slots:
+Hook stages:
 
 ```
 buildStart  transform  beforeSnapshot  afterSnapshot
@@ -340,11 +344,12 @@ beforeValidate  afterValidate  generateBundle  writeBundle
 handleHotUpdate  buildEnd  closeBundle  watchPaths
 ```
 
-`watchPaths(cfg)` is dev-mode only — declares extra paths (files or
-directories) the watcher should observe. Returns
-`{ path: string; recursive?: boolean }[]`. Used for non-loader inputs
-(markdown, includes, static assets). Loaders are not hooks — they're declared on
-`cfg.sources[].loader` (`{ extensions, load, invalidate? }`).
+The runner passes the per-call payload as `opts`: `transform`/`*Snapshot` →
+`{ resource }`, `generate`/`writeBundle` → `{ bundle }`, `handleHotUpdate` →
+`{ hot }`, the rest → `{}`. `watchPaths` (dev-only) returns
+`{ path; recursive? }[]` for non-loader inputs (markdown, includes, assets).
+Loaders are not steps — they're on `cfg.sources[].loader` (`{ extensions,
+load(ctx, { file }), invalidate? }`).
 
 ## Bun primitives
 

@@ -33,8 +33,9 @@ Five ideas carry it — each the *simple* answer to one concern, together the
   into `ctx`; nothing passes data sideways.
 - **One renderer, two deliveries.** A single route table renders any page; prod
   precomputes to `dist/`, dev renders on demand from `ctx` + SSE live-reload.
-- **Plugins are functions that register functions** (Emacs `add-hook`). They meet
-  only at `ctx`; never import one another. Order = config order.
+- **Plugins are step descriptors** `{ hook, fn, ...config }`; every function is
+  `fn(ctx, config, opts)`. They meet only at `ctx`; never import one another.
+  Order = config order.
 - **Composition over configuration.** Many-variant concerns are lists you compose
   (`validators: [...]`, a target's `pipeline: [...]`), not flags.
 
@@ -158,11 +159,12 @@ modes — one renderer, so output is identical:
 demand from `ctx`, and pushes a live-reload over SSE (`/__fcc/events`) after every
 rebuild. `fcc dev` watches `cfg.sources` + `fcc.config.ts` + plugin `watchPaths`.
 
-## 6. Plugins = hooks (Emacs `add-hook`)
+## 6. Plugins = step descriptors, `fn(ctx, config, opts)`
 
-A plugin is a function `(hooks) => { hooks.afterValidate(fn); hooks.writeBundle(fn); … }`
-— no object, no methods. `collectHooks(cfg.plugins)` runs each once into hook
-slots (`state.hooks`); the runner runs each slot, in config order, at its stage:
+A plugin is one or more **step descriptors** — `{ hook, fn, ...config }`, the
+`fn` plus its config inline, as data. `collectHooks(plugins)` flattens them into
+per-stage slots of `{ fn, config }`; the runner runs each slot, in config order,
+calling `fn(ctx, config, opts)` at its stage:
 
 ```
 buildStart  transform  beforeSnapshot  afterSnapshot
@@ -170,11 +172,14 @@ beforeValidate  afterValidate  generateBundle  writeBundle
 handleHotUpdate  buildEnd  closeBundle  watchPaths
 ```
 
-Every hook fn is `(ctx, opts)` — `ctx` first, a single options object second
-(`transform(ctx, { resource })`, `writeBundle(ctx, { bundle })`, …); no-payload
-hooks take just `(ctx)`. Loaders are not hooks — they are declared on
-`cfg.sources[].loader` as `{ extensions, load(ctx, { file }), invalidate? }`.
-Every hook fn may be async; the runner awaits all.
+Every framework function is `fn(ctx, config, opts)` — `ctx` (the one world),
+`config` (the descriptor's static data), `opts` (the per-call payload:
+`{ resource }` / `{ bundle }` / `{ hot }` / `{}`). No setup function, no factory
+closures: config is inspectable data and plugin state lives in `ctx.shared`. A
+factory binds opts → descriptors (`snapshot(opts)` → `[{ hook: "afterValidate",
+fn: snapshotFn, ...opts }]`); the config files are unchanged. Loaders are not
+steps — they sit on `cfg.sources[].loader` as `{ extensions, load(ctx, { file }),
+invalidate? }`. Every fn may be async; the runner awaits all.
 
 ## 7. Validation — one plugin, composable validators
 
@@ -248,14 +253,11 @@ Ordered by increasing risk; each step ships green (builds + tests) on its own.
    per target in addition to the shared `cfg.plugins` (data); hooks collected per
    target; `fcc/presets` → `igSite()`. Enables "npm-only" / "3 sites". *(Menu as a
    resource and a shared-data-`ctx` across same-version targets remain ⏳.)*
-5. **Unify `ctx`.** ⏳ Deferred. Merge the site's internal flat-ns `Context` into
-   the engine `PluginContext` so there is one `ctx` carrying `fns` + the world.
-   *Largest; mostly aesthetic — needs reconciling `ctx.cfg`→`ctx.config`,
-   `ctx.bundle.resources`→`ctx.resources`, `ctx.state`→`ctx.shared` across the
-   whole site layer plus the generated ambient `Context` type. Best as a dedicated
-   focused effort.*
-
-Also generalizing the validator descriptor model (`{ fn, ...config }` +
-`fn(ctx, config, opts)`) to **all** plugins is possible (config becomes inspectable
-data everywhere, no factories), but it's marginal churn over the current
-`(hooks) => void` setup model — deferred.
+5. **Unify `ctx`.** ✅ Done. One `ctx` (the engine `PluginContext`); the site/menu
+   flat-ns plugins attach `fns` + `state` onto it. Ambient `Context =
+   types.fcc.PluginContext & { fns: FnsRegistry }`; `ctx.cfg`→`ctx.config`,
+   `ctx.bundle.resources`→`ctx.resources` reconciled across the site layer.
+6. **Descriptors for all plugins.** ✅ Done. The `{ fn, ...config }` +
+   `fn(ctx, config, opts)` model now covers every plugin (steps `{ hook, fn,
+   ...config }`), not just validators — config is inspectable data everywhere, no
+   setup functions, plugin state in `ctx.shared`.
