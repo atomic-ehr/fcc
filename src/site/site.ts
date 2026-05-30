@@ -11,22 +11,22 @@ export default function site(opts: Opts = {}): Plugin {
     loadAll(ctx);
     ctx.fns.site_core.enable(ctx, { opts });
 
-    return {
-        name: "fcc/site",
-        enforce: "post",
-        watchPaths(cfg) {
+    // Register hooks. Order = config order, so list `site()` last to have its
+    // writeBundle run after other emitters.
+    return (hooks) => {
+        hooks.watchPaths((cfg) => {
             (ctx as any).cfg = cfg;
             return ctx.fns.site_core.watchPaths(ctx);
-        },
-        handleHotUpdate(hot) {
+        });
+        hooks.handleHotUpdate((hot) => {
             return ctx.fns.site_core.handleHotUpdate(ctx, { hot });
-        },
-        async writeBundle(bundle, pctx) {
+        });
+        hooks.writeBundle(async (bundle, pctx) => {
             (ctx as any).cfg    = pctx.config;
             (ctx as any).target = pctx.target;
             (ctx as any).bundle = bundle;
             await ctx.fns.site_core.writeBundle(ctx, { pluginCtx: pctx });
-        },
+        });
     };
 }
 

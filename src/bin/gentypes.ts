@@ -55,10 +55,10 @@ async function main() {
     }
 
     // Files that are not fn-per-file leaves and must never enter FnsRegistry:
-    //   index.ts  — plugin entry / Plugin object factory
+    //   <ns>.ts   — plugin entry / setup function (e.g. menu.ts), named after the ns
     //   style.ts  — static CSS aggregator (named export, no default fn)
     //   render.ts — legacy monolithic aggregator (transitional)
-    const FRAMEWORK_SKIP = new Set(["ctx_ns.d.ts", "loadFns.ts", "index.ts", "style.ts", "render.ts"]);
+    const FRAMEWORK_SKIP = new Set(["ctx_ns.d.ts", "loadFns.ts", "index.ts", "style.ts", "render.ts", `${ns}.ts`]);
 
     const files = await collect(srcDir);
     const entries: Entry[] = [];

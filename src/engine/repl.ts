@@ -1,7 +1,7 @@
 import { mkdir, writeFile, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import type { BuildState } from "./state.ts";
-import { cdp } from "../cdp/index.ts";
+import { cdp } from "../cdp/cdp.ts";
 
 export type ReplHandle = {
   port: number;

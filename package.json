@@ -8,17 +8,17 @@
     "fcc-gentypes": "./src/bin/gentypes.ts"
   },
   "exports": {
-    ".": "./src/engine/index.ts",
-    "./json": "./src/json/index.ts",
-    "./fsh": "./src/fsh/index.ts",
-    "./ts": "./src/ts/index.ts",
-    "./snapshot": "./src/snapshot/index.ts",
-    "./narrative": "./src/narrative/index.ts",
-    "./validator": "./src/validator/index.ts",
-    "./ig-resource": "./src/ig-resource/index.ts",
-    "./npm": "./src/npm/index.ts",
-    "./menu": "./src/menu/index.ts",
-    "./site": "./src/site/index.ts"
+    ".": "./src/engine/engine.ts",
+    "./json": "./src/json/json.ts",
+    "./fsh": "./src/fsh/fsh.ts",
+    "./ts": "./src/ts/ts.ts",
+    "./snapshot": "./src/snapshot/snapshot.ts",
+    "./narrative": "./src/narrative/narrative.ts",
+    "./validator": "./src/validator/validator.ts",
+    "./ig-resource": "./src/ig-resource/ig-resource.ts",
+    "./npm": "./src/npm/npm.ts",
+    "./menu": "./src/menu/menu.ts",
+    "./site": "./src/site/site.ts"
   },
   "dependencies": {
     "@atomic-ehr/fhirpath": "^0.1.4",

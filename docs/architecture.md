@@ -32,21 +32,23 @@ and together they're the *flexible* part:
 - **One renderer, two deliveries.** A single route table renders any page; prod
   precomputes it to `dist/`, dev renders it on demand from memory + live-reloads
   (§5). No dev/prod drift.
-- **Plugins meet at the graph, never each other.** A plugin is just lifecycle
-  hooks. They never import one another — they communicate through the resource
-  graph and `ctx.shared.<ns>` handoffs (menu→site, validator→site). Decoupled, so
-  any plugin is addable/removable in isolation.
+- **Plugins are functions that register functions** (Emacs `add-hook` style). A
+  plugin is `(hooks) => { hooks.afterValidate(fn); hooks.writeBundle(fn); … }` —
+  no object, no methods. Every registered fn may be async (the runner awaits all).
+  They never import one another — they meet at the resource graph and
+  `ctx.shared.<ns>` handoffs (menu→site, validator→site). Run order = config order,
+  so adding/removing/reordering a plugin is a one-line edit.
 - **Composition over configuration.** Where a concern has many variants, it's a
   *list you compose*, not flags — most visibly validation: one plugin running
-  `[structural(), schema(), fhirpathConstraints(), …]` (§7).
+  `[structural(), schema(), fhirpathConstraints(), …]`, each an async validator (§7).
 
 **The four extension points** (add capability without touching the engine):
 
 | Want to… | Add a… | Lives in |
 |----------|--------|----------|
 | read a new source file type | **Loader** (`{ extensions, load, invalidate? }`) | `src/<lang>` (json/fsh/ts) |
-| transform / generate / emit | **Plugin** (lifecycle hooks) | `src/<name>` |
-| add a validation check | **Validator** (`(ctx) => issues`) | `validator({ validators: […] })` |
+| transform / generate / emit | **Plugin** (a `(hooks) => void` registering hook fns) | `src/<name>/<name>.ts` |
+| add a validation check | **Validator** (async `(ctx) => Promise<issues>`) | `validator({ validators: […] })` |
 | change the site | **renderer namespace / `$`-dispatch file** | `src/site_*` |
 
 ## 1. Data model (`src/engine/state.ts`)
@@ -72,7 +74,9 @@ each resource's data for canonical-bearing fields (`url`, `baseDefinition`,
 
 ## 2. Build pipeline (`src/engine/runner.ts`)
 
-A full build (`runTargetFull`) runs the plugin lifecycle in order:
+At startup, `collectHooks(cfg.plugins)` runs each plugin once — they push their
+functions into the hook slots (`state.hooks`). A full build (`runTargetFull`)
+then runs each slot, in registration = config order, at its stage:
 
 ```
 buildStart
@@ -85,8 +89,9 @@ buildStart
   → buildEnd / closeBundle
 ```
 
-Plugins are ordered `enforce: "pre" → (none) → "post"`. The site plugin is
-`enforce: "post"` so it renders after the data is fully shaped.
+Order within a slot is **config order** (no `enforce` flag) — list `site()` last
+so its `writeBundle` runs after the other emitters and after the data is fully
+shaped. Every hook fn may be async; the runner awaits each.
 
 ## 3. Incremental rebuild (`runTargetIncremental`)
 
@@ -192,7 +197,7 @@ validator — you compose them, which is the whole extensibility story ("just dr
 in more validators"):
 
 ```ts
-type Validator = (ctx) => ValidatorIssue[] | Promise<ValidatorIssue[]>
+type Validator = (ctx) => Promise<ValidatorIssue[]>   // always async; run in parallel
 
 validator()                                  // default: [structural()]
 validator({ validators: [

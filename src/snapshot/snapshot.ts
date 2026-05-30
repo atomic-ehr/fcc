@@ -33,9 +33,7 @@ export default function snapshot(opts: { packagesDir?: string; quiet?: boolean }
     return m;
   }
 
-  return {
-    name: "fcc/snapshot",
-    async afterValidate(ctx) {
+  return (hooks) => hooks.afterValidate(async (ctx) => {
       const base = await loadBaseIndex(ctx);
       // In-bundle SDs override the cached packages (current build wins).
       const byUrl = new Map(base);
@@ -71,6 +69,5 @@ export default function snapshot(opts: { packagesDir?: string; quiet?: boolean }
           message: `generated ${made} snapshot(s)${failed ? `; ${failed} kept differential (base unresolved)` : ""}`,
         });
       }
-    },
-  };
+  });
 }

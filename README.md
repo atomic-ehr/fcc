@@ -22,8 +22,9 @@ forking.
 `fcc` rebuilds that toolchain the way Vite rebuilt the JS toolchain:
 
 - **Authoring in TypeScript** (or FSH, or JSON) — same resource graph.
-- **Plugin-first** — snapshot, narrative, validate, NPM packaging,
-  HTML site, codegen are all plugins of the same shape.
+- **Plugin-first** — snapshot, narrative, validation, NPM packaging,
+  HTML site, codegen are all plugins of the same shape (a function that
+  registers hook functions).
 - **Flat-namespace plugins** — each plugin is a folder of single-purpose
   files; everything is reachable as `ctx.fns.<ns>.<fn>(ctx, opts)` and
   hot-swappable. Inspired by [workspaces-template]'s procedural style.
@@ -95,10 +96,10 @@ Four ideas, four extension points — see [`docs/architecture.md`](./docs/archit
 
 - **One graph** — sources become resources in a `BuildState` that survives rebuilds; a changed file invalidates its dependency closure, so rebuilds are incremental.
 - **One renderer, two deliveries** — prod precomputes pages to `dist/`; `fcc dev` renders them on demand from memory and live-reloads the browser over SSE.
-- **Plugins meet at the graph, never each other** — decoupled via the resource graph + `ctx.shared.<ns>` handoffs.
+- **Plugins are functions that register functions** (Emacs `add-hook` style: `(hooks) => { hooks.afterValidate(fn); … }`) — async-first, decoupled via the resource graph + `ctx.shared.<ns>` handoffs.
 - **Composition over configuration** — e.g. validation is one plugin running a list you compose: `validator({ validators: [structural(), schema(), fhirpathConstraints()] })`.
 
-Extend by adding a **loader** (new file type), a **plugin** (lifecycle hook), a **validator** (`(ctx) => issues`), or a **renderer namespace** (`src/site_*`). FSH compiles off-thread in a Worker so dev never blocks.
+Extend by adding a **loader** (new file type), a **plugin** (a `(hooks) => void` registering hook fns), a **validator** (async `(ctx) => Promise<issues>`), or a **renderer namespace** (`src/site_*`). FSH compiles off-thread in a Worker so dev never blocks.
 
 ## Examples
 
@@ -171,9 +172,10 @@ errors, the dependency graph builds itself.
 1. **Sources** (`sources:` in `fcc.config.ts`) declare directories and
    their loader (`ts()`, `fsh()`, `json()`). Each source produces
    `Resource`s.
-2. **Plugins** are objects with hooks: `buildStart`, `transform`,
-   `before/afterSnapshot`, `before/afterValidate`, `generateBundle`,
-   `writeBundle`, `handleHotUpdate`, `watchPaths`.
+2. **Plugins** are setup functions that register functions into hook slots
+   (Emacs `add-hook`): `buildStart`, `transform`, `before/afterSnapshot`,
+   `before/afterValidate`, `generateBundle`, `writeBundle`, `handleHotUpdate`,
+   `watchPaths`. Every registered fn may be async; run order = config order.
 3. **Resource graph**: every cross-reference is by **canonical URL**.
    The core builds five edge types (canonical refs, `meta.profile`,
    binding → ValueSet, VS → CodeSystem, package deps) and uses them
@@ -204,7 +206,7 @@ src/site_core/                  ← the renderer's chrome/dispatch namespace
   $section_description.ts       ← one Content-page section
   $type_RenderCtx.ts            ← type-only, scanner hoists to `types.site_core.RenderCtx`
   …
-src/site/                       ← the plugin entry: index.ts + loadAll.ts + gentypes.sh
+src/site/                       ← the plugin entry: site.ts + loadAll.ts + gentypes.sh
 ```
 
 | Prefix              | Role                                                            |

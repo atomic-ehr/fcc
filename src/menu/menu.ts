@@ -11,14 +11,11 @@ export default function menu(opts: Opts = {}): Plugin {
     loadFns(ctx);
     ctx.state.menu = { ...opts };
 
-    return {
-        name: "fcc/menu",
-        async buildStart(pctx) {
-            (ctx as any).cfg    = pctx.config;
-            (ctx as any).target = pctx.target;
-            await ctx.fns.menu.buildStart(ctx, { pluginCtx: pctx });
-        },
-    };
+    return (hooks) => hooks.buildStart(async (pctx) => {
+        (ctx as any).cfg    = pctx.config;
+        (ctx as any).target = pctx.target;
+        await ctx.fns.menu.buildStart(ctx, { pluginCtx: pctx });
+    });
 }
 
 function makeFreshContext(): Context {

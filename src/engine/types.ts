@@ -157,35 +157,37 @@ export interface PluginContext {
   read(path: string): Promise<string>;
 }
 
-export type Plugin = {
-  name: string;
-  enforce?: "pre" | "post";
-  apply?: "build" | "dev" | ((cfg: ResolvedConfig, env: { command: string }) => boolean);
+// Anything a hook returns; the runner awaits it. Almost every hook is async.
+type Async<T = void> = T | Promise<T>;
+export type WatchPath = { path: string; recursive?: boolean };
 
-  buildStart?(ctx: PluginContext): void | Promise<void>;
-  buildEnd?(err?: Error): void | Promise<void>;
-  closeBundle?(): void | Promise<void>;
+/**
+ * The hook registry — Emacs `add-hook` style. A plugin is a function that
+ * registers one or more functions into these named slots; the runner runs each
+ * slot's functions (in registration = config order) at the matching lifecycle
+ * point. Every registered function may be async.
+ */
+export interface Hooks {
+  buildStart(fn: (ctx: PluginContext) => Async): void;
+  transform(fn: (r: Resource, ctx: PluginContext) => Async<Resource | null | void>): void;
+  beforeSnapshot(fn: (r: Resource, ctx: PluginContext) => Async): void;
+  afterSnapshot(fn: (r: Resource, ctx: PluginContext) => Async): void;
+  beforeValidate(fn: (ctx: PluginContext) => Async): void;
+  afterValidate(fn: (ctx: PluginContext) => Async): void;
+  generateBundle(fn: (bundle: Bundle, ctx: PluginContext) => Async): void;
+  writeBundle(fn: (bundle: Bundle, ctx: PluginContext) => Async): void;
+  buildEnd(fn: (err?: Error) => Async): void;
+  closeBundle(fn: () => Async): void;
+  /** Dev: extend/narrow the invalidation set for a changed file. */
+  handleHotUpdate(fn: (hot: HotUpdateContext) => Async): void;
+  /** Dev: extra paths the watcher should observe (markdown, includes, assets). */
+  watchPaths(fn: (cfg: ResolvedConfig) => Async<WatchPath[]>): void;
+}
 
-  transform?(r: Resource, ctx: PluginContext): Resource | null | void | Promise<Resource | null | void>;
-  beforeSnapshot?(r: Resource, ctx: PluginContext): void | Promise<void>;
-  afterSnapshot?(r: Resource, ctx: PluginContext): void | Promise<void>;
-  beforeValidate?(ctx: PluginContext): void | Promise<void>;
-  afterValidate?(ctx: PluginContext): void | Promise<void>;
-
-  generateBundle?(bundle: Bundle, ctx: PluginContext): void | Promise<void>;
-  writeBundle?(bundle: Bundle, ctx: PluginContext): void | Promise<void>;
-
-  /**
-   * Dev mode: extend or narrow the invalidation set computed from
-   * the file→resources map + reverse-deps closure.
-   */
-  handleHotUpdate?(hot: HotUpdateContext): void | Promise<void>;
-
-  /**
-   * Dev mode: declare extra paths the watcher should observe (in addition
-   * to source dirs and the config file). Resolved against projectRoot.
-   * Useful for plugins that read non-loader files (markdown, includes,
-   * assets) that should trigger a rebuild when edited.
-   */
-  watchPaths?(cfg: ResolvedConfig): Array<{ path: string; recursive?: boolean }> | Promise<Array<{ path: string; recursive?: boolean }>>;
-};
+/**
+ * A plugin: a function that registers hook functions. No object, no methods —
+ * `(hooks) => { hooks.afterValidate(fn); hooks.writeBundle(fn); … }`. Called
+ * once at startup; the registered functions then run on every (incremental)
+ * build, closing over the plugin's own state.
+ */
+export type Plugin = (hooks: Hooks) => void;

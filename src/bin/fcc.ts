@@ -79,10 +79,9 @@ async function main() {
       // recursive dirs, so pass them as extraDirs (watched recursively even if
       // they don't exist yet) rather than letting the watcher stat-guess.
       const pluginDirs: string[] = [];
-      for (const p of resolved.plugins) {
-        if (typeof p.watchPaths !== "function") continue;
-        try { for (const e of (await p.watchPaths(resolved)) ?? []) pluginDirs.push(e.path); }
-        catch { /* plugin opted out */ }
+      for (const fn of state.hooks.watchPaths) {
+        try { for (const e of (await fn(resolved)) ?? []) pluginDirs.push(e.path); }
+        catch { /* hook opted out */ }
       }
 
       console.log("fcc: watching for changes (Ctrl+C to stop)…\n");
@@ -156,8 +155,7 @@ function printInfo(c: Config) {
   for (const t of c.targets) console.log(`  - ${t.name} (fhir ${t.fhir}) → ${t.out}`);
   console.log(`sources:`);
   for (const s of c.sources) console.log(`  - ${s.dir} via ${s.loader.name}`);
-  console.log(`plugins:`);
-  for (const p of c.plugins) console.log(`  - ${p.name}${p.enforce ? ` [${p.enforce}]` : ""}`);
+  console.log(`plugins:  ${c.plugins.length} registered`);
 }
 
 function printDiagnostics(diags: Diagnostic[]) {

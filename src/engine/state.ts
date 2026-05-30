@@ -1,4 +1,26 @@
-import type { Bundle, Diagnostic, EmittedFile, Resource, ResolvedConfig, Target } from "./types.ts";
+import type { Bundle, Diagnostic, EmittedFile, Hooks, Plugin, Resource, ResolvedConfig, Target } from "./types.ts";
+
+// The collected hook slots — one function list per lifecycle stage. Plugins
+// register into these once at startup (collectHooks); the runner runs them.
+export type HookSlots = {
+  [K in keyof Hooks]: Parameters<Hooks[K]>[0][];
+};
+
+const HOOK_NAMES: (keyof Hooks)[] = [
+  "buildStart", "transform", "beforeSnapshot", "afterSnapshot",
+  "beforeValidate", "afterValidate", "generateBundle", "writeBundle",
+  "buildEnd", "closeBundle", "handleHotUpdate", "watchPaths",
+];
+
+/** Run each plugin's registration function, collecting hook fns into slots. */
+export function collectHooks(plugins: Plugin[]): HookSlots {
+  const slots = Object.fromEntries(HOOK_NAMES.map(n => [n, []])) as HookSlots;
+  const reg = Object.fromEntries(
+    HOOK_NAMES.map(n => [n, (fn: unknown) => { (slots[n] as unknown[]).push(fn); }]),
+  ) as unknown as Hooks;
+  for (const plugin of plugins) plugin(reg);
+  return slots;
+}
 
 /**
  * Per-target build state — survives between incremental rebuilds in
@@ -37,6 +59,7 @@ export type TargetState = {
 export type BuildState = {
   cfg: ResolvedConfig;
   byTarget: Map<string, TargetState>;
+  hooks: HookSlots;
 };
 
 export function createState(cfg: ResolvedConfig): BuildState {
@@ -44,7 +67,7 @@ export function createState(cfg: ResolvedConfig): BuildState {
   for (const target of cfg.targets) {
     byTarget.set(target.name, freshTargetState(target));
   }
-  return { cfg, byTarget };
+  return { cfg, byTarget, hooks: collectHooks(cfg.plugins) };
 }
 
 export function freshTargetState(target: Target): TargetState {

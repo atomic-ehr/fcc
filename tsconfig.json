@@ -20,8 +20,17 @@
     // these via `extends`.
     "baseUrl": ".",
     "paths": {
-      "fcc": ["./src/engine/index.ts"],
-      "fcc/*": ["./src/*/index.ts"]
+      "fcc": ["./src/engine/engine.ts"],
+      "fcc/json": ["./src/json/json.ts"],
+      "fcc/fsh": ["./src/fsh/fsh.ts"],
+      "fcc/ts": ["./src/ts/ts.ts"],
+      "fcc/snapshot": ["./src/snapshot/snapshot.ts"],
+      "fcc/narrative": ["./src/narrative/narrative.ts"],
+      "fcc/validator": ["./src/validator/validator.ts"],
+      "fcc/ig-resource": ["./src/ig-resource/ig-resource.ts"],
+      "fcc/npm": ["./src/npm/npm.ts"],
+      "fcc/menu": ["./src/menu/menu.ts"],
+      "fcc/site": ["./src/site/site.ts"]
     },
 
     // Best practices

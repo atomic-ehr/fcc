@@ -10,9 +10,7 @@ type Opts = {
 };
 
 export default function npm(opts: Opts = { emitUnpacked: true }): Plugin {
-  return {
-    name: "fcc/npm",
-    async writeBundle(bundle, ctx) {
+  return (hooks) => hooks.writeBundle(async (bundle, ctx) => {
       const outDir = resolve(ctx.config.projectRoot, ctx.target.out);
       await mkdir(outDir, { recursive: true });
 
@@ -68,8 +66,7 @@ export default function npm(opts: Opts = { emitUnpacked: true }): Plugin {
           ctx.emitFile({ path: full, bytes: e.bytes });
         }
       }
-    },
-  };
+  });
 }
 
 type IndexEntry = {

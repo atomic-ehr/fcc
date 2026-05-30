@@ -22,21 +22,26 @@ export type ValidatorIssue = {
   validator: string;
 };
 
-/** A validator produces issues for the current build. Sync or async. */
-export type Validator = (ctx: PluginContext) => ValidatorIssue[] | Promise<ValidatorIssue[]>;
+/**
+ * A validator produces issues for the current build. **Always async** — almost
+ * every real check is (terminology servers, FHIRPath, reference resolution,
+ * network), so the framework commits to one async contract. Validators are
+ * independent (read-only over the graph), so the plugin runs them in parallel.
+ */
+export type Validator = (ctx: PluginContext) => Promise<ValidatorIssue[]>;
 
 type Opts = { validators?: Validator[]; quiet?: boolean };
 
 export default function validator(opts: Opts = {}): Plugin {
   const validators = opts.validators ?? [structural()];
-  return {
-    name: "fcc/validator",
-    async afterValidate(ctx) {
-      const issues: ValidatorIssue[] = [];
-      for (const v of validators) {
-        try { issues.push(...await v(ctx)); }
-        catch (e) { ctx.warn({ severity: "warning", source: "fcc/validator", message: `validator threw: ${(e as Error).message}` }); }
-      }
+  return (hooks) => hooks.afterValidate(async (ctx) => {
+      const results = await Promise.all(validators.map(v =>
+        v(ctx).catch((e: Error) => {
+          ctx.warn({ severity: "warning", source: "fcc/validator", message: `validator threw: ${e.message}` });
+          return [] as ValidatorIssue[];
+        }),
+      ));
+      const issues = results.flat();
       const errors = issues.filter(i => i.severity === "error").length;
       const warnings = issues.filter(i => i.severity === "warning").length;
       const resources = new Set(issues.map(i => i.rid)).size;
@@ -47,8 +52,7 @@ export default function validator(opts: Opts = {}): Plugin {
           message: `validated: ${errors} error(s), ${warnings} warning(s) across ${resources} resource(s) → errors.html`,
         });
       }
-    },
-  };
+  });
 }
 
 // ── shared helpers ───────────────────────────────────────────────────────────
@@ -93,7 +97,7 @@ function mkIssue(r: R, f: { severity: ValidatorIssue["severity"]; code: string; 
 // ── structural(): lite lint, no FHIR package cache needed ────────────────────
 
 export function structural(): Validator {
-  return (ctx) => {
+  return async (ctx) => {
     const issues: ValidatorIssue[] = [];
     const seenIds = new Map<string, string>();
     const seenUrls = new Map<string, string>();

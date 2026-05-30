@@ -1,13 +1,13 @@
 import { resolve, join } from "node:path";
 import { readFile } from "node:fs/promises";
 import type {
-  Bundle, Config, Diagnostic, HotUpdateContext, Plugin, PluginContext,
+  Bundle, Config, Diagnostic, HotUpdateContext, PluginContext,
   Resource, ResolvedConfig, Source, Target,
 } from "./types.ts";
 import { fhirPredicates } from "./version.ts";
 import { isAuthored, type Authored, type AuthorContext } from "./authoring.ts";
 import {
-  type BuildState, type TargetState, createState, freshTargetState,
+  type BuildState, type TargetState, type HookSlots, createState, freshTargetState,
   dropResource, indexResource, transitiveDependents,
 } from "./state.ts";
 
@@ -56,7 +56,7 @@ export async function runBuild(state: BuildState, filter?: string): Promise<Buil
     // reset target state on full build
     state.byTarget.set(ts.target.name, freshTargetState(ts.target));
     const fresh = state.byTarget.get(ts.target.name)!;
-    await runTargetFull(state.cfg, fresh);
+    await runTargetFull(state.cfg, fresh, state.hooks);
     bundles.set(ts.target.name, fresh.bundle!);
     diagnostics.push(...fresh.diagnostics);
   }
@@ -79,7 +79,7 @@ export async function runIncremental(
   const bundles = new Map<string, Bundle>();
 
   for (const ts of targets) {
-    await runTargetIncremental(state.cfg, ts, changedFiles);
+    await runTargetIncremental(state.cfg, ts, changedFiles, state.hooks);
     if (ts.bundle) bundles.set(ts.target.name, ts.bundle);
     diagnostics.push(...ts.diagnostics);
   }
@@ -95,15 +95,14 @@ function filterTargets(state: BuildState, filter?: string): TargetState[] {
 // ---------------------------------------------------------------------------
 // full build of one target
 
-async function runTargetFull(cfg: ResolvedConfig, ts: TargetState) {
+async function runTargetFull(cfg: ResolvedConfig, ts: TargetState, hooks: HookSlots) {
   ts.cycle++;
   ts.diagnostics = [];
   ts.emitted = [];
 
-  const plugins = sortPlugins(cfg.plugins);
   const ctx = makeContext(cfg, ts, null);
 
-  for (const p of plugins) if (p.buildStart) await p.buildStart(ctx);
+  for (const fn of hooks.buildStart) await fn(ctx);
 
   // Discover and load every file from every source
   for (const src of cfg.sources) {
@@ -115,36 +114,26 @@ async function runTargetFull(cfg: ResolvedConfig, ts: TargetState) {
   resolveExamples(ts, ctx);
   populateDeps(ts);
 
-  // Transform on full set
-  await runTransform(ts, plugins, ctx);
+  await runTransform(ts, hooks, ctx);
 
-  // Snapshot lifecycle
-  for (const phase of ["beforeSnapshot", "afterSnapshot"] as const) {
-    for (const p of plugins) {
-      const hook = p[phase];
-      if (!hook) continue;
-      for (const r of [...ts.resources.values()]) await hook.call(p, r, ctx);
-    }
-  }
+  for (const fn of hooks.beforeSnapshot) for (const r of [...ts.resources.values()]) await fn(r, ctx);
+  for (const fn of hooks.afterSnapshot)  for (const r of [...ts.resources.values()]) await fn(r, ctx);
+  for (const fn of hooks.beforeValidate) await fn(ctx);
+  for (const fn of hooks.afterValidate)  await fn(ctx);
 
-  for (const p of plugins) if (p.beforeValidate) await p.beforeValidate(ctx);
-  for (const p of plugins) if (p.afterValidate)  await p.afterValidate(ctx);
+  await finalize(cfg, ts, hooks, ctx);
 
-  await finalize(cfg, ts, plugins, ctx);
-
-  for (const p of plugins) if (p.buildEnd)    await p.buildEnd();
-  for (const p of plugins) if (p.closeBundle) await p.closeBundle();
+  for (const fn of hooks.buildEnd)    await fn(undefined);
+  for (const fn of hooks.closeBundle) await fn();
 }
 
 // ---------------------------------------------------------------------------
 // incremental rebuild of one target given a list of changed files
 
-async function runTargetIncremental(cfg: ResolvedConfig, ts: TargetState, changedFiles: string[]) {
+async function runTargetIncremental(cfg: ResolvedConfig, ts: TargetState, changedFiles: string[], hooks: HookSlots) {
   ts.cycle++;
   ts.diagnostics = [];
   ts.emitted = [];
-
-  const plugins = sortPlugins(cfg.plugins);
 
   // Step 1: figure out which resources the changed files **were** producing
   // and the transitive closure of who references them.
@@ -158,8 +147,7 @@ async function runTargetIncremental(cfg: ResolvedConfig, ts: TargetState, change
   // Step 2: call handleHotUpdate hooks to extend the set
   const ctx = makeContext(cfg, ts, invalidationSet);
   for (const f of changedFiles) {
-    for (const p of plugins) {
-      if (!p.handleHotUpdate) continue;
+    for (const fn of hooks.handleHotUpdate) {
       const hot: HotUpdateContext = {
         file: f,
         kind: "update",
@@ -167,7 +155,7 @@ async function runTargetIncremental(cfg: ResolvedConfig, ts: TargetState, change
         invalidate: (id) => invalidationSet.add(id),
         ctx,
       };
-      await p.handleHotUpdate(hot);
+      await fn(hot);
     }
   }
 
@@ -203,20 +191,15 @@ async function runTargetIncremental(cfg: ResolvedConfig, ts: TargetState, change
 
   // Step 6: re-run transforms on invalidated set + newly loaded
   ctx.changedIds = invalidationSet;
-  await runTransform(ts, plugins, ctx);
+  await runTransform(ts, hooks, ctx);
 
   // Snapshot / validate as full passes for now (cheap)
-  for (const phase of ["beforeSnapshot", "afterSnapshot"] as const) {
-    for (const p of plugins) {
-      const hook = p[phase];
-      if (!hook) continue;
-      for (const r of [...ts.resources.values()]) await hook.call(p, r, ctx);
-    }
-  }
-  for (const p of plugins) if (p.beforeValidate) await p.beforeValidate(ctx);
-  for (const p of plugins) if (p.afterValidate)  await p.afterValidate(ctx);
+  for (const fn of hooks.beforeSnapshot) for (const r of [...ts.resources.values()]) await fn(r, ctx);
+  for (const fn of hooks.afterSnapshot)  for (const r of [...ts.resources.values()]) await fn(r, ctx);
+  for (const fn of hooks.beforeValidate) await fn(ctx);
+  for (const fn of hooks.afterValidate)  await fn(ctx);
 
-  await finalize(cfg, ts, plugins, ctx);
+  await finalize(cfg, ts, hooks, ctx);
 }
 
 // ---------------------------------------------------------------------------
@@ -240,14 +223,13 @@ async function loadFile(src: Source, file: string, ts: TargetState, ctx: PluginC
   }
 }
 
-async function runTransform(ts: TargetState, plugins: Plugin[], ctx: PluginContext) {
-  for (const p of plugins) {
-    if (!p.transform) continue;
+async function runTransform(ts: TargetState, hooks: HookSlots, ctx: PluginContext) {
+  for (const fn of hooks.transform) {
     const targetIds = ctx.changedIds
       ? [...ts.resources.values()].filter(r => ctx.changedIds!.has(r.id))
       : [...ts.resources.values()];
     for (const r of targetIds) {
-      const out = await p.transform(r, ctx);
+      const out = await fn(r, ctx);
       if (out && out !== r) {
         ts.resources.set(out.id, out);
         if (out.url) ts.byCanonical.set(out.url, out.id);
@@ -256,7 +238,7 @@ async function runTransform(ts: TargetState, plugins: Plugin[], ctx: PluginConte
   }
 }
 
-async function finalize(cfg: ResolvedConfig, ts: TargetState, plugins: Plugin[], ctx: PluginContext) {
+async function finalize(cfg: ResolvedConfig, ts: TargetState, hooks: HookSlots, ctx: PluginContext) {
   const bundle: Bundle = {
     resources: ts.resources,
     byCanonical: ts.byCanonical,
@@ -267,8 +249,8 @@ async function finalize(cfg: ResolvedConfig, ts: TargetState, plugins: Plugin[],
   };
   ts.bundle = bundle;
 
-  for (const p of plugins) if (p.generateBundle) await p.generateBundle(bundle, ctx);
-  for (const p of plugins) if (p.writeBundle)    await p.writeBundle(bundle, ctx);
+  for (const fn of hooks.generateBundle) await fn(bundle, ctx);
+  for (const fn of hooks.writeBundle)    await fn(bundle, ctx);
 }
 
 // ---------------------------------------------------------------------------
@@ -340,13 +322,6 @@ function makeContext(cfg: ResolvedConfig, ts: TargetState, changedIds: Set<strin
 
 // ---------------------------------------------------------------------------
 // helpers
-
-function sortPlugins(plugins: Plugin[]): Plugin[] {
-  const pre = plugins.filter(p => p.enforce === "pre");
-  const post = plugins.filter(p => p.enforce === "post");
-  const mid = plugins.filter(p => !p.enforce);
-  return [...pre, ...mid, ...post];
-}
 
 async function walk(dir: string, exts: string[]): Promise<string[]> {
   const { readdir } = await import("node:fs/promises");

@@ -18,36 +18,40 @@ extension points — keep changes within this grain:
 - **One renderer, two deliveries.** A single route table (`site_core/buildRoutes`)
   renders any page; `fcc build` precomputes to `dist/`, `fcc dev` renders on
   demand from memory + SSE live-reload. No dev/prod drift.
-- **Plugins meet at the graph, never each other.** A plugin = lifecycle hooks;
-  they communicate via the resource graph + `ctx.shared.<ns>` handoffs
-  (menu→site, validator→site), never by importing one another.
+- **Plugins are functions that register functions (Emacs `add-hook` style).** A
+  plugin is `(hooks) => { hooks.afterValidate(fn); hooks.writeBundle(fn); … }` —
+  **no `Plugin` object, no methods**. There are no sync hooks-vs-async hooks: every
+  registered function may be async and the runner awaits it. Plugins never import
+  one another — they meet at the resource graph + `ctx.shared.<ns>` handoffs
+  (menu→site, validator→site). Run order = config order.
 - **Composition over configuration.** Many-variant concerns are a *list you
   compose*, not flags — e.g. `validator({ validators: [structural(), schema(),
-  fhirpathConstraints()] })`; each validator is `(ctx) => issues`.
+  fhirpathConstraints()] })`; each validator is an **async** `(ctx) => Promise<issues>`.
 
 Extend by adding: a **Loader** (`{extensions, load, invalidate?}`, new file type),
-a **Plugin** (lifecycle hooks), a **Validator** (`(ctx) => issues`, into
-`validator({ validators })`), or a **renderer namespace / `$`-dispatch file**
-(`src/site_*`).
+a **Plugin** (a `(hooks) => void` that registers hook fns), a **Validator**
+(async `(ctx) => Promise<issues>`, into `validator({ validators })`), or a
+**renderer namespace / `$`-dispatch file** (`src/site_*`).
 
 ## Where the code lives
 
 Everything is **one package** (`name: "fcc"`) under a single flat `/src/`.
-There is no `packages/` monorepo. Each top-level folder under `/src/` is a
-namespace; `package.json` `exports` + a tsconfig `paths` alias expose them:
-`fcc` → `/src/engine`, `fcc/<plugin>` → `/src/<plugin>/index.ts`.
+There is no `packages/` monorepo, and **no file is named `index.ts`** — entries
+are named after what they export (procedural: functions + types). `package.json`
+`exports` + tsconfig `paths` map `fcc` → `/src/engine/engine.ts` and
+`fcc/<plugin>` → `/src/<plugin>/<plugin>.ts`.
 
 - **`/src/engine`** — the core engine, imported everywhere as `fcc` (CLI runner,
   loader, watcher, define, authoring, state, version, repl, types).
 - **`/src/bin`** — CLI entry scripts (`fcc.ts`, `repl.ts`, `gentypes.ts`),
   exposed as the `fcc` / `fcc-repl` / `fcc-gentypes` bins.
 - **`/src/cdp`** — CDP browser-control helpers (REPL `cdp.*`).
-- **`/src/<plugin>`** — each non-site plugin, one folder, imported as
-  `fcc/<plugin>`: `json` `fsh` `ts` `snapshot` `narrative` `validate`
-  `ig-resource` `npm` `menu`. Most are a single `index.ts`; `menu` is a flat
-  fn-per-file namespace (`ctx.fns.menu`).
+- **`/src/<plugin>`** — each non-site plugin, one folder `<plugin>/<plugin>.ts`,
+  imported as `fcc/<plugin>`: `json` `fsh` `ts` `snapshot` `narrative` `validator`
+  `ig-resource` `npm` `menu`. Most are a single file (e.g. `snapshot/snapshot.ts`);
+  `menu` is a flat fn-per-file namespace (`ctx.fns.menu`) with a `menu/menu.ts` entry.
 - **`/src/site` + `/src/site_*`** — the IG-site renderer (`fcc/site`). The entry
-  (`site/index.ts` + `site/loadAll.ts` + `site/gentypes.sh`) assembles seven
+  (`site/site.ts` + `site/loadAll.ts` + `site/gentypes.sh`) assembles seven
   flat fn-per-file namespaces, each its own top-level folder with a `site_`
   prefix: `site_core` (chrome, layout, dispatch, tab/section registries, hooks,
   utils), `site_md` (markdown pipeline + pluggable blocks + Shiki),
@@ -105,7 +109,7 @@ Inside a plugin's `src/` directory:
 | `enable.ts`            | Plugin activation. Reads opts, writes them to `ctx.state.<ns>`.         |
 | `loadFns.ts`           | Only file allowed to import siblings. Assembles `ctx.fns.<ns>`.         |
 | `ctx_ns.d.ts`          | Ambient registry: `Context`, `FnsRegistry`, `types.*` namespaces.       |
-| `<hookName>.ts`        | Auto-registered as that fcc lifecycle hook (e.g. `writeBundle.ts`).     |
+| `<hookName>.ts`        | A `site_core` fn named after a lifecycle hook (`writeBundle.ts`, `watchPaths.ts`, `handleHotUpdate.ts`); the `site/site.ts` entry registers `hooks.<name>(ctx ⇒ ctx.fns.site_core.<name>(…))`. |
 | `$type_<Name>.ts`      | Type-only file. Scanner skips. Hoisted via `ctx_ns.d.ts`.               |
 | `$section_<id>.ts`     | `fcc/site` one Content-page section. `(ctx,{resource}) → {title,id,html}\|null`. Ordered per resourceType by `sectionDefaults`/`sectionsFor`; rendered by `renderCanonical`. |
 | `$tab_<id>.ts`         | `fcc/site` project escape-hatch tab renderer (referenced from a `tabDefaults` override). |
@@ -178,7 +182,7 @@ The generator scans every `*.ts` in the src dir and classifies:
 | Filename                  | Result                                           |
 |---------------------------|--------------------------------------------------|
 | `$type_<Name>.ts`         | `types.<ns>.<Name>` ambient type                 |
-| `index.ts`, `style.ts`, `render.ts`, `loadFns.ts`, `ctx_ns.d.ts` | skipped (framework / legacy) |
+| `<ns>.ts` (plugin entry, e.g. `menu.ts`), `style.ts`, `render.ts`, `loadFns.ts`, `ctx_ns.d.ts` | skipped (framework) |
 | `*.test.ts`, `*.d.ts`     | skipped                                          |
 | everything else `*.ts`    | entry in `FnsRegistry.<ns>` keyed by basename    |
 
@@ -233,9 +237,11 @@ export default function loadFns(ctx: Context): void {
 }
 ```
 
-`/src/loadAll.ts` calls every namespace's `loadFns(ctx)`; the plugin's
-`/src/index.ts` (the Plugin object factory) calls `loadAll(ctx)` once at
-construction, then delegates every hook to `ctx.fns.core.*`.
+`/src/site/loadAll.ts` calls every namespace's `loadFns(ctx)`; the plugin entry
+`/src/site/site.ts` (the setup function) calls `loadAll(ctx)` once, then
+**registers** the fcc lifecycle hooks — `hooks.writeBundle(...)`,
+`hooks.watchPaths(...)`, `hooks.handleHotUpdate(...)` — each delegating to
+`ctx.fns.site_core.*`.
 
 ## `enable.ts` — the activation fn
 
@@ -308,7 +314,18 @@ port for `navigate({ path })` = `process.env.SITE_PORT ?? 4321`.
 
 ## fcc plugin lifecycle
 
-Hooks (any plugin may implement zero or more):
+A plugin is a setup function `(hooks) => void`. It registers zero or more
+functions into the hook slots (Emacs `add-hook`); the runner runs each slot, in
+config order, at the matching stage. Every registered fn may be async:
+
+```ts
+export function snapshot(opts = {}): Plugin {
+  return (hooks) => hooks.afterValidate(async (ctx) => { /* … */ });
+}
+// multi-hook: return (hooks) => { hooks.writeBundle(fn); hooks.watchPaths(fn); }
+```
+
+Hook slots:
 
 ```
 buildStart  transform  beforeSnapshot  afterSnapshot
@@ -319,7 +336,8 @@ handleHotUpdate  buildEnd  closeBundle  watchPaths
 `watchPaths(cfg)` is dev-mode only — declares extra paths (files or
 directories) the watcher should observe. Returns
 `{ path: string; recursive?: boolean }[]`. Used for non-loader inputs
-(markdown, includes, static assets).
+(markdown, includes, static assets). Loaders are not hooks — they're declared on
+`cfg.sources[].loader` (`{ extensions, load, invalidate? }`).
 
 ## Bun primitives
 
