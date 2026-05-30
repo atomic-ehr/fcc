@@ -20,8 +20,8 @@ export default function $section_capabilityGrid(ctx: Context, opts: { resource: 
     const rows = resources.map(res => {
         const profiles = ([] as string[]).concat(res.supportedProfile ?? res.profile ?? [])
             .map((p: string) => ctx.fns.core.linkCanonical(ctx, { url: p, short: true })).join("<br>");
-        const interactions = join((res.interaction ?? []).map((i: any) => `${badge(i)}<code class="text-xs">${esc(i.code)}</code>`));
-        const search = join((res.searchParam ?? []).map((s: any) => `${badge(s)}<code class="text-xs">${esc(s.name)}</code>`));
+        const interactions = join((res.interaction ?? []).filter((i: any) => i.code).map((i: any) => `${badge(i)}<code class="text-xs">${esc(i.code)}</code>`));
+        const search = join((res.searchParam ?? []).filter((s: any) => s.name).map((s: any) => `${badge(s)}<code class="text-xs">${esc(s.name)}</code>`));
         const includes = (res.searchInclude ?? []).map((s: string) => esc(s)).join(", ");
         const ops = (res.operation ?? []).map((o: any) => esc(o.name)).join(", ");
         return `<tr class="border-t border-slate-100 align-top">

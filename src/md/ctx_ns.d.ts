@@ -13,6 +13,7 @@ declare global {
             mdInline: typeof import("./mdInline").default;
             mdToHtml: typeof import("./mdToHtml").default;
             parseIal: typeof import("./parseIal").default;
+            sanitizeHtml: typeof import("./sanitizeHtml").default;
             sdListTable: typeof import("./sdListTable").default;
             stripUnrenderedLiquid: typeof import("./stripUnrenderedLiquid").default;
             warmHighlighter: typeof import("./warmHighlighter").default;

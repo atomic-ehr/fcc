@@ -13,6 +13,8 @@ export default function mdToHtml(ctx: Context, opts: { md: string }): string {
         autolinks: true,
         headings: { ids: true },
     }) as string;
-    const withBlocks = ctx.fns.md.applyBlocks(ctx, { html });
+    // Sanitize author HTML before our (trusted) block/Shiki transforms run.
+    const safe = ctx.fns.md.sanitizeHtml(ctx, { html });
+    const withBlocks = ctx.fns.md.applyBlocks(ctx, { html: safe });
     return ctx.fns.md.highlightBlocks(ctx, { html: withBlocks });
 }

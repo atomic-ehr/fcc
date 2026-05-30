@@ -19,7 +19,7 @@ export default function usagesOf(ctx: Context, opts: { profile: types.fcc.Resour
         }
         if (r.resourceType !== "StructureDefinition") continue;
 
-        let refs = d.baseDefinition === url;
+        let refs = typeof d.baseDefinition === "string" && d.baseDefinition.split("|", 1)[0] === url;
         if (!refs) {
             const diff = d.differential?.element as Array<Record<string, any>> | undefined;
             const snap = d.snapshot?.element as Array<Record<string, any>> | undefined;

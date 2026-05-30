@@ -20,7 +20,7 @@ export default function fhirValue(ctx: Context, opts: { value: unknown; depth?: 
         const label = esc(o.display ?? o.reference);
         const id = o.reference.split("/");
         const href = id.length === 2 ? `${id[0]}-${id[1]}.html` : undefined;
-        return href ? `<a class="text-sky-700 hover:underline" href="${href}">${label}</a>` : label;
+        return href ? `<a class="text-sky-700 hover:underline" href="${esc(href)}">${label}</a>` : label;
     }
     // CodeableConcept.
     if (Array.isArray(o.coding)) {
@@ -35,11 +35,16 @@ export default function fhirValue(ctx: Context, opts: { value: unknown; depth?: 
     if (o.value !== undefined && (o.unit !== undefined || o.code !== undefined || o.currency !== undefined)) {
         return esc(`${o.value} ${o.unit ?? o.code ?? o.currency ?? ""}`.trim());
     }
-    // Period.
-    if (o.start !== undefined || o.end !== undefined) return esc(`${o.start ?? "…"} → ${o.end ?? "…"}`);
+    // Period (only when the object is *just* a period — not any object with a
+    // stray start/end key).
+    if ((o.start !== undefined || o.end !== undefined) &&
+        Object.keys(o).every(k => k === "start" || k === "end" || k === "id" || k === "extension")) {
+        return esc(`${o.start ?? "…"} → ${o.end ?? "…"}`);
+    }
 
-    // Extension: url (last segment) → its value*.
+    // Extension: url (last segment) → its value*. Depth-bounded like the generic case.
     if (typeof o.url === "string" && depth > 0) {
+        if (depth >= 3) return "…";
         const valKey = Object.keys(o).find(k => k.startsWith("value"));
         const inner = valKey ? ctx.fns.narrative.fhirValue(ctx, { value: o[valKey], depth: depth + 1 })
             : (Array.isArray(o.extension) ? ctx.fns.narrative.fhirValue(ctx, { value: o.extension, depth: depth + 1 }) : "");

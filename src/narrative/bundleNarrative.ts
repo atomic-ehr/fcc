@@ -13,7 +13,7 @@ export default function bundleNarrative(ctx: Context, opts: { resource: types.fc
     const blocks = entries.map((e, i) => {
         const res = e.resource as { resourceType?: string; id?: string; text?: { div?: string } } | undefined;
         const inner = res?.text?.div && res.text.div.replace(/<[^>]+>/g, "").trim().length > 40
-            ? `<div class="prose prose-slate max-w-none">${res.text.div}</div>`
+            ? `<div class="prose prose-slate max-w-none">${ctx.fns.md.sanitizeHtml(ctx, { html: res.text.div })}</div>`
             : (res ? ctx.fns.narrative.generateNarrative(ctx, { resource: { resourceType: res.resourceType ?? "Resource", id: res.id ?? String(i), data: res } as types.fcc.Resource }) : "");
         const label = res ? `${res.resourceType}/${res.id ?? ""}` : "entry";
         return `<div class="mt-3 border-t border-slate-100 pt-2">
