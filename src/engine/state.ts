@@ -32,6 +32,8 @@ export type TargetState = {
   // resource graph
   resources: Map<string, Resource>;
   byCanonical: Map<string, string>;
+  // typed index: resourceType -> ids (backs ctx.byType.<RT> / ctx.canonicals.<RT>)
+  byType: Map<string, Set<string>>;
 
   // source map: file path -> resource ids produced by it
   fileToResources: Map<string, Set<string>>;
@@ -75,6 +77,7 @@ export function freshTargetState(target: Target): TargetState {
     target,
     resources: new Map(),
     byCanonical: new Map(),
+    byType: new Map(),
     fileToResources: new Map(),
     resourceToFiles: new Map(),
     reverseCanonical: new Map(),
@@ -93,6 +96,9 @@ export function dropResource(ts: TargetState, id: string) {
   if (r.url) {
     if (ts.byCanonical.get(r.url) === id) ts.byCanonical.delete(r.url);
   }
+  // typed index cleanup
+  const typeSet = ts.byType.get(r.resourceType);
+  if (typeSet) { typeSet.delete(id); if (typeSet.size === 0) ts.byType.delete(r.resourceType); }
   // file→resources cleanup
   const files = ts.resourceToFiles.get(id);
   if (files) {
@@ -119,6 +125,7 @@ export function dropResource(ts: TargetState, id: string) {
 export function indexResource(ts: TargetState, r: Resource, fromFile: string | null) {
   ts.resources.set(r.id, r);
   if (r.url) ts.byCanonical.set(r.url, r.id);
+  (ts.byType.get(r.resourceType) ?? ts.byType.set(r.resourceType, new Set()).get(r.resourceType)!).add(r.id);
   if (fromFile) {
     (ts.fileToResources.get(fromFile) ?? ts.fileToResources.set(fromFile, new Set()).get(fromFile)!).add(r.id);
     (ts.resourceToFiles.get(r.id)  ?? ts.resourceToFiles.set(r.id, new Set()).get(r.id)!).add(fromFile);

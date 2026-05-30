@@ -263,6 +263,17 @@ export function makeContext(cfg: ResolvedConfig, ts: TargetState, changedIds: Se
     fhir: fhirPredicates(ts.target.fhir),
     resources: ts.resources,
     byCanonical: ts.byCanonical,
+    // Live typed indexes — read the current graph on access (no staleness).
+    byType: new Proxy({}, {
+      get: (_t, rt: string) => [...(ts.byType.get(rt) ?? [])].map(id => ts.resources.get(id)).filter(Boolean) as Resource[],
+    }) as Record<string, Resource[]>,
+    canonicals: new Proxy({}, {
+      get: (_t, rt: string) => {
+        const m = new Map<string, Resource>();
+        for (const id of ts.byType.get(rt) ?? []) { const r = ts.resources.get(id); if (r?.url) m.set(r.url, r); }
+        return m;
+      },
+    }) as Record<string, Map<string, Resource>>,
     changedIds,
     cycle: ts.cycle,
     dev: cfg.dev === true,

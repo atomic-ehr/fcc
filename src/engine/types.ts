@@ -123,6 +123,11 @@ export interface PluginContext {
   resources: Map<string, Resource>;
   byCanonical: Map<string, string>;
 
+  /** Live typed index — `ctx.byType.Patient` → all `Patient` resources. */
+  byType: Record<string, Resource[]>;
+  /** Live typed canonical index — `ctx.canonicals.StructureDefinition` → `Map<url, Resource>`. */
+  canonicals: Record<string, Map<string, Resource>>;
+
   /**
    * Cross-plugin shared state, keyed by plugin namespace.
    * Use for handoffs that aren't natural fits for the resource graph

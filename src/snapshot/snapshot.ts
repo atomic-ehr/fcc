@@ -37,14 +37,13 @@ export default function snapshot(opts: { packagesDir?: string; quiet?: boolean }
       const base = await loadBaseIndex(ctx);
       // In-bundle SDs override the cached packages (current build wins).
       const byUrl = new Map(base);
-      for (const r of ctx.resources.values()) {
-        if (r.resourceType === "StructureDefinition" && (r.data as any)?.url) byUrl.set((r.data as any).url, r.data);
+      for (const r of ctx.byType.StructureDefinition) {
+        if ((r.data as any)?.url) byUrl.set((r.data as any).url, r.data);
       }
       const resolver = (input: { canonical: string }) => byUrl.get(input.canonical);
 
       let made = 0, failed = 0;
-      for (const r of ctx.resources.values()) {
-        if (r.resourceType !== "StructureDefinition") continue;
+      for (const r of ctx.byType.StructureDefinition) {
         const d = r.data as Record<string, unknown>;
         if (d.snapshot) continue;
         try {
