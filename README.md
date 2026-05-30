@@ -23,8 +23,8 @@ forking.
 
 - **Authoring in TypeScript** (or FSH, or JSON) — same resource graph.
 - **Plugin-first** — snapshot, narrative, validation, NPM packaging,
-  HTML site, codegen are all plugins of the same shape (a function that
-  registers hook functions).
+  HTML site, codegen are all plugins of the same shape (step descriptors
+  `{ hook, fn, ...config }`).
 - **Flat-namespace plugins** — each plugin is a folder of single-purpose
   files; everything is reachable as `ctx.fns.<ns>.<fn>(ctx, opts)` and
   hot-swappable. Inspired by [workspaces-template]'s procedural style.
