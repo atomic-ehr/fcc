@@ -14,14 +14,14 @@ export default function site(opts: Opts = {}): Plugin {
     // Register hooks. Order = config order, so list `site()` last to have its
     // writeBundle run after other emitters.
     return (hooks) => {
-        hooks.watchPaths((cfg) => {
-            (ctx as any).cfg = cfg;
+        hooks.watchPaths((pctx) => {
+            (ctx as any).cfg = pctx.config;
             return ctx.fns.site_core.watchPaths(ctx);
         });
-        hooks.handleHotUpdate((hot) => {
+        hooks.handleHotUpdate((_pctx, { hot }) => {
             return ctx.fns.site_core.handleHotUpdate(ctx, { hot });
         });
-        hooks.writeBundle(async (bundle, pctx) => {
+        hooks.writeBundle(async (pctx, { bundle }) => {
             (ctx as any).cfg    = pctx.config;
             (ctx as any).target = pctx.target;
             (ctx as any).bundle = bundle;

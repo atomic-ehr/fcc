@@ -116,15 +116,15 @@ async function runTargetFull(cfg: ResolvedConfig, ts: TargetState, hooks: HookSl
 
   await runTransform(ts, hooks, ctx);
 
-  for (const fn of hooks.beforeSnapshot) for (const r of [...ts.resources.values()]) await fn(r, ctx);
-  for (const fn of hooks.afterSnapshot)  for (const r of [...ts.resources.values()]) await fn(r, ctx);
+  for (const fn of hooks.beforeSnapshot) for (const r of [...ts.resources.values()]) await fn(ctx, { resource: r });
+  for (const fn of hooks.afterSnapshot)  for (const r of [...ts.resources.values()]) await fn(ctx, { resource: r });
   for (const fn of hooks.beforeValidate) await fn(ctx);
   for (const fn of hooks.afterValidate)  await fn(ctx);
 
   await finalize(cfg, ts, hooks, ctx);
 
-  for (const fn of hooks.buildEnd)    await fn(undefined);
-  for (const fn of hooks.closeBundle) await fn();
+  for (const fn of hooks.buildEnd)    await fn(ctx, {});
+  for (const fn of hooks.closeBundle) await fn(ctx);
 }
 
 // ---------------------------------------------------------------------------
@@ -155,7 +155,7 @@ async function runTargetIncremental(cfg: ResolvedConfig, ts: TargetState, change
         invalidate: (id) => invalidationSet.add(id),
         ctx,
       };
-      await fn(hot);
+      await fn(ctx, { hot });
     }
   }
 
@@ -164,7 +164,7 @@ async function runTargetIncremental(cfg: ResolvedConfig, ts: TargetState, change
   for (const src of cfg.sources) {
     const rel = changedFiles.filter(f => src.loader.extensions.some(e => f.endsWith(e)));
     if (rel.length > 0 && src.loader.invalidate) {
-      await src.loader.invalidate(rel, ctx, (id) => invalidationSet.add(id));
+      await src.loader.invalidate(ctx, { files: rel, invalidate: (id) => invalidationSet.add(id) });
     }
   }
 
@@ -194,8 +194,8 @@ async function runTargetIncremental(cfg: ResolvedConfig, ts: TargetState, change
   await runTransform(ts, hooks, ctx);
 
   // Snapshot / validate as full passes for now (cheap)
-  for (const fn of hooks.beforeSnapshot) for (const r of [...ts.resources.values()]) await fn(r, ctx);
-  for (const fn of hooks.afterSnapshot)  for (const r of [...ts.resources.values()]) await fn(r, ctx);
+  for (const fn of hooks.beforeSnapshot) for (const r of [...ts.resources.values()]) await fn(ctx, { resource: r });
+  for (const fn of hooks.afterSnapshot)  for (const r of [...ts.resources.values()]) await fn(ctx, { resource: r });
   for (const fn of hooks.beforeValidate) await fn(ctx);
   for (const fn of hooks.afterValidate)  await fn(ctx);
 
@@ -206,7 +206,7 @@ async function runTargetIncremental(cfg: ResolvedConfig, ts: TargetState, change
 // shared steps
 
 async function loadFile(src: Source, file: string, ts: TargetState, ctx: PluginContext) {
-  const out = await src.loader.load(file, ctx);
+  const out = await src.loader.load(ctx, { file });
   if (!out) return;
   for (const r of out.resources) {
     const resource: Resource = {
@@ -229,7 +229,7 @@ async function runTransform(ts: TargetState, hooks: HookSlots, ctx: PluginContex
       ? [...ts.resources.values()].filter(r => ctx.changedIds!.has(r.id))
       : [...ts.resources.values()];
     for (const r of targetIds) {
-      const out = await fn(r, ctx);
+      const out = await fn(ctx, { resource: r });
       if (out && out !== r) {
         ts.resources.set(out.id, out);
         if (out.url) ts.byCanonical.set(out.url, out.id);
@@ -249,14 +249,14 @@ async function finalize(cfg: ResolvedConfig, ts: TargetState, hooks: HookSlots, 
   };
   ts.bundle = bundle;
 
-  for (const fn of hooks.generateBundle) await fn(bundle, ctx);
-  for (const fn of hooks.writeBundle)    await fn(bundle, ctx);
+  for (const fn of hooks.generateBundle) await fn(ctx, { bundle });
+  for (const fn of hooks.writeBundle)    await fn(ctx, { bundle });
 }
 
 // ---------------------------------------------------------------------------
 // context
 
-function makeContext(cfg: ResolvedConfig, ts: TargetState, changedIds: Set<string> | null): PluginContext {
+export function makeContext(cfg: ResolvedConfig, ts: TargetState, changedIds: Set<string> | null): PluginContext {
   return {
     config: cfg,
     target: ts.target,

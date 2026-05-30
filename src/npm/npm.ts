@@ -10,7 +10,7 @@ type Opts = {
 };
 
 export default function npm(opts: Opts = { emitUnpacked: true }): Plugin {
-  return (hooks) => hooks.writeBundle(async (bundle, ctx) => {
+  return (hooks) => hooks.writeBundle(async (ctx, { bundle }) => {
       const outDir = resolve(ctx.config.projectRoot, ctx.target.out);
       await mkdir(outDir, { recursive: true });
 

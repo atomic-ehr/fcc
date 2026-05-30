@@ -13,7 +13,7 @@ export default function json(opts: Opts = {}): Loader {
   return {
     name: "fcc/json",
     extensions: [".json"],
-    async load(file, ctx): Promise<LoadOutput | null> {
+    async load(ctx, { file }): Promise<LoadOutput | null> {
       const text = await readFile(file, "utf8");
       let data: Record<string, unknown>;
       try {
@@ -53,7 +53,7 @@ export default function json(opts: Opts = {}): Loader {
       };
       return { resources: [r as unknown as LoadOutput["resources"][number]] };
     },
-    invalidate(_files, _ctx, _invalidate) {
+    invalidate(_ctx, _opts) {
       // No batch state — file→resource map is 1:1 so the core handles it.
     },
   };

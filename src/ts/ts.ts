@@ -5,7 +5,7 @@ export default function ts(): Loader {
   return {
     name: "fcc/ts",
     extensions: [".ts"],
-    async load(file, ctx): Promise<LoadOutput | null> {
+    async load(ctx, { file }): Promise<LoadOutput | null> {
       // Dynamic import — Bun handles .ts natively.
       // Bust the ESM cache on incremental rebuilds (ctx.cycle > 1).
       const url = ctx.cycle > 1 ? `${file}?t=${Date.now()}` : file;

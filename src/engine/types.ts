@@ -48,16 +48,16 @@ export type LoadOutput = {
 export type Loader = {
   name: string;
   extensions: string[];
-  load(file: string, ctx: PluginContext): Promise<LoadOutput | null>;
+  load(ctx: PluginContext, opts: { file: string }): Promise<LoadOutput | null>;
   /**
    * Optional: invalidate any per-loader caches when files change.
    * fcc calls this before re-running `load` on changed files.
    *
-   * `invalidate(id)` adds a resource id to the rebuild set — useful when
+   * `opts.invalidate(id)` adds a resource id to the rebuild set — useful when
    * a single source file produces resources that are not in the file→resources
    * map (e.g. a batch compiler like fsh-sushi).
    */
-  invalidate?(files: string[], ctx: PluginContext, invalidate: (id: string) => void): void | Promise<void>;
+  invalidate?(ctx: PluginContext, opts: { files: string[]; invalidate: (id: string) => void }): void | Promise<void>;
 };
 
 export type HotUpdateContext = {
@@ -167,21 +167,24 @@ export type WatchPath = { path: string; recursive?: boolean };
  * slot's functions (in registration = config order) at the matching lifecycle
  * point. Every registered function may be async.
  */
+// Every hook fn follows the house signature: `ctx` first, a single options
+// object second (uniform with the flat-ns fns). Hooks with no payload take no
+// second arg.
 export interface Hooks {
   buildStart(fn: (ctx: PluginContext) => Async): void;
-  transform(fn: (r: Resource, ctx: PluginContext) => Async<Resource | null | void>): void;
-  beforeSnapshot(fn: (r: Resource, ctx: PluginContext) => Async): void;
-  afterSnapshot(fn: (r: Resource, ctx: PluginContext) => Async): void;
+  transform(fn: (ctx: PluginContext, opts: { resource: Resource }) => Async<Resource | null | void>): void;
+  beforeSnapshot(fn: (ctx: PluginContext, opts: { resource: Resource }) => Async): void;
+  afterSnapshot(fn: (ctx: PluginContext, opts: { resource: Resource }) => Async): void;
   beforeValidate(fn: (ctx: PluginContext) => Async): void;
   afterValidate(fn: (ctx: PluginContext) => Async): void;
-  generateBundle(fn: (bundle: Bundle, ctx: PluginContext) => Async): void;
-  writeBundle(fn: (bundle: Bundle, ctx: PluginContext) => Async): void;
-  buildEnd(fn: (err?: Error) => Async): void;
-  closeBundle(fn: () => Async): void;
+  generateBundle(fn: (ctx: PluginContext, opts: { bundle: Bundle }) => Async): void;
+  writeBundle(fn: (ctx: PluginContext, opts: { bundle: Bundle }) => Async): void;
+  buildEnd(fn: (ctx: PluginContext, opts: { err?: Error }) => Async): void;
+  closeBundle(fn: (ctx: PluginContext) => Async): void;
   /** Dev: extend/narrow the invalidation set for a changed file. */
-  handleHotUpdate(fn: (hot: HotUpdateContext) => Async): void;
+  handleHotUpdate(fn: (ctx: PluginContext, opts: { hot: HotUpdateContext }) => Async): void;
   /** Dev: extra paths the watcher should observe (markdown, includes, assets). */
-  watchPaths(fn: (cfg: ResolvedConfig) => Async<WatchPath[]>): void;
+  watchPaths(fn: (ctx: PluginContext) => Async<WatchPath[]>): void;
 }
 
 /**

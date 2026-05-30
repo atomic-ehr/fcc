@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { resolve } from "node:path";
 import { existsSync } from "node:fs";
-import { build, runBuild, runIncremental } from "../engine/runner.ts";
+import { build, runBuild, runIncremental, makeContext } from "../engine/runner.ts";
 import { createState } from "../engine/state.ts";
 import { watchSources } from "../engine/watcher.ts";
 import { startRepl } from "../engine/repl.ts";
@@ -79,8 +79,10 @@ async function main() {
       // recursive dirs, so pass them as extraDirs (watched recursively even if
       // they don't exist yet) rather than letting the watcher stat-guess.
       const pluginDirs: string[] = [];
-      for (const fn of state.hooks.watchPaths) {
-        try { for (const e of (await fn(resolved)) ?? []) pluginDirs.push(e.path); }
+      const wpTs = state.byTarget.get(target ?? "") ?? [...state.byTarget.values()][0];
+      const wpCtx = wpTs ? makeContext(resolved, wpTs, null) : undefined;
+      if (wpCtx) for (const fn of state.hooks.watchPaths) {
+        try { for (const e of (await fn(wpCtx)) ?? []) pluginDirs.push(e.path); }
         catch { /* hook opted out */ }
       }
 

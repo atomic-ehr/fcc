@@ -79,7 +79,7 @@ export default function fsh(opts: Opts = {}): Loader {
     name: "fcc/fsh",
     extensions: [".fsh"],
 
-    async load(file, ctx): Promise<LoadOutput | null> {
+    async load(ctx, { file }): Promise<LoadOutput | null> {
       const key = batchKey(ctx);
       let pendingBatch = batches.get(key);
       if (!pendingBatch) {
@@ -92,7 +92,7 @@ export default function fsh(opts: Opts = {}): Loader {
       return { resources: bucket.resources.map(d => toResource(d, file)) };
     },
 
-    invalidate(_files, ctx, invalidate) {
+    invalidate(ctx, { invalidate }) {
       // Sushi can't tell us which output came from which .fsh — any .fsh
       // edit means recompile the whole batch and re-emit every FSH-produced
       // resource.

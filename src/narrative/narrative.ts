@@ -1,7 +1,7 @@
 import type { Plugin } from "fcc";
 
 export default function narrative(_opts: unknown = {}): Plugin {
-  return (hooks) => hooks.transform((r) => {
+  return (hooks) => hooks.transform((_ctx, { resource: r }) => {
     const d = r.data as Record<string, unknown>;
     if (d.text) return null;
     const display =

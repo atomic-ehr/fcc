@@ -85,10 +85,17 @@ are named after what they export (procedural: functions + types). `package.json`
   nothing else. Filename = exported fn name. The file always
   `export default`s the fn.
 
-- **Fn signature.** `(ctx: Context, opts: SomeOpts) => Result`. Even
-  trivial helpers (`htmlEscape({ s })`) take `(ctx, opts)`. Opts is
-  always an object. Async only where there's real IO; the rest stay
-  sync.
+- **Fn signature — `(ctx, opts)` everywhere.** Every function takes `ctx`
+  first and, when it has parameters, a single `opts` object second:
+  `(ctx: Context, opts: SomeOpts) => Result`. This is uniform across **all**
+  layers — flat-ns fns (`htmlEscape(ctx, { s })`), **hook callbacks**
+  (`hooks.transform((ctx, { resource }) => …)`, `hooks.writeBundle((ctx, { bundle }) => …)`,
+  `hooks.afterValidate((ctx) => …)` when there's no payload), and **loaders**
+  (`load(ctx, { file })`, `invalidate(ctx, { files, invalidate })`). The only
+  things that aren't `(ctx, opts)` are the config-time constructors — the plugin
+  factory `snapshot(opts)`, the setup fn `(hooks) => void`, and engine
+  entrypoints (`build`, `defineConfig`) — because no `ctx` exists yet. Opts is
+  always an object. Async only where there's real IO.
 
 - **Types live in `$type_*.ts` files.** Each `$type_<Name>.ts` exports
   a single named type. They are hoisted into the ambient
