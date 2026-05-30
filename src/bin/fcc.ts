@@ -5,6 +5,7 @@ import { build, runBuild, runIncremental } from "../engine/runner.ts";
 import { createState } from "../engine/state.ts";
 import { watchSources } from "../engine/watcher.ts";
 import { startRepl } from "../engine/repl.ts";
+import { startDevServer } from "../engine/devServer.ts";
 import type { Config, Diagnostic, ResolvedConfig } from "../engine/types.ts";
 
 async function main() {
@@ -51,7 +52,9 @@ async function main() {
       }
 
       // ---- watch mode ----
-      const resolved: ResolvedConfig = { ...config, projectRoot: cwd };
+      // dev: true makes emit plugins (site) serve lazily from memory instead of
+      // precomputing every file to disk.
+      const resolved: ResolvedConfig = { ...config, projectRoot: cwd, dev: true };
       const state = createState(resolved);
 
       console.log("fcc: initial build…");
@@ -62,21 +65,39 @@ async function main() {
         `${[...initial.bundles.values()].map(b => b.resources.size).join("/")} resources`,
       );
 
+      // Dev HTTP server: renders pages on demand from the in-memory graph and
+      // live-reloads the browser over SSE after each rebuild.
+      const dev = startDevServer({ state, targetName: target });
+      console.log(`fcc: site on http://localhost:${dev.port}/  (lazy render + live reload)`);
+
       const repl = await startRepl({ state, projectRoot: cwd });
       console.log(`fcc: REPL on http://localhost:${repl.port}/repl  (port written to .fcc/repl-port)`);
-      console.log(`     try:  bun ../../packages/fcc/bin/repl.ts 'state.byTarget.get("${[...state.byTarget.keys()][0]}").resources.size'`);
+      console.log(`     try:  bun ../../src/bin/repl.ts 'state.byTarget.get("${[...state.byTarget.keys()][0]}").resources.size'`);
+
+      // Collect extra dirs declared by plugins (e.g. the site's pagecontent +
+      // intro-notes — non-resource markdown the source dirs miss). These are
+      // recursive dirs, so pass them as extraDirs (watched recursively even if
+      // they don't exist yet) rather than letting the watcher stat-guess.
+      const pluginDirs: string[] = [];
+      for (const p of resolved.plugins) {
+        if (typeof p.watchPaths !== "function") continue;
+        try { for (const e of (await p.watchPaths(resolved)) ?? []) pluginDirs.push(e.path); }
+        catch { /* plugin opted out */ }
+      }
 
       console.log("fcc: watching for changes (Ctrl+C to stop)…\n");
 
       const handle = watchSources({
         cfg: resolved,
         extraPaths: [configPath],
+        extraDirs: pluginDirs,
         async onBatch(files) {
           if (files.includes(configPath)) {
             console.log("fcc: config changed — full rebuild");
             const r = await runBuild(state, target);
             printDiagnostics(r.diagnostics);
             console.log(`fcc: rebuilt in ${r.durationMs.toFixed(0)}ms`);
+            dev.broadcastReload();
             return;
           }
           const ts0 = performance.now();
@@ -85,11 +106,13 @@ async function main() {
           console.log(`fcc: ${files.length} file(s) changed — ${r.ok ? "ok" : "ERRORS"} in ${ms}ms`);
           for (const f of files) console.log(`  · ${shorten(f, cwd)}`);
           printDiagnostics(r.diagnostics);
+          dev.broadcastReload();
         },
       });
 
       const shutdown = async () => {
         handle.close();
+        dev.close();
         await repl.close();
         console.log("\nfcc: stopped");
         process.exit(0);

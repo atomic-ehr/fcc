@@ -6,6 +6,7 @@ import linkGrid from "./linkGrid.ts";
 import $section_description from "./$section_description.ts";
 import $section_notes from "./$section_notes.ts";
 import buildInfoBanner from "./buildInfoBanner.ts";
+import buildRoutes from "./buildRoutes.ts";
 import bytes from "./bytes.ts";
 import canonicalMeta from "./canonicalMeta.ts";
 import canonicalResource from "./canonicalResource.ts";
@@ -54,5 +55,5 @@ import watchPaths from "./watchPaths.ts";
 import writeBundle from "./writeBundle.ts";
 
 export default function loadFns(ctx: Context): void {
-    (ctx.fns as any).site_core = { dataTable, linkGrid, $avail_notExample, $section_description, $section_notes, buildInfoBanner, bytes, canonicalMeta, canonicalResource, canonicalTabStrip, companionPages, enable, featureOn, formatCard, handleHotUpdate, htmlEscape, humanType, idOf, introBlock, jsonBlock, layout, linkCanonical, linkType, loadIntroNotes, mergeTabs, metaDl, navActiveScript, notesFor, order, pageHeader, pageHref, pillType, renderBreadcrumb, renderCanonical, renderResource, renderResourceJsonPage, renderSidebarGroup, resolveFn, sectionDefaults, sectionHeader, sectionsFor, shortLabel, sidebar, tabDefaults, tabLinks, tabsFor, tagBindingStrength, titleOf, topBar, urlVersionStrip, watchPaths, writeBundle };
+    (ctx.fns as any).site_core = { dataTable, linkGrid, $avail_notExample, $section_description, $section_notes, buildInfoBanner, buildRoutes, bytes, canonicalMeta, canonicalResource, canonicalTabStrip, companionPages, enable, featureOn, formatCard, handleHotUpdate, htmlEscape, humanType, idOf, introBlock, jsonBlock, layout, linkCanonical, linkType, loadIntroNotes, mergeTabs, metaDl, navActiveScript, notesFor, order, pageHeader, pageHref, pillType, renderBreadcrumb, renderCanonical, renderResource, renderResourceJsonPage, renderSidebarGroup, resolveFn, sectionDefaults, sectionHeader, sectionsFor, shortLabel, sidebar, tabDefaults, tabLinks, tabsFor, tagBindingStrength, titleOf, topBar, urlVersionStrip, watchPaths, writeBundle };
 }

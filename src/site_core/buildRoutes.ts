@@ -1,0 +1,87 @@
+// The site's URL map — single source of truth for both prod (precompute every
+// file to disk) and dev (render one page on demand from the in-memory graph).
+//
+// Enumerates every output path as a *lazy* render thunk WITHOUT rendering:
+// resource pages (pageHref), companion tabs + raw side-cars (from tabsFor —
+// cheap, no render), index/artifacts/style.css, and pagecontent pages. Also
+// does the per-build setup (Shiki, pagecontent + ref-links, intro/notes, menu)
+// that every render depends on. writeBundle walks the map to write files; the
+// dev server calls one route's render() per request.
+import { css } from "./style.ts";
+
+type Route = {
+    // owning resource id, or null for chrome/aggregate pages (always (re)served).
+    id: string | null;
+    contentType: string;
+    render: () => string | Promise<string>;
+};
+
+export default async function buildRoutes(
+    ctx: Context,
+    opts: { pluginCtx: types.fcc.PluginContext },
+): Promise<{ routes: Map<string, Route>; notesCount: number }> {
+    const pctx = opts.pluginCtx;
+    const o = (ctx.state.site ?? {}) as types.site_core.SiteOpts;
+    const pagecontent = o.pagecontent ?? "input/pagecontent";
+    const introNotes  = o.introNotes  ?? "input/intro-notes";
+
+    // Warm the shared Shiki highlighter once so the (sync) markdown pipeline can
+    // highlight fenced code blocks during the renders below.
+    await ctx.fns.site_md.warmHighlighter(ctx);
+
+    // Pagecontent pages + auto ref-links ([Page Title] → slug.html).
+    const pages = await ctx.fns.site_artifacts.loadPagecontent(ctx, { projectRoot: pctx.config.projectRoot, dir: pagecontent });
+    if (!ctx.state.site) ctx.state.site = {};
+    const refs = ((ctx.state.site as any).refLinkMap ?? {}) as Record<string, string>;
+    for (const p of pages) if (p.title && !(p.title in refs)) refs[p.title] = `${p.slug}.html`;
+    (ctx.state.site as any).refLinkMap = refs;
+
+    const landingHtml = await ctx.fns.site_artifacts.renderLanding(ctx, { projectRoot: pctx.config.projectRoot, pagecontent });
+
+    // Per-resource intro/notes (cached in state across an incremental pass).
+    const cached = (ctx.state.site as any)?.notesCache as Map<string, { intro?: string; notes?: string }> | null | undefined;
+    const notes = cached ?? await ctx.fns.site_core.loadIntroNotes(ctx, { projectRoot: pctx.config.projectRoot, dir: introNotes });
+    (ctx.state.site as any).notesCache = notes;
+    (ctx as any).notes = notes;                                     // renderers read ctx.notes
+
+    // IG-author menu emitted by @fcc/plugin-menu via pctx.shared.menu.
+    ctx.state.menuHtml = (pctx.shared.menu as { html?: string } | undefined)?.html ?? null;
+
+    const routes = new Map<string, Route>();
+
+    // chrome / aggregates — id:null → always (re)written / served fresh
+    routes.set("index.html",     { id: null, contentType: "text/html", render: () => ctx.fns.site_artifacts.renderIndex(ctx, { landingHtml }) });
+    routes.set("artifacts.html", { id: null, contentType: "text/html", render: () => ctx.fns.site_artifacts.renderArtifacts(ctx) });
+    routes.set("style.css",      { id: null, contentType: "text/css",  render: () => css });
+    for (const p of pages) {
+        routes.set(`${p.slug}.html`, { id: null, contentType: "text/html", render: () => ctx.fns.site_artifacts.renderPage(ctx, p) });
+    }
+
+    // resource pages + companion tabs (tabsFor is cheap — no render here).
+    // Every companion route carries the PARENT resource's id (not null, not a
+    // unique id) so the incremental write-gate in writeBundle skips/rewrites a
+    // resource and all its companions as a unit. Changing that breaks companion
+    // incremental correctness.
+    for (const r of pctx.resources.values()) {
+        if (r.resourceType === "ImplementationGuide") continue;
+        const href = ctx.fns.site_core.pageHref(ctx, { resource: r });
+        routes.set(href, { id: r.id, contentType: "text/html", render: () => ctx.fns.site_core.renderResource(ctx, { resource: r }) });
+
+        for (const t of ctx.fns.site_core.tabsFor(ctx, { resource: r })) {
+            if (t.d.kind === "main") continue;                      // main page already mapped above
+            routes.set(t.href, { id: r.id, contentType: "text/html", render: () => ctx.fns.site_core.canonicalResource(ctx, { resource: r, activeId: t.d.id }) });
+            if (t.rawName) {
+                routes.set(t.rawName, { id: r.id, contentType: "application/json", render: () => {
+                    const clean = { ...(r.data as Record<string, unknown>) };
+                    delete (clean as { __wasExample?: boolean }).__wasExample;
+                    return JSON.stringify(clean, null, 2);
+                } });
+            }
+        }
+    }
+
+    let notesCount = 0;
+    for (const id of notes.keys()) if (pctx.resources.has(id)) notesCount++;
+
+    return { routes, notesCount };
+}

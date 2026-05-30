@@ -18,6 +18,7 @@ declare global {
             $section_description: typeof import("./$section_description").default;
             $section_notes: typeof import("./$section_notes").default;
             buildInfoBanner: typeof import("./buildInfoBanner").default;
+            buildRoutes: typeof import("./buildRoutes").default;
             bytes: typeof import("./bytes").default;
             canonicalMeta: typeof import("./canonicalMeta").default;
             canonicalResource: typeof import("./canonicalResource").default;

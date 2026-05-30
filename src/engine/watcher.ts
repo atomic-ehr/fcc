@@ -48,7 +48,7 @@ export function watchSources(opts: WatchOpts): WatcherHandle {
 
   const watchers: FSWatcher[] = [];
 
-  const addWatch = (path: string, isDir: boolean) => {
+  const addWatch = (path: string, isDir: boolean, warnOnFail = false) => {
     try {
       const w = watch(path, isDir ? { recursive: true } : {}, (_event, filename) => {
         if (!filename) return;
@@ -60,8 +60,10 @@ export function watchSources(opts: WatchOpts): WatcherHandle {
       });
       watchers.push(w);
     } catch (e) {
-      // The dir may not exist — skip; on macOS recursive watch is supported.
-      void e;
+      // Source dirs are often optional (e.g. no examples/) — stay quiet. But an
+      // explicitly-declared path (config, plugin watchPaths) failing is worth a
+      // heads-up so the developer knows it isn't being watched.
+      if (warnOnFail) console.warn(`fcc: not watching ${path} (${(e as Error)?.message ?? "unavailable"})`);
     }
   };
 
@@ -69,17 +71,18 @@ export function watchSources(opts: WatchOpts): WatcherHandle {
   for (const src of cfg.sources) {
     addWatch(resolve(cfg.projectRoot, src.dir), true);
   }
-  // Watch extra paths (config file, plugin-declared dirs, etc.)
-  // Detect dir-vs-file via stat so callers don't have to know.
+  // Watch extra paths (config file, etc.). Detect dir-vs-file via stat.
   if (opts.extraPaths) {
     for (const p of opts.extraPaths) {
       let isDir = false;
       try { isDir = statSync(p).isDirectory(); } catch { /* missing path */ }
-      addWatch(p, isDir);
+      addWatch(p, isDir, true);
     }
   }
+  // Explicitly-recursive dirs (plugin watchPaths) — watched recursively even if
+  // they don't exist yet, so a later-created pagecontent/ dir still triggers.
   if (opts.extraDirs) {
-    for (const p of opts.extraDirs) addWatch(p, true);
+    for (const p of opts.extraDirs) addWatch(p, true, true);
   }
 
   return {

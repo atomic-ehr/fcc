@@ -1,96 +1,61 @@
 import { join, resolve } from "node:path";
-import { css } from "./style.ts";
 
+// Builds the route table (buildRoutes) once, then:
+//   • always publishes pctx.shared.site.render(path) — a lazy renderer the dev
+//     server calls to render one page on demand from the in-memory graph;
+//   • in prod (not dev) precomputes every route to disk, honoring changedIds
+//     for incremental rebuilds (resource pages skipped when unchanged;
+//     chrome/aggregate pages always rewritten).
 export default async function writeBundle(
     ctx: Context,
     opts: { pluginCtx: types.fcc.PluginContext },
 ): Promise<void> {
     const pctx = opts.pluginCtx;
     const o = (ctx.state.site ?? {}) as types.site_core.SiteOpts;
-    const pagecontent = o.pagecontent ?? "input/pagecontent";
-    const introNotes  = o.introNotes  ?? "input/intro-notes";
-    const outSub      = o.out         ?? "site";
+    const outDir = resolve(pctx.config.projectRoot, pctx.target.out, o.out ?? "site");
 
-    const outDir = resolve(pctx.config.projectRoot, pctx.target.out, outSub);
-    // (no mkdir needed — Bun.write in writeOne creates parent directories.)
+    const { routes, notesCount } = await ctx.fns.site_core.buildRoutes(ctx, { pluginCtx: pctx });
 
-    // Warm the shared Shiki highlighter once so the (sync) markdown pipeline can
-    // highlight fenced code blocks during the renders below.
-    await ctx.fns.site_md.warmHighlighter(ctx);
+    // Lazy renderer for the dev server (always fresh from the current graph).
+    (pctx.shared as any).site = {
+        render: async (path: string): Promise<{ contentType: string; body: string } | null> => {
+            const route = routes.get(normalize(path));
+            if (!route) return null;
+            return { contentType: route.contentType, body: await route.render() };
+        },
+    };
 
-    // Auto-resolve bare reference links to internal pages: [Page Title] → slug.html.
-    // Loaded once here (before any markdown render) and reused for the page loop.
-    const pages = await ctx.fns.site_artifacts.loadPagecontent(ctx, { projectRoot: pctx.config.projectRoot, dir: pagecontent });
-    if (!ctx.state.site) ctx.state.site = {};
-    const refs = ((ctx.state.site as any).refLinkMap ?? {}) as Record<string, string>;
-    for (const p of pages) if (p.title && !(p.title in refs)) refs[p.title] = `${p.slug}.html`;
-    (ctx.state.site as any).refLinkMap = refs;
-
-    const landingHtml = await ctx.fns.site_artifacts.renderLanding(ctx, { projectRoot: pctx.config.projectRoot, pagecontent });
-
-    // Per-resource intro/notes — loaded once per writeBundle pass, cached in state.
-    const cached = (ctx.state.site as any)?.notesCache as Map<string, { intro?: string; notes?: string }> | null | undefined;
-    const notes = cached
-        ?? await ctx.fns.site_core.loadIntroNotes(ctx, { projectRoot: pctx.config.projectRoot, dir: introNotes });
-    if (!ctx.state.site) ctx.state.site = {};
-    (ctx.state.site as any).notesCache = notes;
-
-    // Bind notes into ctx so renderers see them via ctx.notes.
-    (ctx as any).notes = notes;
-
-    // Pick up an IG-author menu emitted by @fcc/plugin-menu via pctx.shared.menu.
-    // Stored on ctx.state so topBar can read it without a new opts plumbing.
-    const sharedMenu = (pctx.shared.menu as { html?: string } | undefined);
-    ctx.state.menuHtml = sharedMenu?.html ?? null;
-
-    const indexHtml     = ctx.fns.site_artifacts.renderIndex(ctx, { landingHtml });
-    const artifactsHtml = ctx.fns.site_artifacts.renderArtifacts(ctx);
-
-    await writeOne(outDir, "index.html", indexHtml);
-    await writeOne(outDir, "artifacts.html", artifactsHtml);
-    await writeOne(outDir, "style.css", css);
-
-    // Render every pagecontent/*.md (except index.md) as <slug>.html so the
-    // IG-author menu links resolve. `pages` was loaded above (for ref-links).
-    for (const p of pages) {
-        const html = ctx.fns.site_artifacts.renderPage(ctx, p);
-        await writeOne(outDir, `${p.slug}.html`, html);
+    // Dev: the server renders on demand — don't precompute to disk.
+    if (pctx.dev) {
+        pctx.warn({ severity: "info", source: "fcc/site", message: `site ready (dev · lazy render): ${routes.size} route(s), ${notesCount} with intro/notes` });
+        return;
     }
 
+    // Prod: precompute every route. Resource pages honor changedIds; aggregates
+    // (id:null) are always (re)written.
     const changed = pctx.changedIds;
-    let pageCount = 0;
-    for (const r of pctx.resources.values()) {
-        if (r.resourceType === "ImplementationGuide") continue;
-        if (changed && !changed.has(r.id)) continue;
-        const html = await ctx.fns.site_core.renderResource(ctx, { resource: r });
-        const href = ctx.fns.site_core.pageHref(ctx, { resource: r });
-        await writeOne(outDir, href, html);
-        pageCount++;
-
-        // IG-Publisher companion pages per resourceType (profiles: definitions/
-        // mappings/examples/json + raw; value sets: json + raw).
-        for (const page of await ctx.fns.site_core.companionPages(ctx, { resource: r })) {
-            await writeOne(outDir, page.name, page.content);
-            pageCount++;
-        }
+    let count = 0;
+    for (const [path, route] of routes) {
+        if (route.id && changed && !changed.has(route.id)) continue;
+        await Bun.write(join(outDir, path), await route.render());  // Bun.write creates parent dirs
+        count++;
     }
 
     pctx.emitFile({ path: join(outDir, "index.html"), bytes: ctx.fns.site_core.bytes(ctx, { s: "" }) });
-
-    let withNotes = 0;
-    for (const id of notes.keys()) if (pctx.resources.has(id)) withNotes++;
-
     pctx.warn({
         severity: "info", source: "fcc/site",
         message: changed
-            ? `site: ${pageCount} page(s) re-rendered + chrome (${withNotes} have intro/notes)`
-            : `site rendered: ${pctx.resources.size + 1} pages → ${outDir} (${withNotes} have intro/notes)`,
+            ? `site: ${count} file(s) re-rendered + chrome (${notesCount} have intro/notes)`
+            : `site rendered: ${count} files → ${outDir} (${notesCount} have intro/notes)`,
     });
 
-    // Drop cache between full builds (so file additions/deletions are picked up).
+    // Drop notes cache between full builds so file add/delete is picked up.
     if (!changed) (ctx.state.site as any).notesCache = null;
 }
 
-async function writeOne(dir: string, name: string, content: string): Promise<void> {
-    await Bun.write(join(dir, name), content); // Bun.write creates parent dirs
+function normalize(path: string): string {
+    let p = path.split("?")[0]!.split("#")[0]!;
+    if (p.startsWith("/")) p = p.slice(1);
+    if (p === "" ) p = "index.html";
+    return p;
 }

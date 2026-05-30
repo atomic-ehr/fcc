@@ -89,6 +89,9 @@ export type Config = {
 
 export type ResolvedConfig = Config & {
   projectRoot: string;
+  /** True when running under `fcc dev` (watch mode). Lets emit plugins skip
+   *  precompute-to-disk and serve lazily instead. */
+  dev?: boolean;
 };
 
 export type FhirPredicates = {
@@ -136,6 +139,10 @@ export interface PluginContext {
 
   /** Build cycle counter — incremented on each rebuild. */
   cycle: number;
+
+  /** True under `fcc dev` (watch mode). Emit plugins may serve lazily from
+   *  memory instead of precomputing every file to disk. */
+  dev: boolean;
 
   query(type: string, where?: Record<string, unknown>): Resource[];
   byUrl(url: string): Resource | undefined;
