@@ -26,17 +26,5 @@ export default function bindingsTable(ctx: Context, opts: { elements: Array<Reco
             <td class="px-3 py-1.5 text-xs text-slate-600">${ctx.fns.md.mdInline(ctx, { md: b.description })}</td>
         </tr>`).join("");
 
-    return `<div class="overflow-x-auto rounded-b border border-t-0 border-slate-200 bg-white">
-        <table class="min-w-full text-sm">
-            <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-                <tr>
-                    <th class="px-3 py-2">Path</th>
-                    <th class="px-3 py-2">Strength</th>
-                    <th class="px-3 py-2">ValueSet</th>
-                    <th class="px-3 py-2">Description</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">${rows}</tbody>
-        </table>
-    </div>`;
+    return ctx.fns.core.dataTable(ctx, { columns: ["Path", "Strength", "ValueSet", "Description"], rows, attached: true });
 }

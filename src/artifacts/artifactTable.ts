@@ -21,13 +21,6 @@ export default function artifactTable(
 
     return `<section class="mt-8" id="${esc(opts.anchor)}">
         <h2 class="mb-2 text-lg font-semibold text-slate-900">${esc(opts.label)} <span class="ml-1 text-sm font-normal text-slate-400">${opts.list.length}</span></h2>
-        <div class="overflow-x-auto rounded border border-slate-200 bg-white">
-            <table class="min-w-full text-sm">
-                <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-                    <tr><th class="px-3 py-2">Name</th><th class="px-3 py-2">Id</th><th class="px-3 py-2">Description</th></tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">${rows}</tbody>
-            </table>
-        </div>
+        ${ctx.fns.core.dataTable(ctx, { columns: ["Name", "Id", "Description"], rows })}
     </section>`;
 }

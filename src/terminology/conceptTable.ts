@@ -24,12 +24,5 @@ export default function conceptTable(
         </tr>`;
     }).join("");
 
-    return `<div class="overflow-x-auto rounded border border-slate-200 bg-white">
-        <table class="min-w-full text-sm">
-            <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-                <tr>${cols.map(c => `<th class="px-3 py-2">${esc(c)}</th>`).join("")}</tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">${rows}</tbody>
-        </table>
-    </div>`;
+    return ctx.fns.core.dataTable(ctx, { columns: cols, rows });
 }

@@ -34,18 +34,5 @@ export default function constraintsTable(ctx: Context, opts: { elements: Array<R
             <td class="px-3 py-1.5"><code class="text-[11px] text-slate-600">${esc(c.expression ?? "")}</code></td>
         </tr>`).join("");
 
-    return `<div class="overflow-x-auto rounded-b border border-t-0 border-slate-200 bg-white">
-        <table class="min-w-full text-sm">
-            <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-                <tr>
-                    <th class="px-3 py-2">Key</th>
-                    <th class="px-3 py-2">On</th>
-                    <th class="px-3 py-2">Severity</th>
-                    <th class="px-3 py-2">Requirements</th>
-                    <th class="px-3 py-2">Expression</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">${rows}</tbody>
-        </table>
-    </div>`;
+    return ctx.fns.core.dataTable(ctx, { columns: ["Key", "On", "Severity", "Requirements", "Expression"], rows, attached: true });
 }

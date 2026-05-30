@@ -1,6 +1,5 @@
 // Discover every *.md file in the pagecontent dir. Returns slug+title+md
 // for each, ready to be passed to renderPage.
-import { readFile, readdir } from "node:fs/promises";
 import { join, resolve, basename } from "node:path";
 
 export default async function loadPagecontent(
@@ -8,27 +7,18 @@ export default async function loadPagecontent(
     opts: { projectRoot: string; dir: string },
 ): Promise<Array<{ slug: string; title: string; md: string }>> {
     const absDir = resolve(opts.projectRoot, opts.dir);
-    let entries;
-    try {
-        entries = await readdir(absDir, { withFileTypes: true });
-    } catch {
-        return [];
-    }
-
     const out: Array<{ slug: string; title: string; md: string }> = [];
-    for (const e of entries) {
-        if (!e.isFile() || !e.name.endsWith(".md")) continue;
-        // Skip index.md — landing page rendered separately.
-        if (e.name === "index.md") continue;
-        // Skip IG-resource MD files (handled by ig-resource plugin/IG Publisher convention).
-        if (e.name.startsWith("ImplementationGuide-")) continue;
-        const slug = basename(e.name, ".md");
-        const md = await readFile(join(absDir, e.name), "utf8");
-        // Try to lift an H1 from the first line; fall back to title-cased slug.
-        const h1Match = md.match(/^#\s+(.+?)\s*$/m);
-        const title = h1Match ? h1Match[1] : titleCase(slug);
-        out.push({ slug, title, md });
-    }
+    try {
+      for await (const name of new Bun.Glob("*.md").scan({ cwd: absDir })) {
+        // Skip index.md (landing page) + IG-resource MD (handled elsewhere).
+        if (name === "index.md" || name.startsWith("ImplementationGuide-")) continue;
+        const slug = basename(name, ".md");
+        const md = await Bun.file(join(absDir, name)).text();
+        // Lift an H1 for the title; fall back to title-cased slug.
+        const h1 = md.match(/^#\s+(.+?)\s*$/m);
+        out.push({ slug, title: h1 ? h1[1]! : titleCase(slug), md });
+      }
+    } catch { /* dir absent → no pages */ }
     return out;
 }
 

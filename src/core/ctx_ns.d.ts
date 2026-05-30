@@ -23,6 +23,7 @@ declare global {
             canonicalResource: typeof import("./canonicalResource").default;
             canonicalTabStrip: typeof import("./canonicalTabStrip").default;
             companionPages: typeof import("./companionPages").default;
+            dataTable: typeof import("./dataTable").default;
             enable: typeof import("./enable").default;
             featureOn: typeof import("./featureOn").default;
             formatCard: typeof import("./formatCard").default;

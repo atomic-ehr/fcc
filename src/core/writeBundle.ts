@@ -1,4 +1,3 @@
-import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { css } from "./style.ts";
 
@@ -13,7 +12,7 @@ export default async function writeBundle(
     const outSub      = o.out         ?? "site";
 
     const outDir = resolve(pctx.config.projectRoot, pctx.target.out, outSub);
-    await mkdir(outDir, { recursive: true });
+    // (no mkdir needed — Bun.write in writeOne creates parent directories.)
 
     // Warm the shared Shiki highlighter once so the (sync) markdown pipeline can
     // highlight fenced code blocks during the renders below.
@@ -93,5 +92,5 @@ export default async function writeBundle(
 }
 
 async function writeOne(dir: string, name: string, content: string): Promise<void> {
-    await writeFile(join(dir, name), content, "utf8");
+    await Bun.write(join(dir, name), content); // Bun.write creates parent dirs
 }
