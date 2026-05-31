@@ -55,6 +55,7 @@ declare global {
             sectionsFor: typeof import("./sectionsFor").default;
             shortLabel: typeof import("./shortLabel").default;
             sidebar: typeof import("./sidebar").default;
+            statusBadge: typeof import("./statusBadge").default;
             tabDefaults: typeof import("./tabDefaults").default;
             tabLinks: typeof import("./tabLinks").default;
             tabsFor: typeof import("./tabsFor").default;
