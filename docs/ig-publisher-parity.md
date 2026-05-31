@@ -67,7 +67,7 @@ Re-ranked from the draft below. Changes both reviewers drove:
 - ✅ **#7** Status/maturity — per-page badges (`statusBadge`) + `status.html` aggregate.
 - ✅ **#8** OperationDefinition — invocation summary + in/out parameter tables (`$section_operationDef`).
 - ✅ **#3** QA — by-message roll-up in `errors.html` + `qa.txt` export + suppressed-messages filter (IGP `SuppressedMessageInformation` parity: `== Suppressed Messages ==` file, `%`-wildcards, errors never suppressed, stale-pattern detection). Also fixed a validator false-positive: internal `__`-markers (`__wasExample`) were validated as unknown elements (231 phantom errors on us-core, now stripped).
-- 🟡 **#6** Cross-view — `extensions.html` + `search-parameters.html` registries + artifacts cross-view links (Observation code/category matrix remaining).
+- ✅ **#6** Cross-view — `extensions.html` + `search-parameters.html` + `observations.html` registries (the Observation code/category/value matrix: differential + IG-local baseDefinition walk, both code-fixing styles) + artifacts cross-view links.
 - 🟡 **#9** Linkified JSON — local canonical refs link to their page (external base-spec links need #1's spec-map).
 - ⏳ **#1** Dependency bootstrap — heavy/risky (memory, version-conversion, spec.internals), best done interactively; **#4** link-checker and **#10** dependency-table depend on it.
 - ⏳ **#5** intro/notes-via-merge — renderer refactor (canonical Pages now exist, so it's unblocked but golden-risky).
