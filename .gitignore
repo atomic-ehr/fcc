@@ -42,3 +42,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # fsh-sushi runtime: package + tx caches
 .tx-cache
 .fhir/
+.codex-chat/
+.kimi-chat/
+.codex-results/
+.kimi-results/
