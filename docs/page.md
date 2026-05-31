@@ -83,16 +83,32 @@ composeSections(ctx, { sections })   // sort by order, dispatch the section rend
 
 ## Numbering
 
-`numberPages`, deterministic per build:
+FHIR-IG sequential ("сквозная") numbering — the algorithm IG Publisher runs in
+`PublisherGenerator.createTocPage()`/`addPageData()`
+(`vendor/fhir-ig-publisher/…:3483/3583`): pre-order DFS over the page tree, each
+child's label = `parentLabel + "." + (1-based sibling index)`. IGP starts a single
+root at `"0"` and suppresses that prefix; fcc's nav is a **forest**, so each
+top-level node is numbered `1,2,3…` directly — same dotted result, no synthetic
+`"0"` root. Two pure fns, deterministic per build:
 
-- tree from `parent` / `order`; roots ordered by the menu + IG page tree, then
-  artifact groups (Profiles, Extensions, ValueSets, CodeSystems,
-  CapabilityStatements, Examples). Tie-break: `order` → menu pos → group →
-  `title` → `slug`.
-- pre-order DFS → `page.number` ("3.1"); sections continue → "3.1.2"
-  (unavailable sections unnumbered).
-- a menu entry and the auto canonical page for one thing are the **same** `Page` —
-  no double numbering. Renumber never changes slugs / anchors.
+- **`pageTree(ctx, { menu, pages })`** → ordered `PageNode[]` forest. Roots come
+  from the IG-author menu (`ctx.shared.menu.tree`; IGP's `definition.page` plays
+  the same role); canonical pages the menu didn't place fall into fixed artifact
+  groups (Profiles & Extensions, Value Sets, Code Systems, …), each a structural
+  container, pages within a group sorted by `title` → `slug`. The landing page is
+  the home and stays unnumbered. Tie-break: menu pos → group order → `title` →
+  `slug`. An empty-`slug` node is a structural container (a `#`-anchor dropdown
+  header or an artifact group): it occupies a slot, its children number under it,
+  but it emits no number of its own.
+- **`numberPages(ctx, { roots })`** → `Map<slug, "3.1">`. Pre-order DFS (the IGP
+  rule). Granularity is the page (IGP has no markdown-heading numbering); as a
+  superset, a node's ordered `sections` continue the page number — "3.1" →
+  "3.1.1", "3.1.2" — keyed `"<slug>#<sectionId>"`.
+- Computed in `buildRoutes` after `derivePages` (so `byType.Page` holds content +
+  landing + canonical), stored as `ctx.state.site.numbers`; page renders read it
+  **lazily**, so dev re-renders pick up menu reorders for free. A menu entry and
+  the auto canonical page for one thing are the **same** `Page` — no double
+  numbering. Renumber never changes slugs / anchors.
 
 ## Provenance & incremental
 
@@ -115,6 +131,6 @@ url → referrers. `ctx.sql` exposes one `resources` table; edge queries go thro
 | canonical pages as `Page` resources, rendered from `byType.Page` (queryable via `ctx.sql`) | ✅ implemented, golden-stable |
 | per-type merge overrides | ⏳ design |
 | `tab` / `raw` / `lazy` driven by `Page.sections` (today canonical tabs come from `tabsFor`) | ⏳ design |
-| FHIR-IG numbering | ⏳ design |
+| FHIR-IG numbering (`pageTree` + `numberPages`, content-page H1/breadcrumb) | ✅ implemented + tested |
 | intro/notes via merge | ⏳ design |
 | edges (`refs` / `links` / `assets`) | ⏳ deferred (separate `ctx.sql` table) |

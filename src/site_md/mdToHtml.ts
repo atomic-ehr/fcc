@@ -16,5 +16,6 @@ export default function mdToHtml(ctx: Context, opts: { md: string }): string {
     // Sanitize author HTML before our (trusted) block/Shiki transforms run.
     const safe = ctx.fns.site_md.sanitizeHtml(ctx, { html });
     const withBlocks = ctx.fns.site_md.applyBlocks(ctx, { html: safe });
-    return ctx.fns.site_md.highlightBlocks(ctx, { html: withBlocks });
+    const highlighted = ctx.fns.site_md.highlightBlocks(ctx, { html: withBlocks });
+    return ctx.fns.site_md.anchorHeadings(ctx, { html: highlighted });
 }

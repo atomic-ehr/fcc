@@ -54,7 +54,7 @@ export default async function buildRoutes(
         const d = r.data as { slug: string; title: string; role: string; sections: Record<string, unknown> };
         if (d.role !== "page") continue;
         // id = the Page resource id → editing one .md re-renders only that page.
-        routes.set(`${d.slug}.html`, { id: r.id, contentType: "text/html", render: () => ctx.fns.site_artifacts.renderPage(ctx, { slug: d.slug, title: d.title, sections: d.sections }) });
+        routes.set(`${d.slug}.html`, { id: r.id, contentType: "text/html", render: () => ctx.fns.site_artifacts.renderPage(ctx, { slug: d.slug, title: d.title, sections: d.sections, number: ((ctx.state.site as any).numbers as Map<string, string> | undefined)?.get(d.slug) }) });
     }
 
     // QA / validation report — only when the fcc/validator plugin populated it.
@@ -91,6 +91,30 @@ export default async function buildRoutes(
                 } });
             }
         }
+    }
+
+    // FHIR-IG sequential ("сквозная") page numbering. Compute AFTER derivePages
+    // so byType.Page holds content + landing + canonical pages, then fold the
+    // ordered page-tree (menu order → artifact groups) into dotted labels
+    // (numberPages, the IGP createTocPage algorithm). Stored as slug → "3.1";
+    // page renders read it lazily, so dev re-renders pick up reorders for free.
+    {
+        const menuTree = ((pctx.shared.menu as { tree?: { label: string; href: string; children: any[] }[] } | undefined)?.tree) ?? [];
+        const pageDescs = pctx.byType.Page.map(r => {
+            const d = r.data as { slug: string; title: string; kind?: string; role?: string; for?: string; sections?: Record<string, { order?: number; as?: string }> };
+            const kind = d.kind ?? (d.role === "landing" ? "landing" : "content");
+            const sections = d.sections
+                ? Object.entries(d.sections)
+                    .filter(([, s]) => s.as !== "raw")
+                    .sort((a, b) => (a[1].order ?? 0) - (b[1].order ?? 0))
+                    .map(([id]) => id)
+                : undefined;
+            return { slug: d.slug, title: d.title, kind, for: d.for, sections };
+        });
+        const roots = ctx.fns.site_core.pageTree(ctx, { menu: menuTree, pages: pageDescs });
+        (ctx.state.site as any).numbers = ctx.fns.site_core.numberPages(ctx, { roots });  // stamps node.number too
+        (ctx.state.site as any).navRoots = roots;                                          // the left-nav source
+
     }
 
     // Code-defined export routes. Every $route_<name>.ts fn — across all loaded

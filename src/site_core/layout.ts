@@ -43,11 +43,11 @@ tailwind.config = {
 </head>
 <body class="bg-white text-slate-900 antialiased">
 
-${ctx.fns.site_core.topBar(ctx, { active: activeNav })}
-${ctx.fns.site_core.buildInfoBanner(ctx)}
-
-<div class="mx-auto flex max-w-screen-2xl" data-signals="{nav: true}" data-persist="nav">
+<div class="flex min-h-screen" data-signals="{nav: true}" data-persist="nav">
     ${ctx.fns.site_core.sidebar(ctx)}
+    <div class="flex min-w-0 flex-1 flex-col">
+    ${ctx.fns.site_core.topBar(ctx, { active: activeNav })}
+    ${ctx.fns.site_core.buildInfoBanner(ctx)}
     <main class="min-w-0 flex-1 bg-white px-6 py-6 lg:px-10">
         <div class="mb-3 flex items-center gap-2">
             <button type="button" title="Toggle navigation"
@@ -64,6 +64,7 @@ ${ctx.fns.site_core.buildInfoBanner(ctx)}
             · ${new Date().toISOString().slice(0, 10)}</p>
         </footer>
     </main>
+    </div>
 </div>
 
 </body>

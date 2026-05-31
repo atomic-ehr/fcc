@@ -4,6 +4,7 @@
 declare global {
     interface FnsRegistry {
         site_md: {
+            anchorHeadings: typeof import("./anchorHeadings").default;
             applyBlocks: typeof import("./applyBlocks").default;
             blockDefaults: typeof import("./blockDefaults").default;
             expandIncludes: typeof import("./expandIncludes").default;

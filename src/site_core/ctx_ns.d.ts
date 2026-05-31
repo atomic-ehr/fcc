@@ -46,12 +46,15 @@ declare global {
             metaDl: typeof import("./metaDl").default;
             navActiveScript: typeof import("./navActiveScript").default;
             notesFor: typeof import("./notesFor").default;
+            numberPages: typeof import("./numberPages").default;
             order: typeof import("./order").default;
             pageHeader: typeof import("./pageHeader").default;
             pageHref: typeof import("./pageHref").default;
+            pageTree: typeof import("./pageTree").default;
             pillType: typeof import("./pillType").default;
             renderBreadcrumb: typeof import("./renderBreadcrumb").default;
             renderCanonical: typeof import("./renderCanonical").default;
+            renderNavTree: typeof import("./renderNavTree").default;
             renderResource: typeof import("./renderResource").default;
             renderResourceJsonPage: typeof import("./renderResourceJsonPage").default;
             renderSidebarGroup: typeof import("./renderSidebarGroup").default;
@@ -85,6 +88,7 @@ declare global {
             type HotUpdateContext = import("fcc").HotUpdateContext;
         }
         namespace site_core {
+            type PageNode = import("./$type_PageNode").PageNode;
             type RenderCtx = import("./$type_RenderCtx").RenderCtx;
             type Route = import("./$type_Route").Route;
             type RouteDef = import("./$type_RouteDef").RouteDef;
