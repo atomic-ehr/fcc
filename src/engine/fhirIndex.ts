@@ -72,6 +72,9 @@ export function packageManifest(config: ResolvedConfig, target: Target, ig: Reso
     "tools-version": 3,
     type: "IG",
     canonical: config.canonical,
+    // The IG's own url when set, else the canonical. (IG Publisher writes the
+    // versioned published web location, e.g. .../STU9, which fcc has no source
+    // for — there's no publish-request/package-list — so the canonical is used.)
     url: (data.url as string | undefined) ?? config.canonical,
     title: config.title ?? config.id,
     description: config.description ?? (data.description as string | undefined),
@@ -79,7 +82,9 @@ export function packageManifest(config: ResolvedConfig, target: Target, ig: Reso
     dependencies: config.deps ?? {},
     directories: { lib: "package", example: "example" },
   };
-  if (data.date) pkg.date = data.date;
+  // `date` is intentionally omitted: IG Publisher writes a yyyyMMddHHmmss build
+  // timestamp (non-reproducible), while FHIR ImplementationGuide.date is an ISO
+  // date with different semantics — passing either through would mislead.
   if (data.publisher) pkg.author = data.publisher;
   const jur = jurisdictionUrn(data.jurisdiction);
   if (jur) pkg.jurisdiction = jur;

@@ -201,6 +201,8 @@ export interface PluginContext {
    * in, data out; the Database stays an engine-internal detail). In-place edits
    * to a resource's `data` between queries are NOT tracked, so query after the
    * enrichment hooks (snapshot/narrative/validate) to see fully-built resources.
+   * Positional params use `?`; named params use the bun:sqlite `$` sigil
+   * (`WHERE id = $id`, `{ $id }`) — a key without the sigil binds nothing.
    *
    *   ctx.sql(`SELECT id, json_extract(json,'$.status') AS status
    *            FROM resources WHERE resourceType = ?`, ['Observation'])

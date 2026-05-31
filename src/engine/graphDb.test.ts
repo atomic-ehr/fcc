@@ -27,6 +27,6 @@ test("ctx.sql queries the graph with json_extract + params, and re-indexes on mu
 
   // a graph mutation invalidates the cached index — the next query sees the new row
   indexResource(ts, res("Observation/o2", "Observation", { id: "o2", status: "preliminary" }), null);
-  const [{ n }] = ctx.sql("SELECT count(*) AS n FROM resources WHERE resourceType = 'Observation'") as { n: number }[];
-  expect(n).toBe(2);
+  const rows2 = ctx.sql("SELECT count(*) AS n FROM resources WHERE resourceType = 'Observation'") as { n: number }[];
+  expect(rows2[0]!.n).toBe(2);
 });

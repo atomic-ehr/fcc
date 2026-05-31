@@ -23,6 +23,8 @@ export function buildGraphDb(resources: Map<string, Resource>): Database {
   );
   const insertAll = db.transaction((rows: Resource[]) => {
     for (const r of rows) {
+      let json: string;
+      try { json = JSON.stringify(r.data); } catch { json = "null"; }   // a non-serializable resource degrades, never crashes the index
       ins.run(
         r.id,
         r.resourceType,
@@ -30,7 +32,7 @@ export function buildGraphDb(resources: Map<string, Resource>): Database {
         r.url ?? null,
         r.version ?? null,
         (r.data as { __wasExample?: boolean }).__wasExample ? 1 : 0,
-        JSON.stringify(r.data),
+        json,
       );
     }
   });

@@ -8,7 +8,7 @@ import { fhirPredicates } from "./version.ts";
 import { isAuthored, type Authored, type AuthorContext } from "./authoring.ts";
 import {
   type BuildState, type TargetState, type HookSlots, createState, freshTargetState,
-  dropResource, indexResource, transitiveDependents,
+  dropResource, indexResource, invalidateGraphDb, transitiveDependents,
 } from "./state.ts";
 import { buildGraphDb } from "./graphDb.ts";
 
@@ -55,6 +55,7 @@ export async function runBuild(state: BuildState, filter?: string): Promise<Buil
 
   for (const ts of targets) {
     // reset target state on full build
+    invalidateGraphDb(ts);                            // close the prior ctx.sql db before discarding the state
     state.byTarget.set(ts.target.name, freshTargetState(ts.target));
     const fresh = state.byTarget.get(ts.target.name)!;
     await runTargetFull(state.cfg, fresh, state.hooks.get(ts.target.name)!);
@@ -232,8 +233,14 @@ async function runTransform(ts: TargetState, hooks: HookSlots, ctx: PluginContex
     for (const r of targetIds) {
       const out = await fn(ctx, config, { resource: r });
       if (out && out !== r) {
-        ts.resources.set(out.id, out);
-        if (out.url) ts.byCanonical.set(out.url, out.id);
+        // A transform that returns a NEW resource must go through the index
+        // helpers (not a bare .set) so byType, reverseCanonical, the file map
+        // and the ctx.sql index all stay consistent — and a re-key
+        // (out.id !== r.id) drops the old id instead of orphaning it.
+        const o = out as Resource;
+        const file = [...(ts.resourceToFiles.get(r.id) ?? [])][0] ?? null;
+        dropResource(ts, r.id);
+        indexResource(ts, o, file);
       }
     }
   }
