@@ -4,7 +4,9 @@ How fcc turns IG source artifacts into FHIR packages + browsable sites, and how
 it rebuilds **incrementally**. This document describes the **target** architecture
 we are refactoring toward; a Status table (§10) marks what is done, in progress,
 or planned, and §11 is the refactoring plan. For a per-module reference with
-grounded examples, see [`modules.md`](modules.md).
+grounded examples, see [`modules.md`](modules.md); for the (in-design) unified
+`Page` resource model — every renderable page in the graph, with sections,
+numbering and provenance — see [`page.md`](page.md).
 
 ## 0. The model in one breath
 
