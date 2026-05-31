@@ -10,6 +10,7 @@ declare global {
             $avail_notExample: typeof import("./$avail_notExample").default;
             $route_examplesZip: typeof import("./$route_examplesZip").default;
             $route_extensions: typeof import("./$route_extensions").default;
+            $route_observations: typeof import("./$route_observations").default;
             $route_qa: typeof import("./$route_qa").default;
             $route_searchParameters: typeof import("./$route_searchParameters").default;
             $route_status: typeof import("./$route_status").default;

@@ -26,6 +26,7 @@ export default function renderArtifacts(ctx: Context, _opts: {} = {}): string {
     // Cross-view registry pages (IG-Publisher CrossViewRenderer).
     const crossViews = [
         ctx.byType.StructureDefinition.some(r => (r.data as { type?: string }).type === "Extension") ? { label: "Extensions registry", href: "extensions.html" } : null,
+        ctx.byType.StructureDefinition.some(r => { const d = r.data as { type?: string; derivation?: string }; return d.type === "Observation" && d.derivation === "constraint"; }) ? { label: "Observations", href: "observations.html" } : null,
         ctx.byType.SearchParameter.length ? { label: "Search Parameters", href: "search-parameters.html" } : null,
         { label: "Status & maturity", href: "status.html" },
     ].filter(Boolean) as { label: string; href: string }[];
