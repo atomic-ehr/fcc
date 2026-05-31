@@ -3,7 +3,8 @@
 How fcc turns IG source artifacts into FHIR packages + browsable sites, and how
 it rebuilds **incrementally**. This document describes the **target** architecture
 we are refactoring toward; a Status table (§10) marks what is done, in progress,
-or planned, and §11 is the refactoring plan.
+or planned, and §11 is the refactoring plan. For a per-module reference with
+grounded examples, see [`modules.md`](modules.md).
 
 ## 0. The model in one breath
 
@@ -42,7 +43,9 @@ Five ideas carry it — each the *simple* answer to one concern, together the
   computed navigation — all live in `ctx`. Producers read `ctx` and write back
   into `ctx`; nothing passes data sideways.
 - **One renderer, two deliveries.** A single route table renders any page; prod
-  precomputes to `dist/`, dev renders on demand from `ctx` + SSE live-reload.
+  precomputes to `dist/`, dev renders on demand from `ctx` + SSE live-reload. A
+  route's `render()` may return bytes, so `$route_*` files deliver binary exports
+  (e.g. `examples.json.zip`) through the very same path.
 - **Plugins are step descriptors** `{ hook, fn, ...config }`; every function is
   `fn(ctx, config, opts)`. They meet only at `ctx`; never import one another.
   Order = config order.
@@ -231,7 +234,7 @@ flowchart TB
     engine["src/engine — exported as fcc<br/>runner · state (graph + indexes)<br/>watcher · devServer (lazy + SSE) · types"]
     bin["src/bin<br/>fcc · repl · gentypes CLIs"]
     loaders["src/json · fsh · ts · pages<br/>cfg.sources[].loader"]
-    plugins["src/snapshot · narrative · validator<br/>ig-resource · npm · menu<br/>(step descriptors)"]
+    plugins["src/snapshot · narrative · validator<br/>ig-resource · npm · sqlite · menu<br/>(step descriptors)"]
     site["src/site + site_*<br/>renderer (7 flat-ns namespaces)"]
 
     bin --> engine

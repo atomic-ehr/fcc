@@ -82,17 +82,20 @@ Everything is one package (`fcc`) under a flat `src/`. The engine is imported as
 | `fcc/ts`           | `.ts` source loader (profile / valueSet / codeSystem / example / capability)      |
 | `fcc/fsh`          | `.fsh` source loader, wraps `fsh-sushi`                                           |
 | `fcc/json`         | `.json` source loader (drop-in for IG-Publisher-style `input/resources/*.json`)   |
+| `fcc/pages`        | `.md` source loader → `Page` resources (`input/pagecontent`)                      |
 | `fcc/snapshot`     | Snapshot generation via `@atomic-ehr/fhirschema` — merges each differential against its base-definition chain into a full `snapshot.element[]` |
 | `fcc/narrative`    | Auto-fills `Resource.text.div`                                                    |
 | `fcc/validator`    | Runs a composable list of validators → QA `errors.html`: `structural()` (lite lint), `schema()` (`@atomic-ehr/fhirschema`), `fhirpathConstraints()` (`@atomic-ehr/fhirpath`), or your own |
 | `fcc/ig-resource`  | Synthesises the `ImplementationGuide` resource                                    |
-| `fcc/npm`          | FHIR NPM `package.tgz` emitter (pure-Bun USTAR + gzip)                            |
+| `fcc/npm`          | FHIR NPM `package.tgz` emitter — IG-Publisher layout (examples in `example/`, conformance-only `.index.json` + `.index.db`), byte-reproducible (pure-Bun USTAR + `Bun.gzipSync`) |
+| `fcc/sqlite`       | Builds the IG-Publisher `.index.db` (SQLite via `bun:sqlite`) → bytes on `ctx.shared.sqlite` for `fcc/npm` to ship |
 | `fcc/menu`         | Reads `sushi-config.yaml` menu → top-bar nav                                      |
 | `fcc/site` (`src/site` + `src/site_*`) | Browsable HTML site, Tailwind-CDN, IG-Publisher-resembling layout — flat fn-per-file across seven `site_*` namespaces with `ctx.fns` hot-reload |
 
 ## Architecture
 
-Four ideas, four extension points — see [`docs/architecture.md`](./docs/architecture.md):
+Four ideas, four extension points — see [`docs/architecture.md`](./docs/architecture.md)
+(and [`docs/modules.md`](./docs/modules.md) for a per-module reference):
 
 - **One graph** — sources become resources in a `BuildState` that survives rebuilds; a changed file invalidates its dependency closure, so rebuilds are incremental.
 - **One renderer, two deliveries** — prod precomputes pages to `dist/`; `fcc dev` renders them on demand from memory and live-reloads the browser over SSE.
