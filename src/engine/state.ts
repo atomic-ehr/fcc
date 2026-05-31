@@ -1,5 +1,6 @@
 import type { Bundle, Diagnostic, EmittedFile, HookName, Issue, Plugin, Resource, ResolvedConfig, StepFn, Target } from "./types.ts";
 import type { Database } from "bun:sqlite";
+import { mergeParts, type Part } from "./merge.ts";
 
 // A hook fn bound to its config (from the descriptor). The runner calls
 // `fn(ctx, config, opts)`.
@@ -69,6 +70,13 @@ export type TargetState = {
   // Lazily-built SQLite index of the graph backing ctx.sql; null until first
   // query, dropped whenever the graph mutates (indexResource/dropResource).
   graphDb?: Database | null;
+
+  // Merge store: the raw partial-resources keyed by id then by source file, plus
+  // the inverse file→ids. resources.get(id) = mergeParts(parts.get(id).values()).
+  // A file's contribution is one part; this is the "what came from where" history
+  // that makes multi-file resources + un-merge (drop a file's part) trivial.
+  parts: Map<string, Map<string, Part>>;
+  fileToParts: Map<string, Set<string>>;
 };
 
 /** Drop the cached ctx.sql graph index (call on any graph mutation). */
@@ -115,6 +123,8 @@ export function freshTargetState(target: Target): TargetState {
     state: {},
     fns: {},
     graphDb: null,
+    parts: new Map(),
+    fileToParts: new Map(),
   };
 }
 
@@ -152,19 +162,53 @@ export function dropResource(ts: TargetState, id: string) {
   }
 }
 
-/** Add a resource to indexes. */
-export function indexResource(ts: TargetState, r: Resource, fromFile: string | null) {
+/** Add a resource to indexes. `fromFile` may be one file, a list (a merged
+ *  resource built from several files), or null (an emitted/derived resource). */
+export function indexResource(ts: TargetState, r: Resource, fromFile: string | string[] | null) {
   invalidateGraphDb(ts);                              // ctx.sql index is now stale
   ts.resources.set(r.id, r);
   if (r.url) ts.byCanonical.set(r.url, r.id);
   (ts.byType.get(r.resourceType) ?? ts.byType.set(r.resourceType, new Set()).get(r.resourceType)!).add(r.id);
-  if (fromFile) {
-    (ts.fileToResources.get(fromFile) ?? ts.fileToResources.set(fromFile, new Set()).get(fromFile)!).add(r.id);
-    (ts.resourceToFiles.get(r.id)  ?? ts.resourceToFiles.set(r.id, new Set()).get(r.id)!).add(fromFile);
+  const files = fromFile == null ? [] : Array.isArray(fromFile) ? fromFile : [fromFile];
+  for (const f of files) {
+    (ts.fileToResources.get(f) ?? ts.fileToResources.set(f, new Set()).get(f)!).add(r.id);
+    (ts.resourceToFiles.get(r.id) ?? ts.resourceToFiles.set(r.id, new Set()).get(r.id)!).add(f);
   }
   for (const dep of r.deps) {
     (ts.reverseCanonical.get(dep) ?? ts.reverseCanonical.set(dep, new Set()).get(dep)!).add(r.id);
   }
+}
+
+// --- merge store -----------------------------------------------------------
+// Loaders feed parts; resources.get(id) = mergeParts(parts of id). A file's
+// part is keyed by file so re-loading replaces it and deleting drops it.
+
+/** Record/replace `file`'s part for `part.id`. */
+export function upsertPart(ts: TargetState, part: Part, file: string) {
+  (ts.parts.get(part.id) ?? ts.parts.set(part.id, new Map()).get(part.id)!).set(file, part);
+  (ts.fileToParts.get(file) ?? ts.fileToParts.set(file, new Set()).get(file)!).add(part.id);
+}
+
+/** Remove every part contributed by `file`; returns the ids it had touched. */
+export function removeFileParts(ts: TargetState, file: string): Set<string> {
+  const ids = ts.fileToParts.get(file);
+  if (!ids) return new Set();
+  for (const id of ids) ts.parts.get(id)?.delete(file);
+  ts.fileToParts.delete(file);
+  return new Set(ids);
+}
+
+/** Re-fold `id` from its surviving parts and re-index it (or drop it if none). */
+export function rematerialize(ts: TargetState, id: string) {
+  const fm = ts.parts.get(id);
+  if (!fm || fm.size === 0) {
+    ts.parts.delete(id);
+    if (ts.resources.has(id)) dropResource(ts, id);
+    return;
+  }
+  const merged = mergeParts([...fm.values()]);
+  if (ts.resources.has(id)) dropResource(ts, id);     // clear stale index before re-adding
+  indexResource(ts, merged, [...fm.keys()]);
 }
 
 /** Walk the reverse-canonical graph: who transitively references any of `seedIds`? */

@@ -9,6 +9,7 @@ import { isAuthored, type Authored, type AuthorContext } from "./authoring.ts";
 import {
   type BuildState, type TargetState, type HookSlots, createState, freshTargetState,
   dropResource, indexResource, invalidateGraphDb, transitiveDependents,
+  upsertPart, removeFileParts, rematerialize,
 } from "./state.ts";
 import { buildGraphDb } from "./graphDb.ts";
 
@@ -208,21 +209,16 @@ async function runTargetIncremental(cfg: ResolvedConfig, ts: TargetState, change
 // shared steps
 
 async function loadFile(src: Source, file: string, ts: TargetState, ctx: PluginContext) {
+  // Parts model: a file contributes parts; same-id parts across files merge.
+  // Drop this file's previous parts first (re-load / delete), add the fresh ones,
+  // then re-fold every id it touched (now or before). Single part → identity.
+  const touched = removeFileParts(ts, file);
   const out = await src.loader.load(ctx, { file });
-  if (!out) return;
-  for (const r of out.resources) {
-    const resource: Resource = {
-      id: r.id,
-      resourceType: r.resourceType,
-      url: r.url,
-      version: r.version,
-      data: r.data,
-      source: r.source,
-      deps: new Set(r.deps ?? []),
-      meta: r.meta ?? {},
-    };
-    indexResource(ts, resource, file);
+  for (const r of out?.resources ?? []) {
+    upsertPart(ts, r, file);
+    touched.add(r.id);
   }
+  for (const id of touched) rematerialize(ts, id);
 }
 
 async function runTransform(ts: TargetState, hooks: HookSlots, ctx: PluginContext) {
