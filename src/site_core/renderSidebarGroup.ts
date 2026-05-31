@@ -1,25 +1,28 @@
 export default function renderSidebarGroup(
     ctx: Context,
-    opts: { label: string; list: types.fcc.Resource[]; anchor: string; open?: boolean },
+    opts: { label: string; list: types.fcc.Resource[]; anchor: string; open?: boolean; num?: number },
 ): string {
     const esc = (s: string) => ctx.fns.site_core.htmlEscape(ctx, { s });
     const isOpen = (opts.open ?? true) && opts.list.length <= 25;
     const sorted = opts.list.slice().sort((a, b) =>
         ctx.fns.site_core.idOf(ctx, { resource: a }).localeCompare(ctx.fns.site_core.idOf(ctx, { resource: b })),
     );
-    const items = sorted.map(r => {
+    // FHIR-IG-style through numbering: group N, items N.M (see docs/page.md).
+    const numSpan = (n: string) => `<span class="mr-1 tabular-nums text-slate-400">${n}</span>`;
+    const items = sorted.map((r, j) => {
         const href = ctx.fns.site_core.pageHref(ctx, { resource: r });
         const title = esc(ctx.fns.site_core.titleOf(ctx, { resource: r }));
         const label = esc(ctx.fns.site_core.shortLabel(ctx, { resource: r }));
+        const n = opts.num ? numSpan(`${opts.num}.${j + 1}`) : "";
         return `
             <li>
-                <a href="${href}" class="block truncate rounded px-2 py-0.5 text-sm text-slate-700 hover:bg-sky-50 hover:text-sky-800" title="${title}">${label}</a>
+                <a href="${href}" class="block truncate rounded px-2 py-0.5 text-sm text-slate-700 hover:bg-sky-50 hover:text-sky-800" title="${title}">${n}${label}</a>
             </li>`;
     }).join("");
     return `<details class="group-block" ${isOpen ? "open" : ""} id="${esc(opts.anchor)}">
         <summary class="rounded px-2 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500 hover:bg-slate-100">
             <span class="flex min-w-0 items-center gap-1.5">
-                <span class="truncate">${esc(opts.label)}</span>
+                <span class="truncate">${opts.num ? numSpan(String(opts.num)) : ""}${esc(opts.label)}</span>
                 <span class="rounded-full bg-slate-100 px-1.5 py-px text-[10px] font-medium text-slate-500">${opts.list.length}</span>
             </span>
         </summary>

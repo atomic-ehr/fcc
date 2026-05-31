@@ -15,11 +15,12 @@ export default function sidebar(ctx: Context, _opts: {} = {}): string {
     const sortedTypes = Object.keys(groups).sort((a, b) =>
         ctx.fns.site_core.order(ctx, { t: a }) - ctx.fns.site_core.order(ctx, { t: b }) || a.localeCompare(b),
     );
-    const sections: string[] = sortedTypes.map(type =>
+    const sections: string[] = sortedTypes.map((type, i) =>
         ctx.fns.site_core.renderSidebarGroup(ctx, {
             label: ctx.fns.site_core.humanType(ctx, { t: type }),
             list: groups[type]!,
             anchor: type,
+            num: i + 1,                          // FHIR-IG-style group numbering
         }),
     );
 
