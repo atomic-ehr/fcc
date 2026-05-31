@@ -51,7 +51,7 @@ are named after what they export (procedural: functions + types). `package.json`
 - **`/src/cdp`** — CDP browser-control helpers (REPL `cdp.*`).
 - **`/src/<plugin>`** — each non-site plugin, one folder `<plugin>/<plugin>.ts`,
   imported as `fcc/<plugin>`: `json` `fsh` `ts` `snapshot` `narrative` `validator`
-  `ig-resource` `npm` `sqlite` `menu`. Most are a single file (e.g. `snapshot/snapshot.ts`);
+  `ig-resource` `npm` `manifest` `sqlite` `menu`. Most are a single file (e.g. `snapshot/snapshot.ts`);
   `menu` is a flat fn-per-file namespace (`ctx.fns.menu`) with a `menu/menu.ts` entry.
 - **`/src/site` + `/src/site_*`** — the IG-site renderer (`fcc/site`). The entry
   (`site/site.ts` + `site/loadAll.ts` + `site/gentypes.sh`) assembles seven

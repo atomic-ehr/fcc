@@ -1,7 +1,9 @@
-// The FHIR NPM package .index.json model (https://hl7.org/fhir/packages.html#2.1.10.4),
-// shared by the npm plugin (.index.json) and the sqlite plugin (.index.db) so the
-// per-resource index is computed once. Pure + ctx-free; imported as `fcc`.
-import type { Resource, Bundle } from "./types.ts";
+// The FHIR NPM package model — the per-file `.index.json` rows
+// (https://hl7.org/fhir/packages.html#2.1.10.4) and the `package.json` manifest,
+// in one place so the npm plugin (.index.json + package.json), the sqlite plugin
+// (.index.db), and any other consumer (e.g. a registry-publish step) compute
+// them identically. Pure + ctx-free; imported as `fcc`.
+import type { Resource, Bundle, ResolvedConfig, Target } from "./types.ts";
 
 // Per-file fields beyond filename/resourceType/id, in IG Publisher's order. Each
 // is copied from the resource's same-named scalar element when present.
@@ -55,4 +57,39 @@ export function packageEntries(bundle: Bundle): { resource: Resource; example: b
   }
   if (bundle.ig && !bundle.resources.has(bundle.ig.id)) out.push({ resource: bundle.ig, example: false });
   return out;
+}
+
+/**
+ * The FHIR NPM `package.json` manifest (IG Publisher's `type: "IG"` shape):
+ * canonical/version/deps from config, url/date/publisher/jurisdiction from the
+ * ImplementationGuide when present. Undefined fields are dropped.
+ */
+export function packageManifest(config: ResolvedConfig, target: Target, ig: Resource | undefined): Record<string, unknown> {
+  const data = (ig?.data ?? {}) as Record<string, unknown>;
+  const pkg: Record<string, unknown> = {
+    name: config.id,
+    version: config.version,
+    "tools-version": 3,
+    type: "IG",
+    canonical: config.canonical,
+    url: (data.url as string | undefined) ?? config.canonical,
+    title: config.title ?? config.id,
+    description: config.description ?? (data.description as string | undefined),
+    fhirVersions: [target.fhir],
+    dependencies: config.deps ?? {},
+    directories: { lib: "package", example: "example" },
+  };
+  if (data.date) pkg.date = data.date;
+  if (data.publisher) pkg.author = data.publisher;
+  const jur = jurisdictionUrn(data.jurisdiction);
+  if (jur) pkg.jurisdiction = jur;
+  for (const k of Object.keys(pkg)) if (pkg[k] === undefined) delete pkg[k];
+  return pkg;
+}
+
+// FHIR jurisdiction (CodeableConcept[]) → the "system#code" urn string IG
+// Publisher writes (e.g. "urn:iso:std:iso:3166#US").
+function jurisdictionUrn(j: unknown): string | undefined {
+  const coding = (j as Array<{ coding?: Array<{ system?: string; code?: string }> }> | undefined)?.[0]?.coding?.[0];
+  return coding?.system && coding?.code ? `${coding.system}#${coding.code}` : undefined;
 }

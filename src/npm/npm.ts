@@ -1,5 +1,5 @@
 import { join, resolve } from "node:path";
-import { indexEntry, packageEntries, tar } from "fcc";
+import { indexEntry, packageEntries, packageManifest, tar } from "fcc";
 import type { Plugin, PluginContext, Bundle, Resource, IndexEntry } from "fcc";
 
 type Opts = {
@@ -31,8 +31,11 @@ async function npmFn(ctx: PluginContext, config: Record<string, unknown>, { bund
       const outDir = resolve(ctx.config.projectRoot, ctx.target.out);
       const enc = new TextEncoder();
 
-      // 1. package.json — FHIR NPM manifest, derived from config + the IG resource.
-      const packageJsonBytes = enc.encode(JSON.stringify(buildPackageJson(ctx, bundle), null, 2) + "\n");
+      // 1. package.json — the manifest the manifest plugin published, or built
+      // here via the shared helper when that plugin isn't in the pipeline.
+      const pkg = (ctx.shared as { manifest?: Record<string, unknown> }).manifest
+        ?? packageManifest(ctx.config, ctx.target, bundle.ig);
+      const packageJsonBytes = enc.encode(JSON.stringify(pkg, null, 2) + "\n");
 
       // 2. resource files — conformance (flat, indexed) vs examples (example/, not indexed).
       const conformance: { path: string; bytes: Uint8Array }[] = [];
@@ -87,38 +90,4 @@ async function npmFn(ctx: PluginContext, config: Record<string, unknown>, { bund
           ctx.emitFile({ path: full, bytes: e.bytes });
         }
       }
-}
-
-// The FHIR NPM package manifest. IG Publisher derives it from the IG resource +
-// build config; we pull the canonical/version/deps from config and the
-// url/date/publisher/jurisdiction from the ImplementationGuide when present.
-function buildPackageJson(ctx: PluginContext, bundle: Bundle): Record<string, unknown> {
-  const cfg = ctx.config;
-  const ig = (bundle.ig?.data ?? {}) as Record<string, unknown>;
-  const pkg: Record<string, unknown> = {
-    name: cfg.id,
-    version: cfg.version,
-    "tools-version": 3,
-    type: "IG",
-    canonical: cfg.canonical,
-    url: (ig.url as string | undefined) ?? cfg.canonical,
-    title: cfg.title ?? cfg.id,
-    description: cfg.description ?? (ig.description as string | undefined),
-    fhirVersions: [ctx.target.fhir],
-    dependencies: cfg.deps ?? {},
-    directories: { lib: "package", example: "example" },
-  };
-  if (ig.date) pkg.date = ig.date;
-  if (ig.publisher) pkg.author = ig.publisher;
-  const jur = jurisdictionUrn(ig.jurisdiction);
-  if (jur) pkg.jurisdiction = jur;
-  for (const k of Object.keys(pkg)) if (pkg[k] === undefined) delete pkg[k];
-  return pkg;
-}
-
-// FHIR jurisdiction (CodeableConcept[]) → the "system#code" urn string IG
-// Publisher writes (e.g. "urn:iso:std:iso:3166#US").
-function jurisdictionUrn(j: unknown): string | undefined {
-  const coding = (j as Array<{ coding?: Array<{ system?: string; code?: string }> }> | undefined)?.[0]?.coding?.[0];
-  return coding?.system && coding?.code ? `${coding.system}#${coding.code}` : undefined;
 }

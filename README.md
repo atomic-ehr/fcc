@@ -88,6 +88,7 @@ Everything is one package (`fcc`) under a flat `src/`. The engine is imported as
 | `fcc/validator`    | Runs a composable list of validators → QA `errors.html`: `structural()` (lite lint), `schema()` (`@atomic-ehr/fhirschema`), `fhirpathConstraints()` (`@atomic-ehr/fhirpath`), or your own |
 | `fcc/ig-resource`  | Synthesises the `ImplementationGuide` resource                                    |
 | `fcc/npm`          | FHIR NPM `package.tgz` emitter — IG-Publisher layout (examples in `example/`, conformance-only `.index.json` + `.index.db`), byte-reproducible (pure-Bun USTAR + `Bun.gzipSync`) |
+| `fcc/manifest`     | Builds the FHIR `package.json` manifest → `ctx.shared.manifest` (reused by `fcc/npm`; the build logic is the shared `packageManifest` helper) |
 | `fcc/sqlite`       | Builds the IG-Publisher `.index.db` (SQLite via `bun:sqlite`) → bytes on `ctx.shared.sqlite` for `fcc/npm` to ship |
 | `fcc/menu`         | Reads `sushi-config.yaml` menu → top-bar nav                                      |
 | `fcc/site` (`src/site` + `src/site_*`) | Browsable HTML site, Tailwind-CDN, IG-Publisher-resembling layout — flat fn-per-file across seven `site_*` namespaces with `ctx.fns` hot-reload |

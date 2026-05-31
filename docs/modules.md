@@ -220,6 +220,19 @@ import npm from "fcc/npm";
 - Default opts are `{ emitUnpacked: true }` — pass `npm({ emitUnpacked: false })` to ship only `package.tgz`.
 - `.index.db` is omitted when the sqlite plugin isn't in the pipeline; the package.json `jurisdiction` becomes a `"system#code"` urn (e.g. `urn:iso:std:iso:3166#US`) from the IG's first jurisdiction coding.
 
+### `manifest` plugin
+Builds the FHIR `package.json` manifest from config + the IG resource and publishes it (plain data) on `ctx.shared.manifest`.
+
+Runs at the `generateBundle` hook. It calls the shared `fcc` helper `packageManifest(config, target, ig)` — `type: "IG"`, `canonical`, `url`, `fhirVersions`, `dependencies`, `directories`, `jurisdiction`, etc. — and assigns the resulting object to `ctx.shared.manifest`. The `npm` plugin reads that handoff for `package/package.json` (falling back to the same helper when this plugin isn't in the pipeline, since a package.json is mandatory), and any other consumer (a site version chip, a registry-publish step) can read the manifest object directly.
+
+```ts
+import manifest from "fcc/manifest";
+// in a target's plugins (alongside npm); igSite() includes it:
+manifest()
+```
+- Takes no options; the manifest is pure data (no methods), built once at `generateBundle`.
+- Build logic lives in the shared `packageManifest` helper, so npm and any future emitter stay in sync.
+
 ### `sqlite` plugin
 Builds the IG-Publisher `.index.db` (a SQLite mirror of the package's conformance resources) in memory and publishes its serialized bytes for the npm plugin to ship.
 

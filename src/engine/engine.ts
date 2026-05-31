@@ -8,4 +8,4 @@ export { createState, type BuildState, type TargetState } from "./state.ts";
 export { watchSources, type WatchOpts, type WatcherHandle } from "./watcher.ts";
 export { startRepl, type ReplHandle, type ReplOpts } from "./repl.ts";
 export { zip, tar, type ZipEntry, type TarEntry } from "./utils.ts";
-export { indexEntry, packageEntries, type IndexEntry } from "./fhirIndex.ts";
+export { indexEntry, packageEntries, packageManifest, type IndexEntry } from "./fhirIndex.ts";
