@@ -18,7 +18,7 @@ export default async function writeBundle(
 
     // Lazy renderer for the dev server (always fresh from the current graph).
     (pctx.shared as any).site = {
-        render: async (path: string): Promise<{ contentType: string; body: string } | null> => {
+        render: async (path: string): Promise<{ contentType: string; body: string | Uint8Array } | null> => {
             const route = routes.get(normalize(path));
             if (!route) return null;
             return { contentType: route.contentType, body: await route.render() };

@@ -9,17 +9,10 @@
 // dev server calls one route's render() per request.
 import { css } from "./style.ts";
 
-type Route = {
-    // owning resource id, or null for chrome/aggregate pages (always (re)served).
-    id: string | null;
-    contentType: string;
-    render: () => string | Promise<string>;
-};
-
 export default async function buildRoutes(
     ctx: Context,
     opts: { pluginCtx: types.fcc.PluginContext },
-): Promise<{ routes: Map<string, Route>; notesCount: number }> {
+): Promise<{ routes: Map<string, types.site_core.Route>; notesCount: number }> {
     const pctx = opts.pluginCtx;
     const o = (ctx.state.site ?? {}) as types.site_core.SiteOpts;
     const introNotes  = o.introNotes  ?? "input/intro-notes";
@@ -51,7 +44,7 @@ export default async function buildRoutes(
     // IG-author menu emitted by @fcc/plugin-menu via pctx.shared.menu.
     ctx.state.menuHtml = (pctx.shared.menu as { html?: string } | undefined)?.html ?? null;
 
-    const routes = new Map<string, Route>();
+    const routes = new Map<string, types.site_core.Route>();
 
     // chrome / aggregates — id:null → always (re)written / served fresh
     routes.set("index.html",     { id: null, contentType: "text/html", render: () => ctx.fns.site_artifacts.renderIndex(ctx, { landingHtml }) });
@@ -91,6 +84,20 @@ export default async function buildRoutes(
                     return JSON.stringify(clean, null, 2);
                 } });
             }
+        }
+    }
+
+    // Code-defined export routes. Every $route_<name>.ts fn — across all loaded
+    // namespaces — contributes one or more RouteDefs (e.g. examples.json.zip).
+    // fn names are globally unique, so this flat scan is deterministic. A route
+    // can deliver bytes (zip/binary) through the same render() machinery.
+    const allFns = ctx.fns as unknown as Record<string, Record<string, Function>>;
+    for (const ns of Object.keys(allFns)) {
+        for (const key of Object.keys(allFns[ns] ?? {})) {
+            if (!key.startsWith("$route_")) continue;
+            const out = await allFns[ns]![key]!(ctx, { pluginCtx: pctx });
+            const defs = (Array.isArray(out) ? out : out ? [out] : []) as types.site_core.RouteDef[];
+            for (const d of defs) routes.set(d.path, { id: d.id ?? null, contentType: d.contentType, render: d.render });
         }
     }
 

@@ -4,7 +4,7 @@
 // live-reload over SSE after every rebuild. No files are written to disk in dev.
 import type { BuildState } from "./state.ts";
 
-type RenderFn = (path: string) => Promise<{ contentType: string; body: string } | null>;
+type RenderFn = (path: string) => Promise<{ contentType: string; body: string | Uint8Array } | null>;
 
 export type DevServer = { port: number; broadcastReload(): void; close(): void };
 
@@ -53,7 +53,7 @@ export function startDevServer(opts: { state: BuildState; targetName?: string; p
             if (!out) return new Response("Not found", { status: 404 });
 
             const isHtml = out.contentType.startsWith("text/html");
-            const body = isHtml ? inject(out.body) : out.body;
+            const body = isHtml && typeof out.body === "string" ? inject(out.body) : out.body;
             const contentType = isHtml ? "text/html; charset=utf-8" : out.contentType;
             return new Response(body, { headers: { "content-type": contentType } });
         },

@@ -8,6 +8,7 @@ declare global {
     interface FnsRegistry {
         site_core: {
             $avail_notExample: typeof import("./$avail_notExample").default;
+            $route_examplesZip: typeof import("./$route_examplesZip").default;
             $section_description: typeof import("./$section_description").default;
             $section_notes: typeof import("./$section_notes").default;
             buildInfoBanner: typeof import("./buildInfoBanner").default;
@@ -75,6 +76,8 @@ declare global {
         }
         namespace site_core {
             type RenderCtx = import("./$type_RenderCtx").RenderCtx;
+            type Route = import("./$type_Route").Route;
+            type RouteDef = import("./$type_RouteDef").RouteDef;
             type SiteOpts = import("./$type_SiteOpts").SiteOpts;
             type TabDescriptor = import("./$type_TabDescriptor").TabDescriptor;
             type TabMergeSpec = import("./$type_TabMergeSpec").TabMergeSpec;

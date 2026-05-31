@@ -77,8 +77,9 @@ async function main() {
             entries.push({ kind: "type", rel, typeName, typeFileName: stem });
             continue;
         }
-        // Skip $script_ and $route_ in fcc plugin context (not used here yet)
-        const runtimeName = stem; // keep leading $ for $render_*, etc.
+        // Everything else is a fn registered under its basename, leading $ kept
+        // (e.g. $route_*, $render_*, $section_*, $avail_*, $block_*).
+        const runtimeName = stem;
         entries.push({ kind: "fn", rel, runtimeName, fnFileName: stem });
     }
 
