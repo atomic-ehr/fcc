@@ -12,6 +12,7 @@ declare global {
             $route_extensions: typeof import("./$route_extensions").default;
             $route_qa: typeof import("./$route_qa").default;
             $route_searchParameters: typeof import("./$route_searchParameters").default;
+            $route_status: typeof import("./$route_status").default;
             $section_description: typeof import("./$section_description").default;
             $section_md: typeof import("./$section_md").default;
             $section_notes: typeof import("./$section_notes").default;

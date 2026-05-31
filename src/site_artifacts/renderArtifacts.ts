@@ -27,6 +27,7 @@ export default function renderArtifacts(ctx: Context, _opts: {} = {}): string {
     const crossViews = [
         ctx.byType.StructureDefinition.some(r => (r.data as { type?: string }).type === "Extension") ? { label: "Extensions registry", href: "extensions.html" } : null,
         ctx.byType.SearchParameter.length ? { label: "Search Parameters", href: "search-parameters.html" } : null,
+        { label: "Status & maturity", href: "status.html" },
     ].filter(Boolean) as { label: string; href: string }[];
     const crossViewBlock = crossViews.length
         ? `<div class="mt-4 flex flex-wrap gap-2">${crossViews.map(v =>
