@@ -71,6 +71,7 @@ declare global {
             tagBindingStrength: typeof import("./tagBindingStrength").default;
             titleOf: typeof import("./titleOf").default;
             topBar: typeof import("./topBar").default;
+            topMenu: typeof import("./topMenu").default;
             urlVersionStrip: typeof import("./urlVersionStrip").default;
             watchPaths: typeof import("./watchPaths").default;
             writeBundle: typeof import("./writeBundle").default;

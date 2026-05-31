@@ -64,10 +64,11 @@ import tabsFor from "./tabsFor.ts";
 import tagBindingStrength from "./tagBindingStrength.ts";
 import titleOf from "./titleOf.ts";
 import topBar from "./topBar.ts";
+import topMenu from "./topMenu.ts";
 import urlVersionStrip from "./urlVersionStrip.ts";
 import watchPaths from "./watchPaths.ts";
 import writeBundle from "./writeBundle.ts";
 
 export default function loadFns(ctx: Context): void {
-    (ctx.fns as any).site_core = { dataTable, linkGrid, $avail_notExample, $section_description, $section_notes, $section_md, $section_operationDef, composeSections, derivePages, statusBadge, buildInfoBanner, buildRoutes, $route_examplesZip, $route_extensions, $route_qa, $route_searchParameters, $route_status, bytes, canonicalMeta, canonicalResource, canonicalTabStrip, companionPages, enable, featureOn, formatCard, handleHotUpdate, htmlEscape, humanType, idOf, introBlock, jsonBlock, linkifyCanonicals, layout, linkCanonical, linkType, loadIntroNotes, mergeTabs, metaDl, navActiveScript, notesFor, order, pageHeader, pageHref, pageTree, numberPages, pillType, renderBreadcrumb, renderNavTree, renderCanonical, renderResource, renderResourceJsonPage, renderSidebarGroup, resolveFn, sectionDefaults, sectionHeader, sectionsFor, shortLabel, sidebar, tabDefaults, tabLinks, tabsFor, tagBindingStrength, titleOf, topBar, urlVersionStrip, watchPaths, writeBundle };
+    (ctx.fns as any).site_core = { dataTable, linkGrid, $avail_notExample, $section_description, $section_notes, $section_md, $section_operationDef, composeSections, derivePages, statusBadge, buildInfoBanner, buildRoutes, $route_examplesZip, $route_extensions, $route_qa, $route_searchParameters, $route_status, bytes, canonicalMeta, canonicalResource, canonicalTabStrip, companionPages, enable, featureOn, formatCard, handleHotUpdate, htmlEscape, humanType, idOf, introBlock, jsonBlock, linkifyCanonicals, layout, linkCanonical, linkType, loadIntroNotes, mergeTabs, metaDl, navActiveScript, notesFor, order, pageHeader, pageHref, pageTree, numberPages, pillType, renderBreadcrumb, renderNavTree, renderCanonical, renderResource, renderResourceJsonPage, renderSidebarGroup, resolveFn, sectionDefaults, sectionHeader, sectionsFor, shortLabel, sidebar, tabDefaults, tabLinks, tabsFor, tagBindingStrength, titleOf, topBar, topMenu, urlVersionStrip, watchPaths, writeBundle };
 }
