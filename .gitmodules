@@ -1,3 +1,6 @@
 [submodule "vendor/us-core"]
 	path = vendor/us-core
 	url = https://github.com/HL7/US-Core.git
+[submodule "vendor/fhir-ig-publisher"]
+	path = vendor/fhir-ig-publisher
+	url = https://github.com/HL7/fhir-ig-publisher.git

@@ -202,6 +202,11 @@ is the only place a generator needs to know *what* to re-emit.
 
 ## 5. Dev vs prod delivery (one renderer)
 
+This covers **static** routes (every route today). Static routes have two
+deliveries (a `dist/` file and lazy-from-memory); **dynamic** routes (a live
+`ctx.sql` browser, search, an API) have one (a server) — see
+[`routing.md`](routing.md) for the page-vs-handler model.
+
 The view layer is a single **route table** (`site_core/buildRoutes`) used by both
 modes — one renderer, so output is identical:
 
