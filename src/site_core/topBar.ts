@@ -14,6 +14,11 @@ export default function topBar(ctx: Context, opts: { active: string }): string {
                 <span class="ml-3 text-xs text-slate-400">v${esc(ctx.config.version)} · FHIR ${esc(ctx.target.fhir)}</span>
             </div>
             <div class="flex items-center gap-2">
+                <a href="artifacts.html" title="Directory of published versions"
+                    class="flex items-center gap-1 rounded-full bg-slate-700/60 px-2 py-0.5 text-xs text-slate-200 hover:bg-slate-600 hover:text-white">
+                    <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l3 2"/></svg>
+                    versions
+                </a>
                 ${qaChip(ctx)}
                 <span class="rounded-full bg-slate-700/60 px-2 py-0.5 text-xs uppercase tracking-wide text-slate-200">${esc(ctx.target.name)}</span>
                 <span class="rounded-full bg-brand px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">${esc(ctx.config.status ?? "draft")}</span>

@@ -45,7 +45,6 @@ tailwind.config = {
 
 <div data-signals="{nav: true}" data-persist="nav">
     ${ctx.fns.site_core.topBar(ctx, { active: activeNav })}
-    ${ctx.fns.site_core.buildInfoBanner(ctx)}
     <div class="flex">
     ${ctx.fns.site_core.sidebar(ctx)}
     <div class="flex min-w-0 flex-1 flex-col">
@@ -56,6 +55,7 @@ tailwind.config = {
         </div>
         ${opts.content}
         <footer class="mt-16 border-t border-slate-200 pt-4 text-xs text-slate-500">
+            ${ctx.fns.site_core.buildInfoBanner(ctx)}
             ${ctx.fns.site_core.featureOn(ctx, { name: "igFooter" }) ? `<p>This page is part of the <span class="font-medium text-slate-700">${esc(ctx.config.title ?? ctx.config.id)}</span> (v${esc(ctx.config.version)}) based on FHIR ${esc(ctx.target.fhir)} — package <code class="rounded bg-slate-100 px-1">${esc(ctx.config.id)}#${esc(ctx.config.version)}</code>.</p>` : ""}
             <p class="mt-1">Built by <a class="text-sky-700 hover:underline" href="https://github.com/HealthSamurai/fcc">fcc</a>
             · target <code class="rounded bg-slate-100 px-1">${esc(ctx.target.name)}</code>

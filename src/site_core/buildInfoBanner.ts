@@ -1,10 +1,8 @@
-// IG-Publisher-style yellow build info strip shown at the top of every page.
+// Build-info line shown in the page footer (moved out of the old top yellow
+// strip — the top bar now carries a "versions" link instead).
 export default function buildInfoBanner(ctx: Context, _opts: {} = {}): string {
     const esc = (s: string) => ctx.fns.site_core.htmlEscape(ctx, { s });
     const title = esc(ctx.config.title ?? ctx.config.id);
     const v = esc(ctx.config.version);
-    return `<div class="border-y border-amber-300 bg-amber-50 px-4 py-1.5 text-xs text-amber-900 lg:px-8">
-        <strong>${title}</strong> — Local Development build (v${v}) built by fcc.
-        See the <a class="font-medium underline" href="artifacts.html">Directory of published versions</a>.
-    </div>`;
+    return `<p class="mt-1"><strong class="font-medium text-slate-700">${title}</strong> — Local Development build (v${v}) built by fcc. See the <a class="text-sky-700 hover:underline" href="artifacts.html">Directory of published versions</a>.</p>`;
 }
