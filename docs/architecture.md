@@ -66,7 +66,7 @@ the last three *project* `ctx` into artifacts.
 | **Validators** | read `ctx` → write `issues` back into `ctx` | (read-only over graph) | after load, over the changed closure |
 | **Views** | project a resource into a representation (snapshot/diff/json tabs, companion files) | pure `(ctx, { resource })` | lazy, at render time |
 | **Generators** | assemble a whole artifact from `ctx` (site route table, npm tarball, nav, QA page) | reads `ctx` | per output target |
-| **Renderers** | leaf fns composing a page from views + chrome (`$section_*`, `layout`, …) | pure | lazy, at render time |
+| **Renderers** | leaf fns composing a page from views + chrome (section renderers, `layout`, …) | pure | lazy, at render time |
 
 **Transformer timing** is by *data dependency*, not difficulty:
 - *local* (resource → itself, e.g. `narrative`): depends only on the resource —
@@ -95,6 +95,36 @@ There is **one** `ctx` — the engine `PluginContext`; the site/menu flat-ns
 plugins attach their `fns` onto it (`Context = PluginContext & { fns: FnsRegistry }`).
 `ctx.fns.<ns>.<fn>(ctx, opts)` is the flat-namespace call surface; cross-file
 types via `types.<ns>.<Name>`.
+
+## 2b. Resources are a fold of partial loads
+
+A loader yields **partial resources** — a `Partial<Resource>` with an `id` and its
+`source` file. Parts that share an `id`, even across files, **merge** into one
+resource; a single part is identity, so 1-file-1-resource is unchanged. This is what
+lets several files build one resource — a profile page from its `.fsh` + `-intro.md`
++ `-notes.md`, the FSH tank, snapshot-over-differential — with no special loader.
+
+```ts
+type Part = Partial<Resource> & { id: string; source: SourceRef };
+load(ctx, { file }) -> Part[];
+
+// engine: ts.parts: Map<id, Map<file, Part>>      // the "what came from where" history
+//         ctx.resources.get(id) = mergeParts([...parts.values()])
+// default merge: $merge_default ; per-type override: $merge_<resourceType>
+```
+
+- **Default merge** — recursive key-wise: objects / keyed maps merge by key, arrays
+  and scalars last-wins, `deps` union, scalars owner-wins (a part that omits a key
+  never clobbers it). A type may override it per resourceType (see the comment above).
+- **Merge-friendly resources** keep collections as keyed maps, not arrays, so the
+  default merge needs no per-array dedup (e.g. a `Page` keeps its sections as a map).
+- **Incremental** — each part is keyed by `source`, so re-loading a file replaces its
+  part and deleting drops it; re-fold the `id`. `fileToResources` / `resourceToFiles`
+  are built from the parts (the many-to-one file map).
+- **Two phases** — *load* (files → parts → merge by id; order-free, additive merge is
+  commutative) then *process* (snapshot / validate / number over the merged graph).
+
+A `Page` is one consumer of this — see [`page.md`](page.md).
 
 ## 3. Pipelines: one source → many artifacts
 
