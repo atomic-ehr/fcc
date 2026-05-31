@@ -243,7 +243,6 @@ async function finalize(cfg: ResolvedConfig, ts: TargetState, hooks: HookSlots, 
     resources: ts.resources,
     byCanonical: ts.byCanonical,
     ig: ctx.byId(`ImplementationGuide/${cfg.id}`) ?? makePlaceholderIG(cfg),
-    packageJson: makePackageJson(cfg, ts.target),
     diagnostics: ts.diagnostics,
     emitted: ts.emitted,
   };
@@ -443,20 +442,6 @@ function makePlaceholderIG(cfg: ResolvedConfig): Resource {
     source: { kind: "virtual", producer: "fcc/runner" },
     deps: new Set(),
     meta: {},
-  };
-}
-
-function makePackageJson(cfg: ResolvedConfig, target: Target): Record<string, unknown> {
-  return {
-    name: cfg.id,
-    version: cfg.version,
-    canonical: cfg.canonical,
-    type: "fhir.ig",
-    title: cfg.title ?? cfg.id,
-    description: cfg.description,
-    "fhir-version-list": [target.fhir],
-    fhirVersions: [target.fhir],
-    dependencies: cfg.deps ?? {},
   };
 }
 

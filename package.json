@@ -18,6 +18,7 @@
     "./validator": "./src/validator/validator.ts",
     "./ig-resource": "./src/ig-resource/ig-resource.ts",
     "./npm": "./src/npm/npm.ts",
+    "./sqlite": "./src/sqlite/sqlite.ts",
     "./menu": "./src/menu/menu.ts",
     "./site": "./src/site/site.ts",
     "./presets": "./src/presets/presets.ts"

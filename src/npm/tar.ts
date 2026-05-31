@@ -4,6 +4,23 @@
 type Entry = { path: string; bytes: Uint8Array; mtime?: number };
 
 const BLOCK = 512;
+const enc = new TextEncoder();
+
+function byteLen(s: string): number { return enc.encode(s).length; }
+
+// USTAR stores a path as name (≤100 bytes) + an optional directory prefix
+// (≤155 bytes); the extractor rejoins them as `prefix/name`. Split at the last
+// "/" so a long full path (e.g. package/example/<long>.json) still fits without
+// pax extensions. Throws only when a single path component itself exceeds 100 B.
+function splitPath(path: string): { name: string; prefix: string } {
+  if (byteLen(path) <= 100) return { name: path, prefix: "" };
+  const idx = path.lastIndexOf("/");
+  if (idx > 0) {
+    const name = path.slice(idx + 1), prefix = path.slice(0, idx);
+    if (byteLen(name) <= 100 && byteLen(prefix) <= 155) return { name, prefix };
+  }
+  throw new Error(`tar: path too long for USTAR even with prefix (name>100 or prefix>155): ${path}`);
+}
 
 export function tar(entries: Entry[]): Uint8Array {
   const chunks: Uint8Array[] = [];
@@ -22,22 +39,20 @@ export function tar(entries: Entry[]): Uint8Array {
 function header(e: Entry): Uint8Array {
   const buf = new Uint8Array(BLOCK);
 
-  const path = e.path;
-  if (path.length > 100) {
-    throw new Error(`tar: path too long for USTAR (max 100): ${path}`);
-  }
-  writeStr(buf, 0,   100, path);
+  const { name, prefix } = splitPath(e.path);
+  writeStr(buf, 0,   100, name);
   writeStr(buf, 100,   8, "0000644");           // mode
   writeStr(buf, 108,   8, "0000000");           // uid
   writeStr(buf, 116,   8, "0000000");           // gid
   writeOct(buf, 124,  12, e.bytes.length);      // size
-  writeOct(buf, 136,  12, e.mtime ?? Math.floor(Date.now() / 1000));
+  writeOct(buf, 136,  12, e.mtime ?? 0);        // default mtime 0 → reproducible archives
   writeStr(buf, 148,   8, "        ");          // checksum placeholder
   buf[156] = 0x30;                              // typeflag '0' = regular file
   writeStr(buf, 257,   6, "ustar");
   writeStr(buf, 263,   2, "00");
   writeStr(buf, 265,  32, "fcc");               // uname
   writeStr(buf, 297,  32, "fcc");               // gname
+  if (prefix) writeStr(buf, 345, 155, prefix);  // USTAR path prefix for paths > 100 bytes
 
   // checksum: sum of all bytes treating field as spaces
   let sum = 0;

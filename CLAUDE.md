@@ -51,7 +51,7 @@ are named after what they export (procedural: functions + types). `package.json`
 - **`/src/cdp`** — CDP browser-control helpers (REPL `cdp.*`).
 - **`/src/<plugin>`** — each non-site plugin, one folder `<plugin>/<plugin>.ts`,
   imported as `fcc/<plugin>`: `json` `fsh` `ts` `snapshot` `narrative` `validator`
-  `ig-resource` `npm` `menu`. Most are a single file (e.g. `snapshot/snapshot.ts`);
+  `ig-resource` `npm` `sqlite` `menu`. Most are a single file (e.g. `snapshot/snapshot.ts`);
   `menu` is a flat fn-per-file namespace (`ctx.fns.menu`) with a `menu/menu.ts` entry.
 - **`/src/site` + `/src/site_*`** — the IG-site renderer (`fcc/site`). The entry
   (`site/site.ts` + `site/loadAll.ts` + `site/gentypes.sh`) assembles seven
@@ -132,6 +132,7 @@ Inside a plugin's `src/` directory:
 | `$ext_<slug>.ts`       | Handler for one specific FHIR extension URL.                            |
 | `$emit_<format>.ts`    | One output-format emitter (`$emit_npm.ts`, `$emit_xml.ts`).             |
 | `$page_<slug>.ts`      | `fcc/site` code-defined site page.                                     |
+| `$route_<name>.ts`     | `fcc/site` code-defined export route. `(ctx,{pluginCtx}) → RouteDef\|RouteDef[]` (`{path,contentType,render→string\|Uint8Array}`); auto-discovered by `buildRoutes` across namespaces, served identically in prod/dev. e.g. `examples.json.zip`. |
 | `$cmd_<name>.ts`       | Contributes a `fcc <name>` CLI subcommand.                              |
 | `$watch_<glob>.ts`     | Declarative watch pattern.                                              |
 | `$asset_<glob>.ts`     | Static asset source declaration.                                        |

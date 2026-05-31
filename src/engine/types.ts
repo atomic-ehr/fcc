@@ -132,7 +132,6 @@ export type Bundle = {
   resources: Map<string, Resource>;
   byCanonical: Map<string, string>;
   ig: Resource;
-  packageJson: Record<string, unknown>;
   diagnostics: Diagnostic[];
   emitted: EmittedFile[];
 };

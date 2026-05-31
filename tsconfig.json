@@ -30,6 +30,7 @@
       "fcc/validator": ["./src/validator/validator.ts"],
       "fcc/ig-resource": ["./src/ig-resource/ig-resource.ts"],
       "fcc/npm": ["./src/npm/npm.ts"],
+      "fcc/sqlite": ["./src/sqlite/sqlite.ts"],
       "fcc/menu": ["./src/menu/menu.ts"],
       "fcc/site": ["./src/site/site.ts"],
       "fcc/presets": ["./src/presets/presets.ts"]
