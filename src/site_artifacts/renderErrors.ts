@@ -41,17 +41,44 @@ export default function renderErrors(ctx: Context, opts: { report: types.site_ar
         </section>`;
     }).join("");
 
+    // Roll-up by message code (the IG-Publisher QA signal — scan systematically).
+    const byCode = new Map<string, { error: number; warning: number; total: number }>();
+    for (const i of issues) {
+        const c = byCode.get(i.code) ?? { error: 0, warning: 0, total: 0 };
+        if (i.severity === "error") c.error++; else if (i.severity === "warning") c.warning++;
+        c.total++;
+        byCode.set(i.code, c);
+    }
+    const codeRows = [...byCode.entries()]
+        .sort((a, b) => b[1].error - a[1].error || b[1].total - a[1].total)
+        .map(([code, c]) => `<tr class="border-t border-slate-100">
+            <td class="px-3 py-1"><code class="text-xs text-slate-600">${esc(code)}</code></td>
+            <td class="px-3 py-1 text-right text-rose-700">${c.error || ""}</td>
+            <td class="px-3 py-1 text-right text-amber-700">${c.warning || ""}</td>
+            <td class="px-3 py-1 text-right font-medium text-slate-700">${c.total}</td>
+        </tr>`).join("");
+    const rollup = issues.length ? `
+        <h2 class="mt-8 text-sm font-semibold uppercase tracking-wide text-slate-500">By message</h2>
+        <table class="mt-2 w-full max-w-2xl text-sm">
+            <thead><tr class="text-left text-xs uppercase tracking-wide text-slate-400">
+                <th class="px-3 pb-1">Message id</th><th class="px-3 pb-1 text-right">Err</th><th class="px-3 pb-1 text-right">Warn</th><th class="px-3 pb-1 text-right">Total</th>
+            </tr></thead><tbody>${codeRows}</tbody>
+        </table>
+        <h2 class="mt-8 text-sm font-semibold uppercase tracking-wide text-slate-500">By resource</h2>` : "";
+
     const clean = issues.length === 0;
     const content = `
         <h1 class="text-3xl font-semibold text-slate-900">QA Report</h1>
         <p class="mt-2 text-sm text-slate-600">Schema validation of examples (against their profiles) and canonicals, via
             <code>@atomic-ehr/fhirschema</code>. <span class="text-amber-700">Experimental</span> — FHIRPath-constraint and
-            terminology/slicing checks are limited until those evaluators are wired in, so some issues may be false positives.</p>
+            terminology/slicing checks are limited until those evaluators are wired in, so some issues may be false positives.
+            Machine-readable: <a class="text-sky-700 hover:underline" href="qa.txt">qa.txt</a>.</p>
         <div class="mt-4 flex gap-3 text-sm">
             <span class="rounded bg-rose-50 px-3 py-1.5 font-medium text-rose-700">${summary.errors} error(s)</span>
             <span class="rounded bg-amber-50 px-3 py-1.5 font-medium text-amber-700">${summary.warnings} warning(s)</span>
             <span class="rounded bg-slate-50 px-3 py-1.5 font-medium text-slate-600">${summary.resources} resource(s) affected</span>
         </div>
+        ${rollup}
         ${clean ? `<p class="mt-8 rounded bg-emerald-50 px-4 py-3 text-sm text-emerald-700">No validation issues. ✓</p>` : cards}`;
 
     return ctx.fns.site_core.layout(ctx, {
