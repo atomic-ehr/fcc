@@ -5,7 +5,7 @@ export default async function jsonBlock(ctx: Context, opts: { d: Record<string, 
     const clean = { ...opts.d };
     delete (clean as { __wasExample?: boolean }).__wasExample;
     const code = JSON.stringify(clean, null, 2);
-    const hl = await ctx.fns.site_md.highlightCode(ctx, { code, lang: "json" });
+    const hl = ctx.fns.site_core.linkifyCanonicals(ctx, { html: await ctx.fns.site_md.highlightCode(ctx, { code, lang: "json" }) });
 
     const heading = (opts.heading ?? true)
         ? `<h2 class="mt-8 text-lg font-semibold text-slate-900">Source JSON</h2>`

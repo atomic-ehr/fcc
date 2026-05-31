@@ -37,6 +37,7 @@ declare global {
             layout: typeof import("./layout").default;
             linkCanonical: typeof import("./linkCanonical").default;
             linkGrid: typeof import("./linkGrid").default;
+            linkifyCanonicals: typeof import("./linkifyCanonicals").default;
             linkType: typeof import("./linkType").default;
             loadIntroNotes: typeof import("./loadIntroNotes").default;
             mergeTabs: typeof import("./mergeTabs").default;
