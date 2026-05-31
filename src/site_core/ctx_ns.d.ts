@@ -10,6 +10,7 @@ declare global {
             $avail_notExample: typeof import("./$avail_notExample").default;
             $route_examplesZip: typeof import("./$route_examplesZip").default;
             $section_description: typeof import("./$section_description").default;
+            $section_md: typeof import("./$section_md").default;
             $section_notes: typeof import("./$section_notes").default;
             buildInfoBanner: typeof import("./buildInfoBanner").default;
             buildRoutes: typeof import("./buildRoutes").default;
@@ -18,6 +19,7 @@ declare global {
             canonicalResource: typeof import("./canonicalResource").default;
             canonicalTabStrip: typeof import("./canonicalTabStrip").default;
             companionPages: typeof import("./companionPages").default;
+            composeSections: typeof import("./composeSections").default;
             dataTable: typeof import("./dataTable").default;
             enable: typeof import("./enable").default;
             featureOn: typeof import("./featureOn").default;

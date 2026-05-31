@@ -33,7 +33,7 @@ export default function pages(_opts: {} = {}): Loader {
         resourceType: "Page",
         url: undefined,
         version: undefined,
-        data: { resourceType: "Page", id: slug, slug, title, md, role },
+        data: { resourceType: "Page", id: slug, slug, title, md, role, sections: { body: { type: "md", order: 0, md } } },
         source: { kind: "md", path: file },
         meta: {},
       };

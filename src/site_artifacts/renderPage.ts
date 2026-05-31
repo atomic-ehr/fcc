@@ -2,9 +2,9 @@
 // Used for the IG-author top-nav targets (general-requirements.html,
 // must-support.html, ...) that aren't backed by a FHIR resource.
 
-export default function renderPage(ctx: Context, opts: { slug: string; title: string; md: string }): string {
+export default async function renderPage(ctx: Context, opts: { slug: string; title: string; sections: Record<string, unknown> }): Promise<string> {
     const esc = (s: string) => ctx.fns.site_core.htmlEscape(ctx, { s });
-    const html = ctx.fns.site_md.mdToHtml(ctx, { md: opts.md });
+    const html = await ctx.fns.site_core.composeSections(ctx, { sections: opts.sections as any });
     return ctx.fns.site_core.layout(ctx, {
         title: opts.title,
         content: `

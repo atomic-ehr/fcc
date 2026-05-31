@@ -51,10 +51,10 @@ export default async function buildRoutes(
     routes.set("artifacts.html", { id: null, contentType: "text/html", render: () => ctx.fns.site_artifacts.renderArtifacts(ctx) });
     routes.set("style.css",      { id: null, contentType: "text/css",  render: () => css });
     for (const r of pageResources) {
-        const d = r.data as { slug: string; title: string; md: string; role: string };
+        const d = r.data as { slug: string; title: string; role: string; sections: Record<string, unknown> };
         if (d.role !== "page") continue;
         // id = the Page resource id → editing one .md re-renders only that page.
-        routes.set(`${d.slug}.html`, { id: r.id, contentType: "text/html", render: () => ctx.fns.site_artifacts.renderPage(ctx, { slug: d.slug, title: d.title, md: d.md }) });
+        routes.set(`${d.slug}.html`, { id: r.id, contentType: "text/html", render: () => ctx.fns.site_artifacts.renderPage(ctx, { slug: d.slug, title: d.title, sections: d.sections }) });
     }
 
     // QA / validation report — only when the fcc/validator plugin populated it.
