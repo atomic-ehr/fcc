@@ -193,6 +193,20 @@ export interface PluginContext {
   byUrl(url: string): Resource | undefined;
   byId(id: string): Resource | undefined;
 
+  /**
+   * Ad-hoc SQL over the graph. Lazily builds an in-memory SQLite index of every
+   * resource — columns `id`, `resourceType`, `rid` (`data.id`), `url`,
+   * `version`, `example`, and `json` (the full resource, for `json_extract`) —
+   * and caches it until a resource is added or dropped. Returns plain rows (data
+   * in, data out; the Database stays an engine-internal detail). In-place edits
+   * to a resource's `data` between queries are NOT tracked, so query after the
+   * enrichment hooks (snapshot/narrative/validate) to see fully-built resources.
+   *
+   *   ctx.sql(`SELECT id, json_extract(json,'$.status') AS status
+   *            FROM resources WHERE resourceType = ?`, ['Observation'])
+   */
+  sql(query: string, params?: Record<string, unknown> | unknown[]): unknown[];
+
   emitResource(r: Partial<Resource> & { resourceType: string; data: Record<string, unknown> }): string;
   emitFile(f: EmittedFile): void;
 

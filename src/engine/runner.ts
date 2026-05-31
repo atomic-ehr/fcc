@@ -10,6 +10,7 @@ import {
   type BuildState, type TargetState, type HookSlots, createState, freshTargetState,
   dropResource, indexResource, transitiveDependents,
 } from "./state.ts";
+import { buildGraphDb } from "./graphDb.ts";
 
 export type BuildOpts = {
   projectRoot: string;
@@ -301,6 +302,12 @@ export function makeContext(cfg: ResolvedConfig, ts: TargetState, changedIds: Se
       return id ? ts.resources.get(id) : undefined;
     },
     byId(id) { return ts.resources.get(id); },
+
+    sql(query, params) {
+      if (!ts.graphDb) ts.graphDb = buildGraphDb(ts.resources);     // lazy; invalidated on mutation
+      const stmt = ts.graphDb.query(query);
+      return (params === undefined ? stmt.all() : stmt.all(params as any)) as unknown[];
+    },
 
     emitResource(r) {
       const id = r.id ?? `${r.resourceType}/${(r.data.id as string | undefined) ?? cryptoRandomId()}`;

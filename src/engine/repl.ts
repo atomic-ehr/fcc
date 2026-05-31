@@ -1,6 +1,7 @@
 import { mkdir, writeFile, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import type { BuildState } from "./state.ts";
+import { makeContext } from "./runner.ts";
 import { cdp } from "../cdp/cdp.ts";
 
 export type ReplHandle = {
@@ -58,8 +59,15 @@ export async function startRepl(opts: ReplOpts): Promise<ReplHandle> {
 
 async function runRepl(code: string, state: BuildState): Promise<Response> {
   const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-  const args = ["state", "cfg", "T", "cdp"];
-  const argVals = [state, state.cfg, makeT(state), cdp];
+  // sql(query, params?, target?) — ctx.sql over a target's graph (default first).
+  const T = makeT(state);
+  const sql = (query: string, params?: Record<string, unknown> | unknown[], target?: string) => {
+    const ts = T(target);
+    if (!ts) throw new Error(`repl sql: no target ${target ?? "(default)"}`);
+    return makeContext(state.cfg, ts, null).sql(query, params);
+  };
+  const args = ["state", "cfg", "T", "cdp", "sql"];
+  const argVals = [state, state.cfg, T, cdp, sql];
 
   // Try expression form first — wrap as `return (code)`. If that parses, we
   // get a value back for one-liners. If it's a SyntaxError (e.g. multi-statement

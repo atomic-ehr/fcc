@@ -1,4 +1,5 @@
 import type { Bundle, Diagnostic, EmittedFile, HookName, Issue, Plugin, Resource, ResolvedConfig, StepFn, Target } from "./types.ts";
+import type { Database } from "bun:sqlite";
 
 // A hook fn bound to its config (from the descriptor). The runner calls
 // `fn(ctx, config, opts)`.
@@ -64,7 +65,16 @@ export type TargetState = {
   // incremental rebuilds; reset on a full build (freshTargetState).
   state: Record<string, any>;
   fns: Record<string, any>;
+
+  // Lazily-built SQLite index of the graph backing ctx.sql; null until first
+  // query, dropped whenever the graph mutates (indexResource/dropResource).
+  graphDb?: Database | null;
 };
+
+/** Drop the cached ctx.sql graph index (call on any graph mutation). */
+export function invalidateGraphDb(ts: TargetState) {
+  if (ts.graphDb) { ts.graphDb.close(); ts.graphDb = null; }
+}
 
 export type BuildState = {
   cfg: ResolvedConfig;
@@ -104,6 +114,7 @@ export function freshTargetState(target: Target): TargetState {
     shared: {},
     state: {},
     fns: {},
+    graphDb: null,
   };
 }
 
@@ -111,6 +122,7 @@ export function freshTargetState(target: Target): TargetState {
 export function dropResource(ts: TargetState, id: string) {
   const r = ts.resources.get(id);
   if (!r) return;
+  invalidateGraphDb(ts);                              // ctx.sql index is now stale
   ts.resources.delete(id);
   if (r.url) {
     if (ts.byCanonical.get(r.url) === id) ts.byCanonical.delete(r.url);
@@ -142,6 +154,7 @@ export function dropResource(ts: TargetState, id: string) {
 
 /** Add a resource to indexes. */
 export function indexResource(ts: TargetState, r: Resource, fromFile: string | null) {
+  invalidateGraphDb(ts);                              // ctx.sql index is now stale
   ts.resources.set(r.id, r);
   if (r.url) ts.byCanonical.set(r.url, r.id);
   (ts.byType.get(r.resourceType) ?? ts.byType.set(r.resourceType, new Set()).get(r.resourceType)!).add(r.id);

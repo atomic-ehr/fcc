@@ -19,7 +19,12 @@ export default defineConfig({
 });
 ```
 - Hook stages run in this order: `buildStart` `transform` `beforeSnapshot` `afterSnapshot` `beforeValidate` `afterValidate` `generateBundle` `writeBundle` `buildEnd` `closeBundle`, plus dev-only `handleHotUpdate` and `watchPaths`.
-- `ctx` surface: indexes `resources` / `byType.<RT>` / `canonicals.<RT>` / `byCanonical`, `issues`, cross-plugin `shared`, render `state`, fn registry `fns`; queries `query(type, where?)` / `byUrl` / `byId`; outputs `emitResource(r)` (returns id) / `emitFile(f)`; diagnostics `warn(d)` and `error(d)` (the latter throws — `never`).
+- `ctx` surface: indexes `resources` / `byType.<RT>` / `canonicals.<RT>` / `byCanonical`, `issues`, cross-plugin `shared`, render `state`, fn registry `fns`; queries `query(type, where?)` / `byUrl` / `byId` / `sql(query, params?)`; outputs `emitResource(r)` (returns id) / `emitFile(f)`; diagnostics `warn(d)` and `error(d)` (the latter throws — `never`).
+- `ctx.sql(query, params?)` — ad-hoc SQL over the graph, backed by a lazily-built in-memory SQLite index (`resources` table: `id`, `resourceType`, `rid`, `url`, `version`, `example`, and a `json` column for `json_extract`). Built on first call, cached until a resource is added/dropped; returns plain rows. Also exposed in the dev REPL as `sql(...)`:
+  ```sh
+  bun src/bin/repl.ts "sql(\"SELECT resourceType, count(*) n FROM resources GROUP BY resourceType ORDER BY n DESC\")"
+  bun src/bin/repl.ts "sql(\"SELECT id, json_extract(json,'\$.status') s FROM resources WHERE resourceType=?\", ['Observation'])"
+  ```
 
 ### Engine helpers (`zip`, `indexEntry`, `packageEntries`)
 Pure, ctx-free byte/model helpers exported from `fcc` that emitter plugins (npm, sqlite) import directly — the one project import the flat-ns rule permits.
