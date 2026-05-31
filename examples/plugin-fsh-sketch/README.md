@@ -4,7 +4,7 @@ A paper-implementation sketch for the FSH source plugin referenced in
 `../basic-ig/fcc.config.ts`.
 
 This is **not runnable** — it shows the shape of a source plugin in the
-`fcc` model (see `../../design.md`, §4.6 and §6.2):
+`fcc` model (see `../../docs/architecture.md`):
 
 - registered as `loader: fsh()` in `sources[]`
 - runs in the **resolution / load** phase, before transforms

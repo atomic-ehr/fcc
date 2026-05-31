@@ -2,7 +2,7 @@
 //
 // Paper sketch of @fcc/plugin-fsh.
 // Shows the contract a source plugin must implement against the API in
-// ../../design.md. Not wired up to fcc core (which doesn't exist yet).
+// ../../docs/architecture.md. Not wired up to fcc core (which doesn't exist yet).
 
 import { plugin } from "fcc";
 

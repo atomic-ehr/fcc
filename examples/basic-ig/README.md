@@ -1,7 +1,7 @@
 # basic-ig
 
 A minimal Implementation Guide that exercises the `fcc` API surface
-described in `../../design.md`.
+described in `../../docs/architecture.md`.
 
 This is a **paper example** — `fcc` core does not exist yet. The files
 here are the public API as seen by an IG author. Treat as a spec for

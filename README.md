@@ -9,7 +9,9 @@ at the build state from a shell or a browser.
 > playing with the model and inspecting real IGs; not yet a drop-in
 > replacement for IG Publisher.
 
-See [`design.md`](./design.md) for the long-form architecture.
+See [`docs/architecture.md`](./docs/architecture.md) for the architecture,
+[`docs/modules.md`](./docs/modules.md) for a per-module reference, and
+[`docs/page.md`](./docs/page.md) for the (in-progress) unified Page model.
 
 ## Why
 

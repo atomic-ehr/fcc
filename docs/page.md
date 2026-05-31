@@ -1,14 +1,21 @@
 # The `Page` resource
 
-> **Status: design / target.** Not implemented. Today only markdown pagecontent
-> becomes `Page` resources; conformance pages (StructureDefinition, ValueSet, …)
-> are routes computed directly in
-> [`site_core/buildRoutes`](../src/site_core/buildRoutes.ts). This spec has been
-> hardened against a multi-agent adversarial review (codex + an internal
-> workflow); the engine-reality caveats it surfaced are folded in, and the
-> non-trivial engine work is listed explicitly in
-> [§ Engine changes required](#engine-changes-required). See
-> [`architecture.md`](architecture.md) for the engine model.
+> **Status: partially implemented.**
+> - ✅ **Merge-friendly resources** (the foundation): loaders emit partial
+>   resources, parts that share an `id` merge — `src/engine/merge.ts` +
+>   `ts.parts`/`upsertPart`/`removeFileParts`/`rematerialize` in `state.ts`
+>   (`merge.test.ts`, `mergeLoad.test.ts`).
+> - ✅ **`Page` body as a `sections` map**: content pages render by composing
+>   `$section_<type>` from data on the Page — `composeSections` + `$section_md`
+>   (`composeSections.test.ts`); golden-stable.
+> - ⏳ **Design (not yet built):** canonical pages as `Page` resources +
+>   `buildRoutes` single loop, `as:"tab"|"raw"` companion/side-car routes,
+>   FHIR-IG numbering, intro/notes via merge. Edges (`refs`/`links`/`assets`)
+>   deferred to a later separate `ctx.sql` table.
+>
+> Hardened against a multi-agent adversarial review (codex + kimi + an internal
+> workflow). See [`architecture.md`](architecture.md) for the engine model and
+> [`modules.md`](modules.md) for the module reference.
 
 ## Why
 
@@ -338,23 +345,22 @@ re-render only its page" work (today's behavior — see `buildRoutes`
 
 The merge model is the one real foundation; the rest builds on it:
 
-1. **Partial-resource merge (foundation).** The engine keeps `ts.parts:
-   Map<id, Part[]>` (`Part = Partial<Resource> & { source }`), materialises
-   `resources.get(id) = merge(parts)` with the default key-wise merge (or
-   `$merge_<RT>`), and builds `fileToResources`/`resourceToFiles` from each part's
-   `source` — the many-to-one file map. Today a file maps 1:1 and there is no part
-   store or merge; this is the enabling change. (It also subsumes the fsh-tank and
-   snapshot-over-differential as ordinary merges.)
-2. **Collections as keyed maps.** `Page.sections`/`sources`/`refs`/`links`/`assets`
-   become `Record<…>` so the default merge is a plain recursive key-wise combine.
-3. **Watcher seeds for aux files.** `-intro.md`/`-notes.md` must be watched sources
-   so an edit seeds the rebuild; their parts carry the page id.
-4. **Section-fn signature** — additive `(ctx,{page,resource,section})`, with the
-   compat shim for today's `(ctx,{resource})` files.
-5. **`role` → `kind`** — migrate the two live `byType.Page` consumers
-   (`buildRoutes` filter, `pages()` loader).
-6. **(optional)** graphDb `links`/`refs` tables for first-class edge queries
-   (else `json_each` over `resources.json`).
+1. ✅ **Partial-resource merge (foundation) — done.** The engine keeps `ts.parts:
+   Map<id, Map<file, Part>>`, materialises `resources.get(id) = mergeParts(parts)`
+   with the default key-wise merge, and builds `fileToResources`/`resourceToFiles`
+   from each part's `source` — the many-to-one file map. (`src/engine/merge.ts`,
+   `state.ts`, `runner.ts loadFile`.) `$merge_<RT>` custom mergers are still a
+   future extension point.
+2. ✅ **Collections as keyed maps — done for `sections`** (`Page.sections` is a
+   `Record`, composed by `composeSections`); `refs`/`links`/`assets` follow when
+   edges land.
+3. ⏳ **Watcher seeds for aux files.** `-intro.md`/`-notes.md` must be watched
+   sources so an edit seeds the rebuild; their parts carry the page id.
+4. ⏳ **Section-fn signature** — additive `(ctx,{page,resource,section})`, with a
+   compat shim for today's `(ctx,{resource})` files. (`$section_md` already uses
+   `{ section }`.)
+5. ⏳ **`role` → `kind`** — migrate the two live `byType.Page` consumers.
+6. ⏳ **(optional)** graphDb `links`/`refs` tables for edge queries.
 
 ## Open decisions
 
