@@ -54,11 +54,16 @@ export default defineConfig({
     narrative(),
     // One validation plugin, composed of validator descriptors { fn, ...config }
     // → errors.html. Runs after snapshot (fhirpath reads generated snapshots).
-    validator({ validators: [
-      { fn: structural },                                                          // lite lint
-      { fn: schema, packagesDir: "../../vendor/us-core/input-cache/.fhir/packages" }, // fhirschema
-      { fn: fhirpathConstraints },                                                 // fhirpath invariants
-    ] }),
+    validator({
+      validators: [
+        { fn: structural },                                                          // lite lint
+        { fn: schema, packagesDir: "../../vendor/us-core/input-cache/.fhir/packages" }, // fhirschema
+        { fn: fhirpathConstraints },                                                 // fhirpath invariants
+      ],
+      // IG-Publisher SuppressedMessageInformation parity: hide reviewed
+      // warnings/hints listed in the IG's ignoreWarnings.txt from the QA counts.
+      suppress: "../../vendor/us-core/input/ignoreWarnings.txt",
+    }),
     igRes({ pagecontent: "../../vendor/us-core/input/pagecontent" }),
   ],
 });

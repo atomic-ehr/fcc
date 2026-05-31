@@ -12,4 +12,5 @@ export type ValidationIssue = {
     message?: string;
     expected?: string;
     got?: string;
+    reason?: string;          // suppressed issues carry their suppression category
 };

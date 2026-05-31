@@ -66,7 +66,40 @@ export default function renderErrors(ctx: Context, opts: { report: types.site_ar
         </table>
         <h2 class="mt-8 text-sm font-semibold uppercase tracking-wide text-slate-500">By resource</h2>` : "";
 
+    // Suppressed messages (IG-Publisher SuppressedMessageInformation parity) —
+    // reviewed warnings/hints, grouped by the review reason, plus the stale
+    // patterns (no longer matching anything) so authors can prune them.
+    const sup = opts.report.suppressed;
+    let suppressedSection = "";
+    if (sup) {                                                   // file loaded → always show the panel
+        const byReason = new Map<string, types.site_artifacts.ValidationIssue[]>();
+        for (const i of sup.issues) (byReason.get(i.reason ?? "(unspecified)") ?? byReason.set(i.reason ?? "(unspecified)", []).get(i.reason ?? "(unspecified)")!).push(i);
+        const reasonBlocks = [...byReason.entries()]
+            .sort((a, b) => b[1].length - a[1].length)
+            .map(([reason, list]) => `
+                <details class="mt-2 rounded border border-slate-200 bg-white">
+                    <summary class="cursor-pointer px-3 py-2 text-sm text-slate-700"><span class="font-medium text-slate-500">${list.length}×</span> ${esc(reason)}</summary>
+                    <table class="min-w-full text-sm"><tbody class="divide-y divide-slate-100">${list.map(i => `
+                        <tr class="align-top">
+                            <td class="px-3 py-1 whitespace-nowrap">${badge(i.severity)}</td>
+                            <td class="px-3 py-1"><a class="text-xs text-sky-700 hover:underline" href="${esc(i.href)}">${esc(i.fhirId)}</a></td>
+                            <td class="px-3 py-1 text-xs text-slate-600">${esc(i.message ?? "")}</td>
+                        </tr>`).join("")}</tbody></table>
+                </details>`).join("");
+        const unused = sup.entries.filter(e => e.warnings + e.hints === 0);
+        const unusedNote = unused.length ? `
+            <details class="mt-3"><summary class="cursor-pointer text-xs text-slate-500">${unused.length} of ${sup.entries.length} pattern(s) matched no finding this build</summary>
+            <ul class="mt-1 max-w-3xl list-disc pl-5 text-xs text-slate-400">${unused.slice(0, 50).map(e => `<li><code>${esc(e.raw)}</code></li>`).join("")}${unused.length > 50 ? `<li>… ${unused.length - 50} more</li>` : ""}</ul></details>` : "";
+        suppressedSection = `
+            <h2 class="mt-8 text-sm font-semibold uppercase tracking-wide text-slate-500">Suppressed messages</h2>
+            <p class="mt-1 max-w-3xl text-xs text-slate-500">${sup.total} reviewed warning(s)/hint(s) hidden from the counts above via the suppressed-messages file (${sup.entries.length} pattern(s) loaded). Errors are never suppressed.</p>
+            ${reasonBlocks}
+            ${unusedNote}`;
+    }
+
     const clean = issues.length === 0;
+    const supChip = sup && sup.total
+        ? `<span class="rounded bg-slate-50 px-3 py-1.5 font-medium text-slate-500">${sup.total} suppressed</span>` : "";
     const content = `
         <h1 class="text-3xl font-semibold text-slate-900">QA Report</h1>
         <p class="mt-2 text-sm text-slate-600">Schema validation of examples (against their profiles) and canonicals, via
@@ -77,9 +110,11 @@ export default function renderErrors(ctx: Context, opts: { report: types.site_ar
             <span class="rounded bg-rose-50 px-3 py-1.5 font-medium text-rose-700">${summary.errors} error(s)</span>
             <span class="rounded bg-amber-50 px-3 py-1.5 font-medium text-amber-700">${summary.warnings} warning(s)</span>
             <span class="rounded bg-slate-50 px-3 py-1.5 font-medium text-slate-600">${summary.resources} resource(s) affected</span>
+            ${supChip}
         </div>
         ${rollup}
-        ${clean ? `<p class="mt-8 rounded bg-emerald-50 px-4 py-3 text-sm text-emerald-700">No validation issues. ✓</p>` : cards}`;
+        ${clean ? `<p class="mt-8 rounded bg-emerald-50 px-4 py-3 text-sm text-emerald-700">No validation issues. ✓</p>` : cards}
+        ${suppressedSection}`;
 
     return ctx.fns.site_core.layout(ctx, {
         title: "QA Report",

@@ -25,6 +25,7 @@ export type ValidatorIssue = {
   severity: "error" | "warning" | "information";
   code: string; path: string; message?: string; expected?: string; got?: string;
   validator: string;
+  reason?: string;          // set when moved to the suppressed bucket (its category)
 };
 
 /** A validator function: `(ctx, config, opts) => issues`. Always async. */
@@ -32,10 +33,10 @@ export type ValidatorFn = (ctx: PluginContext, config: Record<string, unknown>, 
 /** A validator descriptor — the fn plus its config, spread inline. */
 export type Validator = { fn: ValidatorFn } & Record<string, unknown>;
 
-type Opts = { validators?: Validator[]; quiet?: boolean };
+type Opts = { validators?: Validator[]; quiet?: boolean; suppress?: string };
 
 export default function validator(opts: Opts = {}): Plugin {
-  return [{ hook: "afterValidate", fn: validateFn, validators: opts.validators ?? [{ fn: structural }], quiet: opts.quiet }];
+  return [{ hook: "afterValidate", fn: validateFn, validators: opts.validators ?? [{ fn: structural }], quiet: opts.quiet, suppress: opts.suppress }];
 }
 
 async function validateFn(ctx: PluginContext, config: Record<string, unknown>, _opts: Record<string, never>): Promise<void> {
@@ -48,19 +49,160 @@ async function validateFn(ctx: PluginContext, config: Record<string, unknown>, _
   ));
   const all = results.flat();
 
-  // Assemble the per-resource map — the world's ctx.issues.
-  ctx.issues.clear();
-  for (const i of all) (ctx.issues.get(i.rid) ?? ctx.issues.set(i.rid, []).get(i.rid)!).push(i);
+  // Suppressed-messages filter (IG-Publisher SuppressedMessageInformation parity):
+  // a reviewed warning/hint matching a wildcard pattern moves to a separate bucket
+  // so it stops gating CI while staying visible (with its review reason). Errors
+  // are never suppressed. Re-read each build so a config edit takes effect on
+  // dev restart without a stale cache.
+  const suppressions = await loadSuppressions(ctx, config.suppress as string | undefined);
+  const { active, suppressed, entries } = applySuppressions(suppressions, all);
 
-  const errors = all.filter(i => i.severity === "error").length;
-  const warnings = all.filter(i => i.severity === "warning").length;
+  // Assemble the per-resource map — the world's ctx.issues (active issues only).
+  ctx.issues.clear();
+  for (const i of active) (ctx.issues.get(i.rid) ?? ctx.issues.set(i.rid, []).get(i.rid)!).push(i);
+
+  const errors = active.filter(i => i.severity === "error").length;
+  const warnings = active.filter(i => i.severity === "warning").length;
   const resources = ctx.issues.size;
-  (ctx.shared as any).validate = { issues: all, summary: { errors, warnings, resources, total: all.length } };
+  const suppressedReport = suppressions.length ? { total: suppressed.length, entries, issues: suppressed } : undefined;
+  (ctx.shared as any).validate = {
+    issues: active,
+    summary: { errors, warnings, resources, total: active.length },
+    suppressed: suppressedReport,
+  };
   if (!config.quiet) {
     ctx.warn({
       severity: errors ? "warning" : "info", source: "fcc/validator",
-      message: `validated: ${errors} error(s), ${warnings} warning(s) across ${resources} resource(s) → errors.html`,
+      message: `validated: ${errors} error(s), ${warnings} warning(s) across ${resources} resource(s)${suppressed.length ? `, ${suppressed.length} suppressed` : ""} → errors.html`,
     });
+  }
+}
+
+// ── suppressed messages (IG-Publisher SuppressedMessageInformation parity) ────
+// A suppression entry hides a non-error issue whose message (or code) matches a
+// wildcard pattern, à la IGP's `ignoreWarnings.txt`. Matching is case-insensitive
+// over the trimmed text; the four wildcard forms mirror IGP's compType:
+//   %x%  contains  ·  %x  endsWith  ·  x%  startsWith  ·  x  equals.
+// File format: a `== Suppressed Messages ==` header, then `# reason` lines name a
+// category and every other non-blank line is a pattern under the current reason.
+
+export type Suppression = {
+  raw: string;              // the pattern as written (post special-case rewrite)
+  comp: string;             // lowercased comparison text (wildcards stripped)
+  type: 0 | 1 | 2 | 3;      // 0 equals · 1 startsWith · 2 endsWith · 3 contains
+  reason: string;           // category name (the preceding "# reason" line)
+};
+
+// IGP appends this to slice warnings; matching also tries the stripped variant.
+const SLICE_SUFFIX = " (this may not be a problem, but you should check that it's not intended to match a slice)".toLowerCase();
+
+function mkSuppression(message: string, reason: string): Suppression | null {
+  let m = message.trim();
+  // IGP SuppressedMessage() special-cases for FHIRPath-constraint phrasing.
+  if (m.includes("Rule ") && m.includes("' Failed (")) {
+    m = m.replace("Rule ", "Constraint failed: ").replace("' Failed (", "' (");
+  } else if (m.startsWith("Rule ") && m.endsWith("%")) {
+    m = m.replace("Rule ", "Constraint failed: ");
+  }
+  const s: Suppression =
+      m.startsWith("%") ? (m.endsWith("%")
+        ? { raw: m, type: 3, comp: m.slice(1, -1).toLowerCase(), reason }
+        : { raw: m, type: 2, comp: m.slice(1).toLowerCase(), reason })
+    : m.endsWith("%") ? { raw: m, type: 1, comp: m.slice(0, -1).toLowerCase(), reason }
+    : { raw: m, type: 0, comp: m.toLowerCase(), reason };
+  // Drop a degenerate empty comparison ("%", "%%"): includes("")/startsWith("")
+  // is always true, so it would silently suppress *every* finding. (IGP crashes
+  // on bare "%"; fcc just ignores the line.)
+  return s.comp === "" ? null : s;
+}
+
+export function parseSuppressedMessages(text: string): Suppression[] {
+  const lines = text.split(/\r?\n/);
+  const firstNonBlank = lines.find(l => l.trim() !== "")?.trim().toLowerCase() ?? "";
+  const out: Suppression[] = [];
+  if (firstNonBlank.startsWith("== suppressed messages ==")) {
+    let reason = "(unspecified)";
+    let started = false;
+    for (const rawLine of lines) {
+      const l = rawLine.trim();
+      if (!started) { if (l.toLowerCase().startsWith("== suppressed messages ==")) started = true; continue; }
+      if (l === "") continue;
+      if (l.startsWith("# ")) reason = l.slice(2).trim() || "(unspecified)";   // IGP: only "# " is a reason
+      else { const s = mkSuppression(l, reason); if (s) out.push(s); }
+    }
+  } else {
+    for (const rawLine of lines) {                                              // legacy: line == pattern
+      const l = rawLine.trim();
+      if (l !== "") { const s = mkSuppression(l, "(unspecified)"); if (s) out.push(s); }
+    }
+  }
+  return out;
+}
+
+function matchInner(s: Suppression, msg: string): boolean {
+  switch (s.type) {
+    case 0: return msg === s.comp;
+    case 1: return msg.startsWith(s.comp);
+    case 2: return msg.endsWith(s.comp);
+    case 3: return msg.includes(s.comp);
+    default: return false;
+  }
+}
+
+/** First suppression matching `text` (case-insensitive, slice-suffix tolerant), or null. */
+export function suppressionFor(entries: Suppression[], text: string | undefined): Suppression | null {
+  if (!text) return null;
+  const msg = text.toLowerCase().trim();
+  const alt = msg.includes(SLICE_SUFFIX) ? msg.replace(SLICE_SUFFIX, "") : msg;
+  for (const s of entries) if (matchInner(s, msg) || matchInner(s, alt)) return s;
+  return null;
+}
+
+export type SuppressionResult = {
+  active: ValidatorIssue[];                 // issues that still gate / display
+  suppressed: ValidatorIssue[];             // non-errors hidden by a pattern (tagged .reason)
+  entries: { raw: string; reason: string; warnings: number; hints: number }[];  // every pattern + its use-count (0 = matched nothing)
+};
+
+/**
+ * Partition issues against suppression patterns. Errors always stay active
+ * (IGP canSuppressErrors=false); a non-error matching a pattern (by message,
+ * then code) moves to `suppressed` carrying its review reason, and bumps that
+ * pattern's warning/hint use-count. `entries` reports every pattern's counts so
+ * stale (zero-use) suppressions can be flagged. Pure — unit-testable without ctx.
+ */
+export function applySuppressions(entries: Suppression[], issues: ValidatorIssue[]): SuppressionResult {
+  const useCounts = new Map<Suppression, { warnings: number; hints: number }>();
+  const active: ValidatorIssue[] = [];
+  const suppressed: ValidatorIssue[] = [];
+  for (const i of issues) {
+    const hit = i.severity !== "error" && entries.length
+      ? (suppressionFor(entries, i.message) ?? suppressionFor(entries, i.code))
+      : null;
+    if (hit) {
+      const uc = useCounts.get(hit) ?? { warnings: 0, hints: 0 };
+      if (i.severity === "warning") uc.warnings++; else uc.hints++;
+      useCounts.set(hit, uc);
+      suppressed.push({ ...i, reason: hit.reason });
+    } else active.push(i);
+  }
+  return {
+    active, suppressed,
+    entries: entries.map(s => {
+      const uc = useCounts.get(s) ?? { warnings: 0, hints: 0 };
+      return { raw: s.raw, reason: s.reason, warnings: uc.warnings, hints: uc.hints };
+    }),
+  };
+}
+
+async function loadSuppressions(ctx: PluginContext, suppress: string | undefined): Promise<Suppression[]> {
+  if (!suppress) return [];
+  const path = resolvePath(ctx.config.projectRoot, suppress);
+  try {
+    return parseSuppressedMessages(await Bun.file(path).text());
+  } catch {
+    ctx.warn({ severity: "warning", source: "fcc/validator", message: `suppressed-messages file not found: ${suppress} (resolved: ${path})` });
+    return [];
   }
 }
 
