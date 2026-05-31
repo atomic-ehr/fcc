@@ -6,6 +6,7 @@ import linkGrid from "./linkGrid.ts";
 import $section_description from "./$section_description.ts";
 import $section_notes from "./$section_notes.ts";
 import $section_md from "./$section_md.ts";
+import $section_operationDef from "./$section_operationDef.ts";
 import composeSections from "./composeSections.ts";
 import derivePages from "./derivePages.ts";
 import statusBadge from "./statusBadge.ts";
@@ -65,5 +66,5 @@ import watchPaths from "./watchPaths.ts";
 import writeBundle from "./writeBundle.ts";
 
 export default function loadFns(ctx: Context): void {
-    (ctx.fns as any).site_core = { dataTable, linkGrid, $avail_notExample, $section_description, $section_notes, $section_md, composeSections, derivePages, statusBadge, buildInfoBanner, buildRoutes, $route_examplesZip, $route_extensions, $route_qa, $route_searchParameters, $route_status, bytes, canonicalMeta, canonicalResource, canonicalTabStrip, companionPages, enable, featureOn, formatCard, handleHotUpdate, htmlEscape, humanType, idOf, introBlock, jsonBlock, linkifyCanonicals, layout, linkCanonical, linkType, loadIntroNotes, mergeTabs, metaDl, navActiveScript, notesFor, order, pageHeader, pageHref, pillType, renderBreadcrumb, renderCanonical, renderResource, renderResourceJsonPage, renderSidebarGroup, resolveFn, sectionDefaults, sectionHeader, sectionsFor, shortLabel, sidebar, tabDefaults, tabLinks, tabsFor, tagBindingStrength, titleOf, topBar, urlVersionStrip, watchPaths, writeBundle };
+    (ctx.fns as any).site_core = { dataTable, linkGrid, $avail_notExample, $section_description, $section_notes, $section_md, $section_operationDef, composeSections, derivePages, statusBadge, buildInfoBanner, buildRoutes, $route_examplesZip, $route_extensions, $route_qa, $route_searchParameters, $route_status, bytes, canonicalMeta, canonicalResource, canonicalTabStrip, companionPages, enable, featureOn, formatCard, handleHotUpdate, htmlEscape, humanType, idOf, introBlock, jsonBlock, linkifyCanonicals, layout, linkCanonical, linkType, loadIntroNotes, mergeTabs, metaDl, navActiveScript, notesFor, order, pageHeader, pageHref, pillType, renderBreadcrumb, renderCanonical, renderResource, renderResourceJsonPage, renderSidebarGroup, resolveFn, sectionDefaults, sectionHeader, sectionsFor, shortLabel, sidebar, tabDefaults, tabLinks, tabsFor, tagBindingStrength, titleOf, topBar, urlVersionStrip, watchPaths, writeBundle };
 }

@@ -9,6 +9,7 @@ export default function sectionDefaults(_ctx: Context, _opts?: Record<string, ne
         CodeSystem:          ["description", "concepts", "csReferences", "notes"],
         CapabilityStatement: ["description", "capabilityGrid", "notes"],
         SearchParameter:     ["description", "searchParamDetail", "notes"],
+        OperationDefinition: ["description", "operationDef", "notes"],
         "*":                 ["meta", "narrative", "notes"],
     };
 }
