@@ -11,6 +11,7 @@ declare global {
             $route_examplesZip: typeof import("./$route_examplesZip").default;
             $route_extensions: typeof import("./$route_extensions").default;
             $route_qa: typeof import("./$route_qa").default;
+            $route_searchParameters: typeof import("./$route_searchParameters").default;
             $section_description: typeof import("./$section_description").default;
             $section_md: typeof import("./$section_md").default;
             $section_notes: typeof import("./$section_notes").default;

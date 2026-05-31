@@ -23,6 +23,16 @@ export default function renderArtifacts(ctx: Context, _opts: {} = {}): string {
         ? ctx.fns.site_artifacts.artifactTable(ctx, { label: "Examples", anchor: "examples", list: examples })
         : "";
 
+    // Cross-view registry pages (IG-Publisher CrossViewRenderer).
+    const crossViews = [
+        ctx.byType.StructureDefinition.some(r => (r.data as { type?: string }).type === "Extension") ? { label: "Extensions registry", href: "extensions.html" } : null,
+        ctx.byType.SearchParameter.length ? { label: "Search Parameters", href: "search-parameters.html" } : null,
+    ].filter(Boolean) as { label: string; href: string }[];
+    const crossViewBlock = crossViews.length
+        ? `<div class="mt-4 flex flex-wrap gap-2">${crossViews.map(v =>
+            `<a href="${v.href}" class="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-sm text-sky-700 hover:border-sky-300">${v.label} →</a>`).join("")}</div>`
+        : "";
+
     const tocItems = [
         ...sortedTypes.map(g => ({ label: `${g.label} (${g.list.length})`, anchor: g.type })),
         ...(examples.length ? [{ label: `Examples (${examples.length})`, anchor: "examples" }] : []),
@@ -33,6 +43,7 @@ export default function renderArtifacts(ctx: Context, _opts: {} = {}): string {
         content: `
             <h1 class="text-3xl font-semibold text-slate-900">Artefacts</h1>
             <p class="mt-2 text-sm text-slate-600">All conformance resources and examples emitted by this IG.</p>
+            ${crossViewBlock}
             ${ctx.fns.site_artifacts.pageToc(ctx, { items: tocItems })}
             ${conformanceBlocks}
             ${examplesBlock}

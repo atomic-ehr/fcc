@@ -14,6 +14,7 @@ import buildRoutes from "./buildRoutes.ts";
 import $route_examplesZip from "./$route_examplesZip.ts";
 import $route_extensions from "./$route_extensions.ts";
 import $route_qa from "./$route_qa.ts";
+import $route_searchParameters from "./$route_searchParameters.ts";
 import bytes from "./bytes.ts";
 import canonicalMeta from "./canonicalMeta.ts";
 import canonicalResource from "./canonicalResource.ts";
@@ -62,5 +63,5 @@ import watchPaths from "./watchPaths.ts";
 import writeBundle from "./writeBundle.ts";
 
 export default function loadFns(ctx: Context): void {
-    (ctx.fns as any).site_core = { dataTable, linkGrid, $avail_notExample, $section_description, $section_notes, $section_md, composeSections, derivePages, statusBadge, buildInfoBanner, buildRoutes, $route_examplesZip, $route_extensions, $route_qa, bytes, canonicalMeta, canonicalResource, canonicalTabStrip, companionPages, enable, featureOn, formatCard, handleHotUpdate, htmlEscape, humanType, idOf, introBlock, jsonBlock, layout, linkCanonical, linkType, loadIntroNotes, mergeTabs, metaDl, navActiveScript, notesFor, order, pageHeader, pageHref, pillType, renderBreadcrumb, renderCanonical, renderResource, renderResourceJsonPage, renderSidebarGroup, resolveFn, sectionDefaults, sectionHeader, sectionsFor, shortLabel, sidebar, tabDefaults, tabLinks, tabsFor, tagBindingStrength, titleOf, topBar, urlVersionStrip, watchPaths, writeBundle };
+    (ctx.fns as any).site_core = { dataTable, linkGrid, $avail_notExample, $section_description, $section_notes, $section_md, composeSections, derivePages, statusBadge, buildInfoBanner, buildRoutes, $route_examplesZip, $route_extensions, $route_qa, $route_searchParameters, bytes, canonicalMeta, canonicalResource, canonicalTabStrip, companionPages, enable, featureOn, formatCard, handleHotUpdate, htmlEscape, humanType, idOf, introBlock, jsonBlock, layout, linkCanonical, linkType, loadIntroNotes, mergeTabs, metaDl, navActiveScript, notesFor, order, pageHeader, pageHref, pillType, renderBreadcrumb, renderCanonical, renderResource, renderResourceJsonPage, renderSidebarGroup, resolveFn, sectionDefaults, sectionHeader, sectionsFor, shortLabel, sidebar, tabDefaults, tabLinks, tabsFor, tagBindingStrength, titleOf, topBar, urlVersionStrip, watchPaths, writeBundle };
 }
