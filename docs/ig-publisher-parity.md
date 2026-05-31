@@ -62,6 +62,18 @@ Re-ranked from the draft below. Changes both reviewers drove:
 | 9 | **JSON/XML serialization with linked tokens** (`JsonXhtmlRenderer`/`XmlXHtmlRenderer`) | linkify type/canonical tokens in JSON tab first; add XML companion tab/side-car | JSON-with-links is the win; XML optional |
 | 10 | **Dependency table page** (`DependencyRenderer`) | aggregate `$page_dependencies` from IG `dependsOn` + loaded packages (#1) | realm/version/draft warnings |
 
+## Progress (autonomous build)
+
+- ✅ **#7** Status/maturity — per-page badges (`statusBadge`) + `status.html` aggregate.
+- 🟡 **#3** QA — by-message roll-up in `errors.html` + `qa.txt` export (suppressed-messages config remaining).
+- 🟡 **#6** Cross-view — `extensions.html` + `search-parameters.html` registries + artifacts cross-view links (Observation code/category matrix remaining).
+- 🟡 **#9** Linkified JSON — local canonical refs link to their page (external base-spec links need #1's spec-map).
+- ⏳ **#1** Dependency bootstrap — heavy/risky (memory, version-conversion, spec.internals), best done interactively; **#4** link-checker and **#10** dependency-table depend on it.
+- ⏳ **#5** intro/notes-via-merge — renderer refactor (canonical Pages now exist, so it's unblocked but golden-risky); **#8** OperationDefinition — low value (most IGs have none).
+- ✖ **#2** Terminology — out of scope for this pass.
+
+Beyond IGP, the engine gained: merge-friendly resources (partial-load merge), canonical pages as `Page` resources (`byType.Page` / `ctx.sql`-queryable), and FHIR-IG through numbering in the nav.
+
 **Deferred tail (post-top-10, were #9/#10 in draft):** History + publish-box
 version notice (`HistoryGenerator`/`PublishBoxStatementGenerator` — HL7.org-hosted
 only), previous-version comparison + deprecation (`PreviousVersionComparator`/
