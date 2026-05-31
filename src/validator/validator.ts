@@ -296,6 +296,18 @@ export async function structural(ctx: PluginContext, _config: Record<string, unk
   return issues;
 }
 
+// fcc tags loaded example resources with internal `__`-prefixed markers
+// (e.g. `__wasExample`) that are not FHIR elements. Drop them before schema
+// validation so fhirschema doesn't report them as unknown elements (fs201) —
+// the JSON output strips them too. Top-level only (where the loader sets them),
+// and a copy only when one is present, so the hot path stays allocation-free.
+export function stripInternal<T>(d: T): T {
+  if (!d || typeof d !== "object") return d;
+  let copy: any = null;
+  for (const k in d as any) if (k.startsWith("__")) { copy ??= { ...(d as any) }; delete copy[k]; }
+  return copy ?? d;
+}
+
 // ── schema — @atomic-ehr/fhirschema; per-resource, incremental ───────────────
 
 export async function schema(ctx: PluginContext, config: Record<string, unknown>, _opts: Record<string, never>): Promise<ValidatorIssue[]> {
@@ -319,7 +331,7 @@ export async function schema(ctx: PluginContext, config: Record<string, unknown>
       try { translate(r.data as any); return []; }
       catch (e) { return [mkIssue(r, { severity: "error", code: "translate", message: `StructureDefinition does not translate: ${(e as Error).message}` }, "schema")]; }
     }
-    const d = r.data as any;
+    const d = stripInternal(r.data as any);
     const schemas = ((d.meta?.profile as string[] | undefined) ?? []).map(stripVer).map(resolveSchema).filter(Boolean);
     let res: any; try { res = fsValidate(vctx, schemas, d, { strict: false }); } catch { return []; }
     return (res?.issues ?? []).map((i: any) => mkIssue(r, {

@@ -1,7 +1,7 @@
 import { test, expect } from "bun:test";
 import { resolve } from "node:path";
 import { readFileSync } from "node:fs";
-import { parseSuppressedMessages, suppressionFor, applySuppressions } from "./validator.ts";
+import { parseSuppressedMessages, suppressionFor, applySuppressions, stripInternal } from "./validator.ts";
 
 const iss = (o: Partial<any> = {}): any => ({
   rid: "Observation/x", rt: "Observation", fhirId: "x", title: "X", href: "Observation-x.html",
@@ -94,6 +94,25 @@ test("match: empty/undefined text never matches", () => {
   expect(suppressionFor(e, undefined)).toBeNull();
   expect(suppressionFor(e, "")).toBeNull();
   expect(suppressionFor([], "anything")).toBeNull();
+});
+
+// stripInternal — drops fcc's internal __-markers before schema validation.
+
+test("stripInternal: removes top-level __ markers, returns same object when none", () => {
+  const clean = { resourceType: "Observation", id: "x", status: "final" };
+  expect(stripInternal(clean)).toBe(clean);                              // no copy when nothing to strip
+  const tagged = { ...clean, __wasExample: true, __other: 1 };
+  const out = stripInternal(tagged) as any;
+  expect(out).not.toBe(tagged);                                         // copied
+  expect("__wasExample" in out).toBe(false);
+  expect("__other" in out).toBe(false);
+  expect(out.status).toBe("final");                                    // real fields preserved
+  expect("__wasExample" in tagged).toBe(true);                         // original untouched
+});
+
+test("stripInternal: passes through non-objects", () => {
+  expect(stripInternal(null)).toBeNull();
+  expect(stripInternal("s")).toBe("s");
 });
 
 // applySuppressions — the pure partition core used by the validator plugin.
