@@ -1,7 +1,6 @@
 import { join, resolve } from "node:path";
-import { indexEntry, packageEntries } from "fcc";
+import { indexEntry, packageEntries, tar } from "fcc";
 import type { Plugin, PluginContext, Bundle, Resource, IndexEntry } from "fcc";
-import { tar } from "./tar.ts";
 
 type Opts = {
   /** Also emit the unpacked package/ directory next to package.tgz, useful for debugging. */

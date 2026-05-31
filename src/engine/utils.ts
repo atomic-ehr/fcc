@@ -108,3 +108,81 @@ export function zip(entries: ZipEntry[], opts: { store?: boolean } = {}): Uint8A
     for (const c of all) { out.set(c, p); p += c.length; }
     return out;
 }
+
+// --- tar -------------------------------------------------------------------
+
+export type TarEntry = { path: string; bytes: Uint8Array; mtime?: number };
+
+const enc = new TextEncoder();
+const TAR_BLOCK = 512;
+
+function tarByteLen(s: string): number { return enc.encode(s).length; }
+
+// USTAR stores a path as name (≤100 bytes) + an optional directory prefix
+// (≤155 bytes); the extractor rejoins them as `prefix/name`. Split at the last
+// "/" so a long full path (e.g. package/example/<long>.json) still fits without
+// pax extensions. Throws only when a single path component itself exceeds 100 B.
+function splitTarPath(path: string): { name: string; prefix: string } {
+    if (tarByteLen(path) <= 100) return { name: path, prefix: "" };
+    const idx = path.lastIndexOf("/");
+    if (idx > 0) {
+        const name = path.slice(idx + 1), prefix = path.slice(0, idx);
+        if (tarByteLen(name) <= 100 && tarByteLen(prefix) <= 155) return { name, prefix };
+    }
+    throw new Error(`tar(): path too long for USTAR even with prefix (name>100 or prefix>155): ${path}`);
+}
+
+// Minimal USTAR tar writer — pure bytes in / bytes out, like zip(). Default
+// mtime 0 → reproducible archives. Spec:
+// https://www.gnu.org/software/tar/manual/html_node/Standard.html
+export function tar(entries: TarEntry[]): Uint8Array {
+    const chunks: Uint8Array[] = [];
+    for (const e of entries) {
+        chunks.push(tarHeader(e));
+        chunks.push(e.bytes);
+        const pad = TAR_BLOCK - (e.bytes.length % TAR_BLOCK || TAR_BLOCK);
+        if (pad < TAR_BLOCK) chunks.push(new Uint8Array(pad));
+    }
+    chunks.push(new Uint8Array(TAR_BLOCK), new Uint8Array(TAR_BLOCK));   // two empty end blocks
+
+    let total = 0;
+    for (const c of chunks) total += c.length;
+    const out = new Uint8Array(total);
+    let off = 0;
+    for (const c of chunks) { out.set(c, off); off += c.length; }
+    return out;
+}
+
+function tarHeader(e: TarEntry): Uint8Array {
+    const buf = new Uint8Array(TAR_BLOCK);
+    const { name, prefix } = splitTarPath(e.path);
+    tarStr(buf, 0,   100, name);
+    tarStr(buf, 100,   8, "0000644");           // mode
+    tarStr(buf, 108,   8, "0000000");           // uid
+    tarStr(buf, 116,   8, "0000000");           // gid
+    tarOct(buf, 124,  12, e.bytes.length);      // size
+    tarOct(buf, 136,  12, e.mtime ?? 0);        // default mtime 0 → reproducible
+    tarStr(buf, 148,   8, "        ");          // checksum placeholder
+    buf[156] = 0x30;                            // typeflag '0' = regular file
+    tarStr(buf, 257,   6, "ustar");
+    tarStr(buf, 263,   2, "00");
+    tarStr(buf, 265,  32, "fcc");               // uname
+    tarStr(buf, 297,  32, "fcc");               // gname
+    if (prefix) tarStr(buf, 345, 155, prefix);  // USTAR path prefix for paths > 100 bytes
+
+    let sum = 0;
+    for (let i = 0; i < TAR_BLOCK; i++) sum += buf[i]!;
+    tarOct(buf, 148, 7, sum);
+    buf[155] = 0x20;
+    return buf;
+}
+
+function tarStr(buf: Uint8Array, off: number, len: number, s: string) {
+    const bytes = enc.encode(s);
+    for (let i = 0; i < Math.min(bytes.length, len); i++) buf[off + i] = bytes[i]!;
+}
+
+function tarOct(buf: Uint8Array, off: number, len: number, n: number) {
+    tarStr(buf, off, len - 1, n.toString(8).padStart(len - 1, "0"));
+    buf[off + len - 1] = 0;
+}
