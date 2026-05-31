@@ -4,3 +4,6 @@
 [submodule "vendor/fhir-ig-publisher"]
 	path = vendor/fhir-ig-publisher
 	url = https://github.com/HL7/fhir-ig-publisher.git
+[submodule "vendor/mcode"]
+	path = vendor/mcode
+	url = https://github.com/HL7/fhir-mCODE-ig.git
