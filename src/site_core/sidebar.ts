@@ -3,6 +3,9 @@ export default function sidebar(ctx: Context, _opts: {} = {}): string {
     const groups: Record<string, types.fcc.Resource[]> = {};
     for (const r of ctx.resources.values()) {
         if (r.resourceType === "ImplementationGuide") continue;
+        // Canonical Page resources are projections of a backing resource (which is
+        // already in its own group), not standalone nav targets.
+        if (r.resourceType === "Page" && (r.data as { kind?: string }).kind === "canonical") continue;
         // Examples are intentionally omitted from the left nav — they're linked
         // from each profile's Examples tab and the artefacts index instead.
         if ((r.data as { __wasExample?: boolean }).__wasExample) continue;

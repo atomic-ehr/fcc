@@ -21,6 +21,7 @@ declare global {
             companionPages: typeof import("./companionPages").default;
             composeSections: typeof import("./composeSections").default;
             dataTable: typeof import("./dataTable").default;
+            derivePages: typeof import("./derivePages").default;
             enable: typeof import("./enable").default;
             featureOn: typeof import("./featureOn").default;
             formatCard: typeof import("./formatCard").default;

@@ -69,8 +69,14 @@ export default async function buildRoutes(
     // unique id) so the incremental write-gate in writeBundle skips/rewrites a
     // resource and all its companions as a unit. Changing that breaks companion
     // incremental correctness.
-    for (const r of pctx.resources.values()) {
-        if (r.resourceType === "ImplementationGuide" || r.resourceType === "Page") continue;
+    // Canonical pages are Page resources (kind:"canonical" → ref → backing
+    // resource); render each via its backing resource. Same routes as the old
+    // per-resource loop, now driven by byType.Page.
+    ctx.fns.site_core.derivePages(ctx, { pluginCtx: pctx });
+    for (const page of pctx.byType.Page) {
+        if ((page.data as { kind?: string }).kind !== "canonical") continue;
+        const r = pctx.byId((page.data as { ref?: string }).ref ?? "");
+        if (!r) continue;
         const href = ctx.fns.site_core.pageHref(ctx, { resource: r });
         routes.set(href, { id: r.id, contentType: "text/html", render: () => ctx.fns.site_core.renderResource(ctx, { resource: r }) });
 
