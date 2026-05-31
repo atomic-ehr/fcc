@@ -10,15 +10,25 @@ or planned, and §11 is the refactoring plan.
 Everything flows through a single in-memory world, `ctx`. Sources are loaded into
 it, enriched in place, projected out of it:
 
-```
-  sources ──Loaders──▶  ctx (the world)  ──Generators──▶ artifacts
-  (.json .fsh .ts .md)   ├ resources       (npm, site, nav, QA report)
-                         ├ canonicals.<RT>        ▲
-                         ├ byType.<RT>            │ read
-                         ├ issues (validation)    │
-                         └ (one dependency graph) │
-                              ▲   Transformers · Validators · Views
-                              └── enrich resources / write results back into ctx
+```mermaid
+flowchart LR
+    src["sources<br/>.json · .fsh · .ts · .md"]
+    art["artifacts<br/>npm · site · nav · QA report"]
+
+    subgraph ctx["ctx — the one world"]
+        direction TB
+        res["resources"]
+        idx["canonicals.RT · byType.RT"]
+        iss["issues (validation)"]
+        dep["one dependency graph"]
+    end
+
+    enrich["Transformers · Validators · Views"]
+
+    src -->|Loaders| ctx
+    ctx -->|Generators| art
+    ctx -. read .-> enrich
+    enrich -->|"enrich / write back"| ctx
 ```
 
 Five ideas carry it — each the *simple* answer to one concern, together the
@@ -76,9 +86,10 @@ ctx.issues                             // Map<resourceId, Issue[]> — validatio
 ctx.shared.<ns>                        // cross-plugin handoffs (menu → site, …)
 ```
 
-There is **one** `ctx` (the engine `PluginContext` and the site's flat-ns
-`Context` are being unified — §10/§11). `ctx.fns.<ns>.<fn>(ctx, opts)` is the
-flat-namespace call surface; cross-file types via `types.<ns>.<Name>`.
+There is **one** `ctx` — the engine `PluginContext`; the site/menu flat-ns
+plugins attach their `fns` onto it (`Context = PluginContext & { fns: FnsRegistry }`).
+`ctx.fns.<ns>.<fn>(ctx, opts)` is the flat-namespace call surface; cross-file
+types via `types.<ns>.<Name>`.
 
 ## 3. Pipelines: one source → many artifacts
 
@@ -93,9 +104,9 @@ The pipeline splits into a **data pipeline** (shared) and an **output pipeline**
 
 ```ts
 targets: [
-  { name: "npm",     fhir: "4.0.1", pipeline: [npm()] },        // package only
-  { name: "site-r4", fhir: "4.0.1", pipeline: igSite() },       // three sites,
-  { name: "site-r5", fhir: "5.0.0", pipeline: igSite() },       //  one per version
+  { name: "npm",     fhir: "4.0.1", out: "dist/npm", plugins: [npm()] },   // package only
+  { name: "site-r4", fhir: "4.0.1", out: "dist/r4",  plugins: igSite() },  // three sites,
+  { name: "site-r5", fhir: "5.0.0", out: "dist/r5",  plugins: igSite() },  //  one per version
 ]
 ```
 
@@ -128,6 +139,17 @@ Concretely, on `state.ts`'s `TargetState` (survives rebuilds):
 4. **Drop** invalidated; **re-load** their files; re-`populateDeps`.
 5. **Re-transform** only the closure; **re-validate** only the closure (replace those `ctx.issues` entries).
 6. Generators emit only the closure (prod) — or nothing (dev, lazy).
+
+```mermaid
+flowchart TD
+    chg["changed files"] -->|fileToResources| seed["seed ids"]
+    seed -->|"transitiveDependents over reverseCanonical"| clo["invalidation closure"]
+    hot["handleHotUpdate + loader invalidate"] -.extend.-> clo
+    clo --> reload["drop → reload → re-transform → re-validate (closure only)"]
+    reload --> mode{mode?}
+    mode -->|prod| disk["emit closure → dist/"]
+    mode -->|dev| sse["SSE reload → lazy render on request"]
+```
 
 Per layer:
 - **Loaders** — a changed `.md` invalidates exactly its `Page` resource (provenance), not the whole site.
@@ -166,10 +188,10 @@ A plugin is one or more **step descriptors** — `{ hook, fn, ...config }`, the
 per-stage slots of `{ fn, config }`; the runner runs each slot, in config order,
 calling `fn(ctx, config, opts)` at its stage:
 
-```
-buildStart  transform  beforeSnapshot  afterSnapshot
-beforeValidate  afterValidate  generateBundle  writeBundle
-handleHotUpdate  buildEnd  closeBundle  watchPaths
+```mermaid
+flowchart LR
+    bs[buildStart] --> ld["load (loaders)"] --> tf[transform] --> sn["before/afterSnapshot"] --> vl["before/afterValidate"] --> gb[generateBundle] --> wb[writeBundle] --> be["buildEnd · closeBundle"]
+    dev["dev only: handleHotUpdate · watchPaths"]
 ```
 
 Every framework function is `fn(ctx, config, opts)` — `ctx` (the one world),
@@ -204,14 +226,18 @@ compile is pending, `unref` when idle.
 
 ## 9. Engine map
 
-```
-src/engine/  runner (collectHooks + run slots; full + incremental) · state (graph + indexes)
-             watcher (debounced, single-flight) · devServer (lazy + SSE)
-             types · define · authoring · repl · version  →  exported as `fcc`
-src/bin/     fcc · repl · gentypes CLIs
-src/<loader> json · fsh · ts · pages(planned)            (cfg.sources[].loader)
-src/<plugin> snapshot · narrative · validator · ig-resource · npm · menu   (hooks)
-src/site*    site + seven site_* flat-ns renderer namespaces                (hooks)
+```mermaid
+flowchart TB
+    engine["src/engine — exported as fcc<br/>runner · state (graph + indexes)<br/>watcher · devServer (lazy + SSE) · types"]
+    bin["src/bin<br/>fcc · repl · gentypes CLIs"]
+    loaders["src/json · fsh · ts · pages<br/>cfg.sources[].loader"]
+    plugins["src/snapshot · narrative · validator<br/>ig-resource · npm · menu<br/>(step descriptors)"]
+    site["src/site + site_*<br/>renderer (7 flat-ns namespaces)"]
+
+    bin --> engine
+    loaders -. import fcc .-> engine
+    plugins -. import fcc .-> engine
+    site -. import fcc .-> engine
 ```
 
 ## 10. Status
