@@ -112,9 +112,9 @@ url → referrers. `ctx.sql` exposes one `resources` table; edge queries go thro
 |---|---|
 | Partial-load merge (general — architecture.md § 2b) | ✅ implemented + tested |
 | `Page` body as a sections map; content pages compose section renderers (`composeSections`, a markdown section renderer) | ✅ implemented, golden-stable |
+| canonical pages as `Page` resources, rendered from `byType.Page` (queryable via `ctx.sql`) | ✅ implemented, golden-stable |
 | per-type merge overrides | ⏳ design |
-| canonical pages as `Page` resources + single `buildRoutes` loop | ⏳ design |
-| `tab` / `raw` companion routes, `lazy` sections | ⏳ design |
+| `tab` / `raw` / `lazy` driven by `Page.sections` (today canonical tabs come from `tabsFor`) | ⏳ design |
 | FHIR-IG numbering | ⏳ design |
 | intro/notes via merge | ⏳ design |
 | edges (`refs` / `links` / `assets`) | ⏳ deferred (separate `ctx.sql` table) |
