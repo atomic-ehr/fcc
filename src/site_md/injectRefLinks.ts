@@ -18,14 +18,7 @@ export default function injectRefLinks(ctx: Context, opts: { md: string }): stri
     const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const isDefined = (label: string) => new RegExp(`^\\s*\\[${esc(label)}\\]:`, "m").test(opts.md);
 
-    const chain = (ctx.state.site?.linkResolvers ?? []) as string[];
-    const resolvers = chain
-        .map(name => ctx.fns.site_core.resolveFn(ctx, { key: name }) as ((c: Context, o: { label: string }) => string | null) | undefined)
-        .filter((f): f is (c: Context, o: { label: string }) => string | null => typeof f === "function");
-    const resolve = (label: string): string | null => {
-        for (const fn of resolvers) { const href = fn(ctx, { label }); if (href) return href; }
-        return null;
-    };
+    const resolve = (label: string) => ctx.fns.site_md.resolveLink(ctx, { label });
     // Looks like a resource reference: a single PascalCase token (has an upper-
     // case start and a lowercase letter — excludes [TODO], [1], prose, paths).
     const isRefShaped = (label: string) => /^[A-Z][A-Za-z0-9]+$/.test(label) && /[a-z]/.test(label);

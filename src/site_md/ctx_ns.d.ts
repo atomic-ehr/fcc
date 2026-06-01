@@ -7,6 +7,7 @@ declare global {
             anchorHeadings: typeof import("./anchorHeadings").default;
             applyBlocks: typeof import("./applyBlocks").default;
             blockDefaults: typeof import("./blockDefaults").default;
+            collectUnresolvedRefs: typeof import("./collectUnresolvedRefs").default;
             expandIncludes: typeof import("./expandIncludes").default;
             highlightBlocks: typeof import("./highlightBlocks").default;
             highlightCode: typeof import("./highlightCode").default;
@@ -18,6 +19,7 @@ declare global {
             mdInline: typeof import("./mdInline").default;
             mdToHtml: typeof import("./mdToHtml").default;
             parseIal: typeof import("./parseIal").default;
+            resolveLink: typeof import("./resolveLink").default;
             sanitizeHtml: typeof import("./sanitizeHtml").default;
             sdListTable: typeof import("./sdListTable").default;
             stripUnrenderedLiquid: typeof import("./stripUnrenderedLiquid").default;

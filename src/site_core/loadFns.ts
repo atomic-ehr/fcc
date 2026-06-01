@@ -16,6 +16,7 @@ import $route_examplesZip from "./$route_examplesZip.ts";
 import $route_extensions from "./$route_extensions.ts";
 import $route_observations from "./$route_observations.ts";
 import $route_qa from "./$route_qa.ts";
+import $route_qaLinks from "./$route_qaLinks.ts";
 import $route_searchParameters from "./$route_searchParameters.ts";
 import $route_status from "./$route_status.ts";
 import bytes from "./bytes.ts";
@@ -71,5 +72,5 @@ import watchPaths from "./watchPaths.ts";
 import writeBundle from "./writeBundle.ts";
 
 export default function loadFns(ctx: Context): void {
-    (ctx.fns as any).site_core = { dataTable, linkGrid, $avail_notExample, $section_description, $section_notes, $section_md, $section_operationDef, composeSections, derivePages, statusBadge, buildInfoBanner, buildRoutes, $route_examplesZip, $route_extensions, $route_observations, $route_qa, $route_searchParameters, $route_status, bytes, canonicalMeta, canonicalResource, canonicalTabStrip, companionPages, enable, featureOn, formatCard, handleHotUpdate, htmlEscape, humanType, idOf, introBlock, jsonBlock, linkifyCanonicals, layout, linkCanonical, linkType, loadIntroNotes, mergeTabs, metaDl, navActiveScript, notesFor, order, pageHeader, pageHref, pageTree, numberPages, pillType, renderBreadcrumb, renderNavTree, renderCanonical, renderResource, renderResourceJsonPage, renderSidebarGroup, resolveFn, sectionDefaults, sectionHeader, sectionsFor, shortLabel, sidebar, tabDefaults, tabLinks, tabsFor, tagBindingStrength, titleOf, topBar, topMenu, urlVersionStrip, watchPaths, writeBundle };
+    (ctx.fns as any).site_core = { dataTable, linkGrid, $avail_notExample, $section_description, $section_notes, $section_md, $section_operationDef, composeSections, derivePages, statusBadge, buildInfoBanner, buildRoutes, $route_examplesZip, $route_extensions, $route_observations, $route_qa, $route_qaLinks, $route_searchParameters, $route_status, bytes, canonicalMeta, canonicalResource, canonicalTabStrip, companionPages, enable, featureOn, formatCard, handleHotUpdate, htmlEscape, humanType, idOf, introBlock, jsonBlock, linkifyCanonicals, layout, linkCanonical, linkType, loadIntroNotes, mergeTabs, metaDl, navActiveScript, notesFor, order, pageHeader, pageHref, pageTree, numberPages, pillType, renderBreadcrumb, renderNavTree, renderCanonical, renderResource, renderResourceJsonPage, renderSidebarGroup, resolveFn, sectionDefaults, sectionHeader, sectionsFor, shortLabel, sidebar, tabDefaults, tabLinks, tabsFor, tagBindingStrength, titleOf, topBar, topMenu, urlVersionStrip, watchPaths, writeBundle };
 }
