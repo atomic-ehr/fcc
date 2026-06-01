@@ -2,14 +2,13 @@ import { defineConfig } from "fcc";
 import fsh   from "fcc/fsh";
 import pages from "fcc/pages";
 import menu  from "fcc/menu";
+import deps  from "fcc/deps";
 import { igSite } from "fcc/presets";
 
-// Second IG (besides us-core) used to prove the site renderer — left-nav tree,
-// FHIR-IG sequential numbering, heading anchors — has NO us-core-specific
-// hardcoding. mCODE has a different menu (Content by Group / Conformance /
-// FHIR Artifacts) and different resource set. Lean pipeline on purpose: FSH +
-// pages + menu + site only (snapshot/validate need uncached deps — us-core
-// 6.1.0, genomics-reporting — and aren't required for nav/numbering).
+// Second IG (besides us-core), and the one that exercises cross-IG dependency
+// resolution: mCODE profiles derive from us-core, so sushi needs us-core 6.1.0 +
+// genomics-reporting to compile them (deps → fshToFhir), and deps() indexes the
+// same packages so cross-IG [refs] link to their published pages.
 
 export default defineConfig({
   id:        "hl7.fhir.us.mcode",
@@ -23,7 +22,14 @@ export default defineConfig({
       plugins: igSite({ introNotes: "../../vendor/mcode/input/intro-notes" }) },
   ],
 
-  deps: { "hl7.fhir.r4.core": "4.0.1" },
+  // Mirrors vendor/mcode/sushi-config.yaml. fsh() passes these to sushi so
+  // us-core-derived profiles resolve their Parent; deps() indexes them for
+  // cross-IG links. Downloaded to the FHIR package cache on first build.
+  deps: {
+    "hl7.fhir.r4.core": "4.0.1",
+    "hl7.fhir.us.core": "6.1.0",
+    "hl7.fhir.uv.genomics-reporting": "2.0.0",
+  },
 
   sources: [
     { dir: "../../vendor/mcode/input/fsh",         loader: fsh()   },
@@ -31,6 +37,7 @@ export default defineConfig({
   ],
 
   plugins: [
+    deps(),
     menu({ config: "../../vendor/mcode/sushi-config.yaml" }),
   ],
 });

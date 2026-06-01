@@ -22,11 +22,15 @@ export type DepIndex = {
     packages: { id: string; version: string; base: string }[];
 };
 
+// Indexed at `generateBundle` — once per build, AFTER sources have loaded (so
+// packages an FSH compile pulled into the cache mid-build are already present),
+// and before the site renders. (Stage D consumers that run earlier will trigger
+// an explicit ensure-download step when they land.)
 export default function deps(opts: { packagesDir?: string; quiet?: boolean } = {}): Plugin {
-    return [{ hook: "buildStart", fn: depsFn, ...opts }];
+    return [{ hook: "generateBundle", fn: depsFn, ...opts }];
 }
 
-async function depsFn(ctx: PluginContext, config: Record<string, unknown>, _opts: Record<string, never>): Promise<void> {
+async function depsFn(ctx: PluginContext, config: Record<string, unknown>, _opts: Record<string, unknown>): Promise<void> {
     const declared = ((ctx.config as { deps?: Record<string, string> }).deps ?? {});
     const dirs = [
         config.packagesDir ? resolve(ctx.config.projectRoot, config.packagesDir as string) : null,

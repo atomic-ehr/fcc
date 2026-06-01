@@ -108,6 +108,15 @@ function batchKey(ctx: PluginContext): string {
   return `${ctx.target.name}|${ctx.config.canonical}|${ctx.config.version}`;
 }
 
+// config.deps ({ pkgId: version }) → sushi's ImplementationGuideDependsOn[],
+// minus the FHIR core package for the target version (loaded via fhirVersion).
+export function depsList(ctx: PluginContext): Array<{ packageId: string; version: string }> {
+  const deps = ((ctx.config as { deps?: Record<string, string> }).deps ?? {});
+  return Object.entries(deps)
+    .filter(([id]) => !/^hl7\.fhir\.r\d+[a-z]?\.core$/.test(id))
+    .map(([packageId, version]) => ({ packageId, version }));
+}
+
 async function compileBatch(ctx: PluginContext, opts: Opts): Promise<Batch> {
   const { resolve, join } = await import("node:path");
   const { readdir } = await import("node:fs/promises");
@@ -122,10 +131,17 @@ async function compileBatch(ctx: PluginContext, opts: Opts): Promise<Batch> {
 
   const input = await Promise.all(fshFiles.map(path => readFile(path, "utf8")));
 
+  // The IG's dependsOn packages, so sushi can resolve `Parent:` / bindings from
+  // them (IG-Publisher #1, stage C). fshToFhir loads each from the FHIR package
+  // cache, downloading if absent. The base FHIR core is loaded via fhirVersion,
+  // so the core package is filtered out here.
+  const dependencies = depsList(ctx);
+
   const result = await compileInWorker(input, {
     canonical: ctx.config.canonical,
     version: ctx.config.version,
     fhirVersion: ctx.target.fhir,
+    dependencies,
     snapshot: opts.snapshot ?? false,
     logLevel: opts.quietInfo ? "warn" : "info",
   });
