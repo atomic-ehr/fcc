@@ -7,3 +7,6 @@
 [submodule "vendor/mcode"]
 	path = vendor/mcode
 	url = https://github.com/HL7/fhir-mCODE-ig.git
+[submodule "vendor/fhir-core"]
+	path = vendor/fhir-core
+	url = https://github.com/hapifhir/org.hl7.fhir.core.git

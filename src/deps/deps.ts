@@ -1,6 +1,7 @@
 import type { Plugin, PluginContext } from "fcc";
 import { resolve, join } from "node:path";
 import { homedir } from "node:os";
+import fixPackageUrl from "./fixPackageUrl.ts";
 
 // Dependency bootstrap (IG-Publisher #1, stage A). Indexes the IG's `dependsOn`
 // packages from the FHIR package cache so cross-IG references resolve to the
@@ -42,7 +43,10 @@ async function depsFn(ctx: PluginContext, config: Record<string, unknown>, _opts
         if (!pkgDir) { if (!config.quiet) ctx.warn({ severity: "info", source: "fcc/deps", message: `dependency not in cache, skipped: ${pkg}#${version}` }); continue; }
         try {
             const meta = await Bun.file(join(pkgDir, "package.json")).json();
-            const base = String(meta.url ?? meta.canonical ?? "").replace(/\/+$/, "");
+            // Published base for cross-IG links — the package's `url` (versioned,
+            // e.g. .../extensions/5.3.0; IGP's preferred base2), corrected by the
+            // PackageHacker port for historically-wrong publishes.
+            const base = (fixPackageUrl(String(meta.url ?? meta.canonical ?? "")) ?? "").replace(/\/+$/, "");
             const index = await Bun.file(join(pkgDir, ".index.json")).json().catch(() => ({ files: [] }));
             const specPaths = await loadSpecPaths(pkgDir);
             packages.push({ id: pkg, version, base });
