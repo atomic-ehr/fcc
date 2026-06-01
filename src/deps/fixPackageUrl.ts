@@ -49,6 +49,10 @@ export default function fixPackageUrl(webref: string | null | undefined, opts: {
     if (webref === "http://hl7.org/fhir/us/core/v311") {
         return "https://hl7.org/fhir/us/core/STU3.1.1";
     }
+    // cross-version package base with the redundant package name in the path.
+    if (webref.includes("hl7.org/fhir/uv/hl7.fhir.uv.xver")) {
+        webref = webref.replace("hl7.org/fhir/uv/hl7.fhir.uv.xver", "hl7.org/fhir/uv/xver");
+    }
 
     // 3. optional http → https upgrade (PackageHacker.useSecureReferences).
     if (opts.secure) {

@@ -18,6 +18,10 @@ test("fixPackageUrl: us-core STU4.0.0 → STU4 and v311 → STU3.1.1 (issue #295
     expect(fixPackageUrl("http://hl7.org/fhir/us/core/v311")).toBe("https://hl7.org/fhir/us/core/STU3.1.1");
 });
 
+test("fixPackageUrl: collapses the redundant xver package name in the base", () => {
+    expect(fixPackageUrl("http://hl7.org/fhir/uv/hl7.fhir.uv.xver/STU1")).toBe("http://hl7.org/fhir/uv/xver/STU1");
+});
+
 test("fixPackageUrl: a correct url passes through unchanged", () => {
     expect(fixPackageUrl("http://hl7.org/fhir/R4")).toBe("http://hl7.org/fhir/R4");
     expect(fixPackageUrl("http://hl7.org/fhir/extensions/5.3.0")).toBe("http://hl7.org/fhir/extensions/5.3.0");

@@ -9,7 +9,7 @@ const idx = {
     ]),
     byId: new Map([
         ["Patient", { webPath: "http://hl7.org/fhir/R4/patient.html" }],
-        ["us-core-patient", { webPath: "http://hl7.org/fhir/us/core/StructureDefinition-us-core-patient.html" }],
+        ["us-core-patient", { webPath: "http://hl7.org/fhir/us/core/STU6.1/StructureDefinition-us-core-patient.html" }],
         ["status", { webPath: "http://hl7.org/fhir/R4/valueset-status.html" }],   // a lowercase id — must NOT match prose
     ]),
 };

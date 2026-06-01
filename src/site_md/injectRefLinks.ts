@@ -38,7 +38,9 @@ export default function injectRefLinks(ctx: Context, opts: { md: string }): stri
         const href = resolve(label);
         if (href) { add += `\n[${label}]: ${href}`; continue; }
         if (isRefShaped(label)) {
-            body = body.replace(new RegExp(`\\[${esc(label)}\\](?![(:])`, "g"),
+            // `(?<!\`)` skips a [label] in inline code (`[label]`); isRefShaped
+            // guarantees the label is alphanumeric, so the title attr is safe.
+            body = body.replace(new RegExp(`(?<!\`)\\[${esc(label)}\\](?![(:])`, "g"),
                 `<span class="rounded-sm bg-rose-50 px-0.5 text-rose-700 underline decoration-rose-300 decoration-dashed" title="unresolved reference — no local resource named ${label}">[${label}]</span>`);
         }
     }

@@ -3,12 +3,12 @@
 // and intra-IG links the link-QA report surfaces (IG-Publisher HTMLInspector
 // parity). Deterministic (a graph scan, not render-order dependent), so the
 // report is the same however routes get rendered. Returns label → the page
-// hrefs that use it (both sorted). Cached per build on ctx.state.site.
+// hrefs that use it (both sorted). Recomputed each call (invoked ~twice per
+// build — the report + the artifacts link); not cached, because the obvious
+// cache key (resource count) wouldn't invalidate on the common case of editing a
+// page's markdown to fix a ref.
 export default function collectUnresolvedRefs(ctx: Context, _opts: Record<string, never> = {} as Record<string, never>): Map<string, string[]> {
-    const st = (ctx.state.site ?? (ctx.state.site = {})) as Record<string, unknown>;
     const all = ctx.resources as Map<string, types.fcc.Resource>;
-    if (st.__unresolvedRefs instanceof Map && st.__unresolvedRefsSize === all.size) return st.__unresolvedRefs as Map<string, string[]>;
-
     const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     // Same heuristic as injectRefLinks' red flag: a single PascalCase token (an
     // uppercase start + a lowercase letter) — excludes prose, [1], [TODO], paths.
@@ -38,11 +38,8 @@ export default function collectUnresolvedRefs(ctx: Context, _opts: Record<string
         }
     }
 
-    const result = new Map(
+    return new Map(
         [...hits].map(([k, v]) => [k, [...v].sort()] as [string, string[]])
             .sort((a, b) => a[0].localeCompare(b[0])),
     );
-    st.__unresolvedRefs = result;
-    st.__unresolvedRefsSize = all.size;
-    return result;
 }
