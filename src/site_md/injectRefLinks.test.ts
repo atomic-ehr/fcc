@@ -22,3 +22,28 @@ test("injectRefLinks: skips inline link [x](url) and already-defined", () => {
     expect(c.fns.site_md.injectRefLinks(c, { md: "See [Change Log](other.html)." })).not.toContain("[Change Log]: changes.html");
     expect(c.fns.site_md.injectRefLinks(c, { md: "[Change Log]\n\n[Change Log]: mine.html" })).not.toContain(": changes.html");
 });
+
+test("injectRefLinks: resolves a named graph resource via the lrefResource chain step", () => {
+    const c = mk();
+    c.resources.set("StructureDefinition/my-profile", {
+        resourceType: "StructureDefinition", id: "StructureDefinition/my-profile",
+        data: { resourceType: "StructureDefinition", id: "my-profile", name: "MyProfile", url: "http://x/MyProfile" },
+    });
+    const out = c.fns.site_md.injectRefLinks(c, { md: "uses [MyProfile] here" });
+    expect(out).toContain("[MyProfile]: ");
+    expect(out).toContain("my-profile");                       // links to the resource's page
+    expect(out).not.toContain("text-rose-700");                // resolved → not flagged
+});
+
+test("injectRefLinks: flags an unresolved reference-shaped [Name] in red", () => {
+    const c = mk();
+    const out = c.fns.site_md.injectRefLinks(c, { md: "see [UnknownProfile] here" });
+    expect(out).toContain("text-rose-700");                    // wrapped red
+    expect(out).toContain("[UnknownProfile]");                 // brackets kept as the signal
+    expect(out).toContain('title="unresolved reference');
+});
+
+test("injectRefLinks: leaves non-reference-shaped brackets ([note], [1]) untouched", () => {
+    const c = mk();
+    expect(c.fns.site_md.injectRefLinks(c, { md: "a [note] and [1] and [TODO]" })).not.toContain("text-rose-700");
+});

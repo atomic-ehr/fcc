@@ -8,6 +8,9 @@ import expandIncludes from "./expandIncludes.ts";
 import highlightBlocks from "./highlightBlocks.ts";
 import highlightCode from "./highlightCode.ts";
 import injectRefLinks from "./injectRefLinks.ts";
+import lrefMap from "./lrefMap.ts";
+import lrefResource from "./lrefResource.ts";
+import lrefFhirPath from "./lrefFhirPath.ts";
 import mdInline from "./mdInline.ts";
 import mdToHtml from "./mdToHtml.ts";
 import parseIal from "./parseIal.ts";
@@ -16,5 +19,5 @@ import stripUnrenderedLiquid from "./stripUnrenderedLiquid.ts";
 import warmHighlighter from "./warmHighlighter.ts";
 
 export default function loadFns(ctx: Context): void {
-    (ctx.fns as any).site_md = { sanitizeHtml, anchorHeadings, applyBlocks, blockDefaults, expandIncludes, highlightBlocks, highlightCode, injectRefLinks, mdInline, mdToHtml, parseIal, sdListTable, stripUnrenderedLiquid, warmHighlighter };
+    (ctx.fns as any).site_md = { sanitizeHtml, anchorHeadings, applyBlocks, blockDefaults, expandIncludes, highlightBlocks, highlightCode, injectRefLinks, lrefMap, lrefResource, lrefFhirPath, mdInline, mdToHtml, parseIal, sdListTable, stripUnrenderedLiquid, warmHighlighter };
 }

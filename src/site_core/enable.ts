@@ -43,5 +43,9 @@ export default function enable(ctx: Context, opts: { opts?: types.site_core.Site
         sectionRegistry,
         blockRegistry,
         refLinkMap,
+        // Ordered chain that resolves bracket [labels] in markdown: static map
+        // (built-ins/author/page titles) → named graph resources → FHIR element
+        // paths. First match wins; extend/reorder via site({ linkResolvers }).
+        linkResolvers: o.linkResolvers ?? ["lrefMap", "lrefResource", "lrefFhirPath"],
     } satisfies types.site_core.SiteOpts;
 }

@@ -16,6 +16,12 @@ export type SiteOpts = {
     /** Bare reference-link label → href, merged over the built-in IG-page map. */
     refLinks?: Record<string, string>;
 
+    /** Ordered chain of resolver fn names (resolveFn) that turn a markdown bracket
+     *  [label] into an href; first non-null wins. Each is `(ctx,{label})→string|null`.
+     *  Default ["lrefMap","lrefResource","lrefFhirPath"]; extend/reorder to plug in
+     *  a project resolver. */
+    linkResolvers?: string[];
+
     /** Base URL for FHIR-core spec links; element-path links like [CarePlan.status]
      *  resolve to <base><type>-definitions.html#<Path>. Default R4. */
     fhirSpecBase?: string;
