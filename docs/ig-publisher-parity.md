@@ -69,8 +69,10 @@ Re-ranked from the draft below. Changes both reviewers drove:
 - ✅ **#3** QA — by-message roll-up in `errors.html` + `qa.txt` export + suppressed-messages filter (IGP `SuppressedMessageInformation` parity: `== Suppressed Messages ==` file, `%`-wildcards, errors never suppressed, stale-pattern detection). Also fixed a validator false-positive: internal `__`-markers (`__wasExample`) were validated as unknown elements (231 phantom errors on us-core, now stripped).
 - ✅ **#6** Cross-view — `extensions.html` + `search-parameters.html` + `observations.html` registries (the Observation code/category/value matrix: differential + IG-local baseDefinition walk, both code-fixing styles) + artifacts cross-view links.
 - 🟡 **#9** Linkified JSON — local canonical refs link to their page (external base-spec links need #1's spec-map).
-- ⏳ **#1** Dependency bootstrap — heavy/risky (memory, version-conversion, spec.internals), best done interactively; **#4** link-checker and **#10** dependency-table depend on it.
+- 🟢 **#1** Dependency bootstrap — `deps` plugin indexes `dependsOn` packages from the FHIR cache (memory-safe: `.index.json` + `package.json` + `spec.internals`, lazy bodies; `PackageHacker.fixPackageUrl` ported for wrong bases). Cross-IG links resolve via the chain (`lrefDependency` for canonicals/ids, `lrefAlias` for FSH aliases). `fsh()` threads `deps` → `fshToFhir`, so us-core-derived mCODE profiles compile (0 Parent-not-found, 53 profiles). Remaining: snapshot/validator reuse the index (stage D), lazy-load bodies, dependency-table (#10).
+- 🟢 **#4** Link checker — `qa-links.html` reports reference-shaped `[Name]` links that the resolver chain can't resolve (deterministic graph scan, with use-counts + pages). IG-Publisher `HTMLInspector` parity; the per-page red flag is the inline signal.
 - ⏳ **#5** intro/notes-via-merge — renderer refactor (canonical Pages now exist, so it's unblocked but golden-risky).
+- ⏳ **#10** Dependency table — aggregate page from the `deps` index (now unblocked by #1).
 - ✖ **#2** Terminology — out of scope for this pass.
 
 Beyond IGP, the engine gained: merge-friendly resources (partial-load merge), canonical pages as `Page` resources (`byType.Page` / `ctx.sql`-queryable), and FHIR-IG through numbering in the nav.
