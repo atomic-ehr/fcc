@@ -131,6 +131,14 @@ async function compileBatch(ctx: PluginContext, opts: Opts): Promise<Batch> {
 
   const input = await Promise.all(fshFiles.map(path => readFile(path, "utf8")));
 
+  // FSH `Alias: Name = url` declarations → ctx.state.fshAliases, so the
+  // lrefAlias link resolver can turn a markdown [AliasName] into a link to the
+  // (local or dependency) canonical it names. Sushi expands aliases at compile
+  // time and doesn't surface them, so we read them from the source.
+  const aliases: Record<string, string> = {};
+  for (const text of input) for (const m of text.matchAll(/^Alias:\s+(\S+)\s*=\s*(\S+)/gm)) aliases[m[1]!] = m[2]!;
+  (ctx.state as Record<string, unknown>).fshAliases = aliases;
+
   // The IG's dependsOn packages, so sushi can resolve `Parent:` / bindings from
   // them (IG-Publisher #1, stage C). fshToFhir loads each from the FHIR package
   // cache, downloading if absent. The base FHIR core is loaded via fhirVersion,

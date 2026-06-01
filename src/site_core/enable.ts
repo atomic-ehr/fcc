@@ -44,9 +44,9 @@ export default function enable(ctx: Context, opts: { opts?: types.site_core.Site
         blockRegistry,
         refLinkMap,
         // Ordered chain that resolves bracket [labels] in markdown: static map
-        // (built-ins/author/page titles) → named local resources → dependency
-        // resources (cross-IG, external site) → FHIR element paths. First match
-        // wins (so local beats deps); extend/reorder via site({ linkResolvers }).
-        linkResolvers: o.linkResolvers ?? ["lrefMap", "lrefResource", "lrefDependency", "lrefFhirPath"],
+        // (built-ins/author/page titles) → named local resources → FSH aliases →
+        // dependency resources (cross-IG, external site) → FHIR element paths.
+        // First match wins (so local beats deps); extend via site({ linkResolvers }).
+        linkResolvers: o.linkResolvers ?? ["lrefMap", "lrefResource", "lrefAlias", "lrefDependency", "lrefFhirPath"],
     } satisfies types.site_core.SiteOpts;
 }

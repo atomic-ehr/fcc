@@ -12,6 +12,7 @@ import resolveLink from "./resolveLink.ts";
 import collectUnresolvedRefs from "./collectUnresolvedRefs.ts";
 import lrefMap from "./lrefMap.ts";
 import lrefResource from "./lrefResource.ts";
+import lrefAlias from "./lrefAlias.ts";
 import lrefDependency from "./lrefDependency.ts";
 import lrefFhirPath from "./lrefFhirPath.ts";
 import mdInline from "./mdInline.ts";
@@ -22,5 +23,5 @@ import stripUnrenderedLiquid from "./stripUnrenderedLiquid.ts";
 import warmHighlighter from "./warmHighlighter.ts";
 
 export default function loadFns(ctx: Context): void {
-    (ctx.fns as any).site_md = { sanitizeHtml, anchorHeadings, applyBlocks, blockDefaults, expandIncludes, highlightBlocks, highlightCode, injectRefLinks, resolveLink, collectUnresolvedRefs, lrefMap, lrefResource, lrefDependency, lrefFhirPath, mdInline, mdToHtml, parseIal, sdListTable, stripUnrenderedLiquid, warmHighlighter };
+    (ctx.fns as any).site_md = { sanitizeHtml, anchorHeadings, applyBlocks, blockDefaults, expandIncludes, highlightBlocks, highlightCode, injectRefLinks, resolveLink, collectUnresolvedRefs, lrefMap, lrefResource, lrefAlias, lrefDependency, lrefFhirPath, mdInline, mdToHtml, parseIal, sdListTable, stripUnrenderedLiquid, warmHighlighter };
 }
