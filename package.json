@@ -21,6 +21,7 @@
     "./manifest": "./src/manifest/manifest.ts",
     "./sqlite": "./src/sqlite/sqlite.ts",
     "./menu": "./src/menu/menu.ts",
+    "./deps": "./src/deps/deps.ts",
     "./site": "./src/site/site.ts",
     "./presets": "./src/presets/presets.ts"
   },

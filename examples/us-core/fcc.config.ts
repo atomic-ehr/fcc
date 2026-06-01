@@ -7,6 +7,7 @@ import validator, { structural, schema, fhirpathConstraints } from "fcc/validato
 import igRes     from "fcc/ig-resource";
 import npm       from "fcc/npm";
 import menu      from "fcc/menu";
+import deps      from "fcc/deps";
 import { igSite } from "fcc/presets";
 
 // Points at the HL7/US-Core git submodule under vendor/us-core. The folder
@@ -49,6 +50,8 @@ export default defineConfig({
   // Shared DATA pipeline (loaders are in sources; these enrich/validate the graph).
   // Output generators (site, npm) live in each target's `plugins` (above).
   plugins: [
+    // Index dependsOn packages from the FHIR cache → cross-IG link resolution.
+    deps({ packagesDir: "../../vendor/us-core/input-cache/.fhir/packages" }),
     menu({ config: "../../vendor/us-core/sushi-config.yaml" }),
     snapshot({ packagesDir: "../../vendor/us-core/input-cache/.fhir/packages" }),
     narrative(),

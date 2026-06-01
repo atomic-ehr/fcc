@@ -11,6 +11,7 @@ declare global {
             highlightBlocks: typeof import("./highlightBlocks").default;
             highlightCode: typeof import("./highlightCode").default;
             injectRefLinks: typeof import("./injectRefLinks").default;
+            lrefDependency: typeof import("./lrefDependency").default;
             lrefFhirPath: typeof import("./lrefFhirPath").default;
             lrefMap: typeof import("./lrefMap").default;
             lrefResource: typeof import("./lrefResource").default;
