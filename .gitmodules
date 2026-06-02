@@ -10,3 +10,6 @@
 [submodule "vendor/fhir-core"]
 	path = vendor/fhir-core
 	url = https://github.com/hapifhir/org.hl7.fhir.core.git
+[submodule "vendor/sql-on-fhir"]
+	path = vendor/sql-on-fhir
+	url = https://github.com/FHIR/sql-on-fhir-v2.git
