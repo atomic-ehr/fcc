@@ -64,11 +64,17 @@ Re-ranked from the draft below. Changes both reviewers drove:
 
 ## Progress (autonomous build)
 
+**Status: 9 of the top-10 done** (#1, #3–#10); only **#2 terminology** remains
+(explicitly out of scope — needs a tx client / bundled expansions). Each item was
+golden-verified (us-core byte-identical where output shouldn't change) or
+adversarially reviewed.
+
+
 - ✅ **#7** Status/maturity — per-page badges (`statusBadge`) + `status.html` aggregate.
 - ✅ **#8** OperationDefinition — invocation summary + in/out parameter tables (`$section_operationDef`).
 - ✅ **#3** QA — by-message roll-up in `errors.html` + `qa.txt` export + suppressed-messages filter (IGP `SuppressedMessageInformation` parity: `== Suppressed Messages ==` file, `%`-wildcards, errors never suppressed, stale-pattern detection). Also fixed a validator false-positive: internal `__`-markers (`__wasExample`) were validated as unknown elements (231 phantom errors on us-core, now stripped).
 - ✅ **#6** Cross-view — `extensions.html` + `search-parameters.html` + `observations.html` registries (the Observation code/category/value matrix: differential + IG-local baseDefinition walk, both code-fixing styles) + artifacts cross-view links.
-- 🟡 **#9** Linkified JSON — local canonical refs link to their page (external base-spec links need #1's spec-map).
+- ✅ **#9** Linkified JSON — `linkifyCanonicals` links local canonicals to their page AND dependency canonicals to their published page on the dep's site (via the #1 deps index). us-core's JSON tabs now linkify external base-spec/extension URLs too.
 - ✅ **#1** Dependency bootstrap — `deps` plugin indexes `dependsOn` packages from the FHIR cache (memory-safe: `.index.json` + `package.json` + `spec.internals`, lazy `load()` bodies; `PackageHacker.fixPackageUrl` ported for wrong bases). Cross-IG links resolve via the chain (`lrefDependency` for canonicals/ids, `lrefAlias` for FSH aliases). `fsh()` threads `deps` → `fshToFhir`, so us-core-derived mCODE profiles compile (0 Parent-not-found, 53 profiles). Stage D: snapshot + validator share one base-SD loader (`loadBaseStructureDefinitions` in the engine); read once per build. Adversarially reviewed (a false "must prefer versioned spec.internals key" finding was disproved — our base is the versioned `package.json.url`).
 - ✅ **#4** Link checker — `qa-links.html` reports reference-shaped `[Name]` links that the resolver chain can't resolve (deterministic graph scan, with use-counts + pages). IG-Publisher `HTMLInspector` parity; the per-page red flag is the inline signal.
 - ✅ **#10** Dependency table — `dependencies.html`: each `dependsOn` package with version, FHIR version, published site, and cache/index status (IGP `DependencyRenderer`).
