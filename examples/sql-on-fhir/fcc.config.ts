@@ -17,7 +17,7 @@ export default defineConfig({
   status:    "draft",
 
   targets: [
-    { name: "r5", fhir: "5.0.0", out: "dist/r5", plugins: igSite() },
+    { name: "r5", fhir: "5.0.0", out: "dist/r5", plugins: igSite({ images: `${IG}/input/images` }) },
   ],
 
   deps: {

@@ -26,7 +26,7 @@ export default defineConfig({
     // Output pipeline per target → one source, many artifacts. e.g. add
     //   { name: "pkg", fhir: "4.0.1", out: "dist/pkg", plugins: [npm()] }  // package only
     { name: "r4", fhir: "4.0.1", out: "dist/r4",
-      plugins: igSite({ introNotes: "../../vendor/us-core/input/intro-notes" }) },
+      plugins: igSite({ introNotes: "../../vendor/us-core/input/intro-notes", images: "../../vendor/us-core/input/images" }) },
   ],
 
   // Mirrors hl7.fhir.us.core sushi-config.yaml dependencies. fcc's igRes

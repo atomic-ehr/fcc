@@ -35,6 +35,7 @@ export default function enable(ctx: Context, opts: { opts?: types.site_core.Site
     ctx.state.site = {
         pagecontent: o.pagecontent ?? "input/pagecontent",
         introNotes:  o.introNotes  ?? "input/intro-notes",
+        images:      o.images,
         out:         o.out         ?? "site",
         dropBalloterNotes: o.dropBalloterNotes ?? false,
         features: o.features ?? {},

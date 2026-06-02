@@ -13,15 +13,21 @@ export default async function writeBundle(
     const pctx = opts.pluginCtx;
     const o = (ctx.state.site ?? {}) as types.site_core.SiteOpts;
     const outDir = resolve(pctx.config.projectRoot, pctx.target.out, o.out ?? "site");
+    const imgDir = o.images ? resolve(pctx.config.projectRoot, o.images) : null;
 
     const { routes, notesCount } = await ctx.fns.site_core.buildRoutes(ctx, { pluginCtx: pctx });
 
-    // Lazy renderer for the dev server (always fresh from the current graph).
+    // Lazy renderer for the dev server (always fresh from the current graph). A
+    // path with no route falls back to the IG's static images dir, so <img> works.
     (pctx.shared as any).site = {
         render: async (path: string): Promise<{ contentType: string; body: string | Uint8Array } | null> => {
             const route = routes.get(normalize(path));
-            if (!route) return null;
-            return { contentType: route.contentType, body: await route.render() };
+            if (route) return { contentType: route.contentType, body: await route.render() };
+            if (imgDir) {
+                const f = Bun.file(join(imgDir, normalize(path)));
+                if (await f.exists()) return { contentType: f.type || "application/octet-stream", body: new Uint8Array(await f.arrayBuffer()) };
+            }
+            return null;
         },
     };
 
@@ -41,12 +47,24 @@ export default async function writeBundle(
         count++;
     }
 
+    // Copy the IG's static images to the site root (IG-Publisher input/images/*
+    // → <site>/*), so markdown `<img src="x.png">` resolves on the published site.
+    let imgCount = 0;
+    if (imgDir) {
+        try {
+            for await (const rel of new Bun.Glob("**/*").scan({ cwd: imgDir, onlyFiles: true })) {
+                await Bun.write(join(outDir, rel), Bun.file(join(imgDir, rel)));
+                imgCount++;
+            }
+        } catch { /* no images dir */ }
+    }
+
     pctx.emitFile({ path: join(outDir, "index.html"), bytes: ctx.fns.site_core.bytes(ctx, { s: "" }) });
     pctx.warn({
         severity: "info", source: "fcc/site",
         message: changed
             ? `site: ${count} file(s) re-rendered + chrome (${notesCount} have intro/notes)`
-            : `site rendered: ${count} files → ${outDir} (${notesCount} have intro/notes)`,
+            : `site rendered: ${count} files${imgCount ? ` + ${imgCount} image(s)` : ""} → ${outDir} (${notesCount} have intro/notes)`,
     });
 
     // Drop notes cache between full builds so file add/delete is picked up.

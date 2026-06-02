@@ -19,7 +19,7 @@ export default defineConfig({
 
   targets: [
     { name: "r4", fhir: "4.0.1", out: "dist/r4",
-      plugins: igSite({ introNotes: "../../vendor/mcode/input/intro-notes" }) },
+      plugins: igSite({ introNotes: "../../vendor/mcode/input/intro-notes", images: "../../vendor/mcode/input/images" }) },
   ],
 
   // Mirrors vendor/mcode/sushi-config.yaml. fsh() passes these to sushi so
