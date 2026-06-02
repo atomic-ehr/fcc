@@ -1,6 +1,6 @@
 import type { Plugin, PluginContext } from "fcc";
+import { loadBaseStructureDefinitions } from "fcc";
 import { generateSnapshot } from "@atomic-ehr/fhirschema";
-import { resolve } from "node:path";
 
 // Generate StructureDefinition snapshots via @atomic-ehr/fhirschema (v2): merge
 // each profile's differential against its base-definition chain into a full
@@ -11,7 +11,7 @@ export default function snapshot(opts: { packagesDir?: string; quiet?: boolean }
 }
 
 async function snapshotFn(ctx: PluginContext, config: Record<string, unknown>, _opts: Record<string, never>): Promise<void> {
-  const base = await loadBaseIndex(ctx, config.packagesDir as string | undefined);
+  const base = await loadBaseStructureDefinitions(ctx, config.packagesDir as string | undefined);
   // In-bundle SDs override the cached packages (current build wins).
   const byUrl = new Map(base);
   for (const r of ctx.byType.StructureDefinition) {
@@ -45,28 +45,4 @@ async function snapshotFn(ctx: PluginContext, config: Record<string, unknown>, _
       message: `generated ${made} snapshot(s)${failed ? `; ${failed} kept differential (base unresolved)` : ""}`,
     });
   }
-}
-
-// Base index (dependency packages) is stable across rebuilds — cache it in
-// ctx.shared (the fn is stateless; config is data, state lives on ctx).
-async function loadBaseIndex(ctx: PluginContext, packagesDir: string | undefined): Promise<Map<string, any>> {
-  const cached = (ctx.shared as any).__snapBase as Map<string, any> | undefined;
-  if (cached) return cached;
-  const m = new Map<string, any>();
-  const dir = resolve(ctx.config.projectRoot, packagesDir ?? "input-cache/.fhir/packages");
-  const deps = ((ctx.config as any).deps ?? {}) as Record<string, string>;
-  const wanted = new Set<string>(["hl7.fhir.r4.core#4.0.1"]);
-  for (const [pkg, version] of Object.entries(deps)) wanted.add(`${pkg}#${version}`);
-  for (const pv of wanted) {
-    try {
-      for await (const rel of new Bun.Glob("StructureDefinition-*.json").scan({ cwd: resolve(dir, pv, "package") })) {
-        try {
-          const d = await Bun.file(resolve(dir, pv, "package", rel)).json();
-          if (d?.url && !m.has(d.url)) m.set(d.url, d);
-        } catch { /* skip unreadable */ }
-      }
-    } catch { /* package dir absent */ }
-  }
-  (ctx.shared as any).__snapBase = m;
-  return m;
 }
