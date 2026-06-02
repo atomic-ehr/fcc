@@ -7,10 +7,14 @@ import type { Loader, LoadOutput, Resource } from "fcc";
 // through the normal source/loader/incremental machinery. `Page` is a non-FHIR
 // resourceType, filtered out of FHIR consumers (npm, ig-resource, validator, …).
 //
-// Roles: index.md → "landing"; `<RT>-<id>-(intro|notes).md` → left to the site's
-// intro/notes mechanism (skipped); ImplementationGuide-*.md → skipped; else "page".
+// Roles: index.md → "landing"; ImplementationGuide-*.md → skipped; else "page".
+// `<RT>-<id>-(intro|notes).md` → an "intronotes" Page with a soft `for` edge to
+// its target resource; the -intro & -notes files for a resource merge by shared
+// id into one Page { intro, notes }. The site's notesFor reads these from the
+// graph (authored notes get loader provenance + incremental rebuild like any
+// other source) instead of a side-loaded map.
 
-const INTRO_NOTES = /^[A-Z][A-Za-z]+-.+-(intro|notes)\.md$/;
+const INTRO_NOTES = /^([A-Z][A-Za-z]+)-(.+)-(intro|notes)\.md$/;
 
 export default function pages(_opts: {} = {}): Loader {
   return {
@@ -20,7 +24,22 @@ export default function pages(_opts: {} = {}): Loader {
     async load(_ctx, { file }): Promise<LoadOutput | null> {
       const name = basename(file);
       if (name.startsWith("ImplementationGuide-")) return null;   // handled elsewhere
-      if (INTRO_NOTES.test(name)) return null;                    // site intro/notes mechanism
+
+      const inm = name.match(INTRO_NOTES);
+      if (inm) {
+        const [, rt, idPart, kind] = inm;
+        const md = await readFile(file, "utf8");
+        const slug = `intronotes-${rt}-${idPart}`;                // shared by -intro & -notes → merge
+        const r = {
+          id: `Page/${slug}`,
+          resourceType: "Page",
+          url: undefined, version: undefined,
+          data: { resourceType: "Page", id: slug, slug, role: "intronotes", for: `${rt}/${idPart}`, [kind!]: md },
+          source: { kind: "md", path: file },
+          meta: {},
+        };
+        return { resources: [r as unknown as LoadOutput["resources"][number]] };
+      }
 
       const md = await readFile(file, "utf8");
       const slug = basename(name, ".md");

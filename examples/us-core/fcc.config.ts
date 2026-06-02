@@ -45,6 +45,7 @@ export default defineConfig({
     { dir: "../../vendor/us-core/input/resources",   loader: json() },
     { dir: "../../vendor/us-core/input/examples",    loader: json() },
     { dir: "../../vendor/us-core/input/pagecontent", loader: pages() },  // .md → Page resources
+    { dir: "../../vendor/us-core/input/intro-notes",  loader: pages() },  // <RT>-<id>-{intro,notes}.md → intronotes Pages
   ],
 
   // Shared DATA pipeline (loaders are in sources; these enrich/validate the graph).

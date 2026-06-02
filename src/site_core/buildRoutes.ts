@@ -14,8 +14,6 @@ export default async function buildRoutes(
     opts: { pluginCtx: types.fcc.PluginContext },
 ): Promise<{ routes: Map<string, types.site_core.Route>; notesCount: number }> {
     const pctx = opts.pluginCtx;
-    const o = (ctx.state.site ?? {}) as types.site_core.SiteOpts;
-    const introNotes  = o.introNotes  ?? "input/intro-notes";
 
     // Warm the shared Shiki highlighter once so the (sync) markdown pipeline can
     // highlight fenced code blocks during the renders below.
@@ -35,11 +33,9 @@ export default async function buildRoutes(
     const landing = pageResources.find(r => (r.data as { role?: string }).role === "landing");
     const landingHtml = landing ? ctx.fns.site_md.mdToHtml(ctx, { md: (landing.data as { md: string }).md }) : "";
 
-    // Per-resource intro/notes (cached in state across an incremental pass).
-    const cached = (ctx.state.site as any)?.notesCache as Map<string, { intro?: string; notes?: string }> | null | undefined;
-    const notes = cached ?? await ctx.fns.site_core.loadIntroNotes(ctx, { projectRoot: pctx.config.projectRoot, dir: introNotes });
-    (ctx.state.site as any).notesCache = notes;
-    (ctx as any).notes = notes;                                     // renderers read ctx.notes
+    // Authored per-resource intro/notes are now "intronotes" Page resources in
+    // the graph (loaded by fcc/pages); the section renderers read them via
+    // ctx.fns.site_core.notesFor — no side-loaded map here.
 
     // IG-author menu emitted by @fcc/plugin-menu via pctx.shared.menu.
     ctx.state.menuHtml = (pctx.shared.menu as { html?: string } | undefined)?.html ?? null;
@@ -100,7 +96,7 @@ export default async function buildRoutes(
     // page renders read it lazily, so dev re-renders pick up reorders for free.
     {
         const menuTree = ((pctx.shared.menu as { tree?: { label: string; href: string; children: any[] }[] } | undefined)?.tree) ?? [];
-        const pageDescs = pctx.byType.Page.map(r => {
+        const pageDescs = pctx.byType.Page.filter(r => (r.data as { role?: string }).role !== "intronotes").map(r => {
             const d = r.data as { slug: string; title: string; kind?: string; role?: string; for?: string; sections?: Record<string, { order?: number; as?: string }> };
             const kind = d.kind ?? (d.role === "landing" ? "landing" : "content");
             const sections = d.sections
@@ -132,7 +128,10 @@ export default async function buildRoutes(
     }
 
     let notesCount = 0;
-    for (const id of notes.keys()) if (pctx.resources.has(id)) notesCount++;
+    for (const r of pctx.byType.Page) {
+        const d = r.data as { role?: string; for?: string };
+        if (d.role === "intronotes" && d.for && pctx.resources.has(d.for)) notesCount++;
+    }
 
     return { routes, notesCount };
 }

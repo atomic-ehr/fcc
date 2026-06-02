@@ -6,7 +6,7 @@ export default function renderIndex(ctx: Context, opts: { landingHtml: string })
     const counts: Record<string, number> = {};
     for (const r of ctx.resources.values()) {
         if (r.resourceType === "ImplementationGuide") continue;
-        if (r.resourceType === "Page" && (r.data as { kind?: string }).kind === "canonical") continue;   // projection, not a counted artifact
+        if (r.resourceType === "Page" && ((r.data as { kind?: string }).kind === "canonical" || (r.data as { role?: string }).role === "intronotes")) continue;   // projections / authored notes — not counted artifacts
         if ((r.data as { __wasExample?: boolean }).__wasExample) {
             counts["Examples"] = (counts["Examples"] ?? 0) + 1;
         } else {
