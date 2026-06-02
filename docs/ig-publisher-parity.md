@@ -72,8 +72,8 @@ Re-ranked from the draft below. Changes both reviewers drove:
 - ✅ **#1** Dependency bootstrap — `deps` plugin indexes `dependsOn` packages from the FHIR cache (memory-safe: `.index.json` + `package.json` + `spec.internals`, lazy `load()` bodies; `PackageHacker.fixPackageUrl` ported for wrong bases). Cross-IG links resolve via the chain (`lrefDependency` for canonicals/ids, `lrefAlias` for FSH aliases). `fsh()` threads `deps` → `fshToFhir`, so us-core-derived mCODE profiles compile (0 Parent-not-found, 53 profiles). Stage D: snapshot + validator share one base-SD loader (`loadBaseStructureDefinitions` in the engine); read once per build. Adversarially reviewed (a false "must prefer versioned spec.internals key" finding was disproved — our base is the versioned `package.json.url`).
 - ✅ **#4** Link checker — `qa-links.html` reports reference-shaped `[Name]` links that the resolver chain can't resolve (deterministic graph scan, with use-counts + pages). IG-Publisher `HTMLInspector` parity; the per-page red flag is the inline signal.
 - ✅ **#10** Dependency table — `dependencies.html`: each `dependsOn` package with version, FHIR version, published site, and cache/index status (IGP `DependencyRenderer`).
-- ⏳ **#5** intro/notes-via-merge — renderer refactor (canonical Pages now exist, so it's unblocked but golden-risky).
-- ✖ **#2** Terminology — out of scope for this pass.
+- ✅ **#5** intro/notes-via-merge — `input/intro-notes/<RT>-<id>-{intro,notes}.md` load through `pages()` as `intronotes` Page resources (soft `for` edge; the two files merge by id into one Page); `notesFor` reads them from the graph instead of a side map. Golden-stable (us-core byte-identical). Full merge into the canonical Page deferred (needs load-time `derivePages`).
+- ✖ **#2** Terminology — out of scope for this pass (the one remaining top-10 item; needs a tx client / bundled expansions).
 
 Beyond IGP, the engine gained: merge-friendly resources (partial-load merge), canonical pages as `Page` resources (`byType.Page` / `ctx.sql`-queryable), and FHIR-IG through numbering in the nav.
 
