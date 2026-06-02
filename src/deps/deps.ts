@@ -15,19 +15,23 @@ import fixPackageUrl from "./fixPackageUrl.ts";
 // (shipped by core/THO/extensions and most IGs) gives the exact published filename;
 // IGs without it fall back to the IG-Publisher `<RT>-<id>.html` convention.
 
-export type DepEntry = { pkg: string; version: string; resourceType: string; id: string; url: string; webPath: string };
+export type DepEntry = { pkg: string; version: string; resourceType: string; id: string; url: string; file: string; webPath: string };
+export type DepPkg = { id: string; version: string; base: string; fhirVersion?: string };
 export type DepIndex = {
     byCanonical: Map<string, DepEntry>;      // bare canonical url → entry
     byId: Map<string, DepEntry>;             // resource id → entry (first/nearer dep wins)
-    packages: { id: string; version: string; base: string }[];
+    packages: DepPkg[];
+    /** Lazily read + cache a dependency resource BODY by canonical url (the bodies
+     *  are never loaded during indexing — only on demand, e.g. by snapshot). */
+    load(url: string): Promise<Record<string, unknown> | null>;
 };
 
-// Indexed at `generateBundle` — once per build, AFTER sources have loaded (so
-// packages an FSH compile pulled into the cache mid-build are already present),
-// and before the site renders. (Stage D consumers that run earlier will trigger
-// an explicit ensure-download step when they land.)
+// Indexed at `beforeValidate` — once per build, AFTER sources have loaded (so
+// packages an FSH compile pulled into the cache mid-build are present), and
+// before snapshot/validate (afterValidate) and the site render (writeBundle) —
+// all of which can read ctx.state.deps.
 export default function deps(opts: { packagesDir?: string; quiet?: boolean } = {}): Plugin {
-    return [{ hook: "generateBundle", fn: depsFn, ...opts }];
+    return [{ hook: "beforeValidate", fn: depsFn, ...opts }];
 }
 
 async function depsFn(ctx: PluginContext, config: Record<string, unknown>, _opts: Record<string, unknown>): Promise<void> {
@@ -40,7 +44,7 @@ async function depsFn(ctx: PluginContext, config: Record<string, unknown>, _opts
 
     const byCanonical = new Map<string, DepEntry>();
     const byId = new Map<string, DepEntry>();
-    const packages: { id: string; version: string; base: string }[] = [];
+    const packages: DepPkg[] = [];
 
     for (const [pkg, version] of Object.entries(declared)) {
         const pkgDir = await findPkgDir(dirs, pkg, version);
@@ -54,11 +58,11 @@ async function depsFn(ctx: PluginContext, config: Record<string, unknown>, _opts
             if (!base) { if (!config.quiet) ctx.warn({ severity: "warning", source: "fcc/deps", message: `${pkg}#${version} has no url/canonical — skipped (can't build cross-IG web paths)` }); continue; }
             const index = await Bun.file(join(pkgDir, ".index.json")).json().catch(() => ({ files: [] }));
             const specPaths = await loadSpecPaths(pkgDir);
-            packages.push({ id: pkg, version, base });
-            for (const f of (index.files ?? []) as Array<{ url?: string; id?: string; resourceType?: string; version?: string }>) {
-                if (!f.url) continue;
+            packages.push({ id: pkg, version, base, fhirVersion: (meta.fhirVersions ?? meta["fhir-version-list"] ?? [])[0] });
+            for (const f of (index.files ?? []) as Array<{ url?: string; id?: string; resourceType?: string; version?: string; filename?: string }>) {
+                if (!f.url || !f.filename) continue;
                 const rel = specPaths?.[f.url] ?? specPaths?.[`${f.url}|${f.version}`] ?? `${f.resourceType}-${f.id}.html`;
-                const entry: DepEntry = { pkg, version, resourceType: f.resourceType ?? "", id: f.id ?? "", url: f.url, webPath: base ? `${base}/${rel}` : rel };
+                const entry: DepEntry = { pkg, version, resourceType: f.resourceType ?? "", id: f.id ?? "", url: f.url, file: join(pkgDir, f.filename), webPath: base ? `${base}/${rel}` : rel };
                 if (!byCanonical.has(f.url)) byCanonical.set(f.url, entry);   // config order = precedence
                 if (f.id && !byId.has(f.id)) byId.set(f.id, entry);
             }
@@ -67,7 +71,19 @@ async function depsFn(ctx: PluginContext, config: Record<string, unknown>, _opts
         }
     }
 
-    (ctx.state as Record<string, unknown>).deps = { byCanonical, byId, packages } satisfies DepIndex;
+    // Lazy body loader (cached) — bodies are read only on demand, never at index time.
+    const bodyCache = new Map<string, Record<string, unknown> | null>();
+    const load = async (url: string): Promise<Record<string, unknown> | null> => {
+        const e = byCanonical.get(url) ?? byCanonical.get(url.split("|", 1)[0]!);
+        if (!e) return null;
+        if (bodyCache.has(e.file)) return bodyCache.get(e.file)!;
+        let body: Record<string, unknown> | null = null;
+        try { body = await Bun.file(e.file).json(); } catch { body = null; }
+        bodyCache.set(e.file, body);
+        return body;
+    };
+
+    (ctx.state as Record<string, unknown>).deps = { byCanonical, byId, packages, load } satisfies DepIndex;
     if (!config.quiet) ctx.warn({ severity: "info", source: "fcc/deps", message: `indexed ${packages.length}/${Object.keys(declared).length} dependency package(s) → ${byCanonical.size} canonical(s) for cross-IG links` });
 }
 

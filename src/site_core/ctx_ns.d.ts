@@ -8,6 +8,7 @@ declare global {
     interface FnsRegistry {
         site_core: {
             $avail_notExample: typeof import("./$avail_notExample").default;
+            $route_dependencies: typeof import("./$route_dependencies").default;
             $route_examplesZip: typeof import("./$route_examplesZip").default;
             $route_extensions: typeof import("./$route_extensions").default;
             $route_observations: typeof import("./$route_observations").default;

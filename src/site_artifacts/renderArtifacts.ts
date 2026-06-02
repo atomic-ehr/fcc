@@ -29,6 +29,7 @@ export default function renderArtifacts(ctx: Context, _opts: {} = {}): string {
         ctx.byType.StructureDefinition.some(r => { const d = r.data as { type?: string; derivation?: string }; return d.type === "Observation" && d.derivation === "constraint"; }) ? { label: "Observations", href: "observations.html" } : null,
         ctx.byType.SearchParameter.length ? { label: "Search Parameters", href: "search-parameters.html" } : null,
         { label: "Status & maturity", href: "status.html" },
+        Object.keys((ctx.config as { deps?: Record<string, string> }).deps ?? {}).length ? { label: "Dependencies", href: "dependencies.html" } : null,
         ctx.fns.site_md.collectUnresolvedRefs(ctx).size ? { label: "Unresolved references", href: "qa-links.html" } : null,
     ].filter(Boolean) as { label: string; href: string }[];
     const crossViewBlock = crossViews.length

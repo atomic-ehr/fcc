@@ -27,6 +27,17 @@ maybe("deps: indexes R4 core from the cache and maps canonicals to published pag
     expect(idx.byId.get("Patient").webPath).toBe("http://hl7.org/fhir/R4/patient.html");
 });
 
+maybe("deps: load() lazily reads a resource body by canonical url (cached, null on miss)", async () => {
+    const step = deps({ quiet: true })[0]!;
+    const ctx: any = { config: { deps: { "hl7.fhir.r4.core": "4.0.1" }, projectRoot: "/tmp" }, state: {}, warn: () => {} };
+    await step.fn(ctx, step, {});
+    const body = await ctx.state.deps.load("http://hl7.org/fhir/StructureDefinition/Patient");
+    expect(body.resourceType).toBe("StructureDefinition");
+    expect(body.id).toBe("Patient");
+    expect(await ctx.state.deps.load("http://hl7.org/fhir/StructureDefinition/Patient")).toBe(body);  // cached (same ref)
+    expect(await ctx.state.deps.load("http://example.org/nope")).toBeNull();
+});
+
 test("deps: a missing dependency is skipped gracefully (no throw, empty index)", async () => {
     const step = deps({ quiet: true })[0]!;
     const ctx: any = {
