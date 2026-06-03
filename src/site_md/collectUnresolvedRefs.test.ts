@@ -26,10 +26,10 @@ test("collectUnresolvedRefs: an author-defined [Label]: link is not flagged", ()
 
 test("collectUnresolvedRefs: aggregates the same broken ref across multiple pages", () => {
     const c = mk();
-    c.resources.set("Page/a", page("a", "uses [Broken] here"));
-    c.resources.set("Page/b", page("b", "also [Broken] there"));
+    c.resources.set("Page/a", page("a", "uses [BrokenRef] here"));
+    c.resources.set("Page/b", page("b", "also [BrokenRef] there"));
     const u = c.fns.site_md.collectUnresolvedRefs(c);
-    expect(u.get("Broken")).toEqual(["a.html", "b.html"]);
+    expect(u.get("BrokenRef")).toEqual(["a.html", "b.html"]);
 });
 
 test("collectUnresolvedRefs: also scans canonical resource descriptions", () => {

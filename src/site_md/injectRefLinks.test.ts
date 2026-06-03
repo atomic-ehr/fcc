@@ -47,3 +47,11 @@ test("injectRefLinks: leaves non-reference-shaped brackets ([note], [1]) untouch
     const c = mk();
     expect(c.fns.site_md.injectRefLinks(c, { md: "a [note] and [1] and [TODO]" })).not.toContain("text-rose-700");
 });
+
+test("injectRefLinks: a single capitalised word in prose is NOT flagged red (no camelCase hump)", () => {
+    const c = mk();
+    // [Home]/[Normative]/[FHIRPath] are prose, not resource refs — must stay plain.
+    expect(c.fns.site_md.injectRefLinks(c, { md: "the [Home] page is [Normative] per [FHIRPath]" })).not.toContain("text-rose-700");
+    // a compound identifier still flags when unresolved.
+    expect(c.fns.site_md.injectRefLinks(c, { md: "see [UnknownProfile]" })).toContain("text-rose-700");
+});

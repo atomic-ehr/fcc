@@ -19,9 +19,12 @@ export default function injectRefLinks(ctx: Context, opts: { md: string }): stri
     const isDefined = (label: string) => new RegExp(`^\\s*\\[${esc(label)}\\]:`, "m").test(opts.md);
 
     const resolve = (label: string) => ctx.fns.site_md.resolveLink(ctx, { label });
-    // Looks like a resource reference: a single PascalCase token (has an upper-
-    // case start and a lowercase letter — excludes [TODO], [1], prose, paths).
-    const isRefShaped = (label: string) => /^[A-Z][A-Za-z0-9]+$/.test(label) && /[a-z]/.test(label);
+    // Looks like a resource reference: a compound PascalCase token — an uppercase
+    // start AND an internal camelCase hump (a lowercase immediately followed by an
+    // uppercase/digit), e.g. USCorePatient, RadiotherapyVolume. The hump is what
+    // separates a real multi-word identifier from a single capitalised English
+    // word in prose ([Home], [Normative], [Extensions]) or a path/[TODO]/[1].
+    const isRefShaped = (label: string) => /^[A-Z][A-Za-z0-9]+$/.test(label) && /[a-z][A-Z0-9]/.test(label);
 
     // One pass over the markdown: each candidate reference label ([x] that isn't
     // an inline [x](…) link). Resolved → append a definition (→ link); unresolved

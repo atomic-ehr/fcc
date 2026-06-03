@@ -10,9 +10,10 @@
 export default function collectUnresolvedRefs(ctx: Context, _opts: Record<string, never> = {} as Record<string, never>): Map<string, string[]> {
     const all = ctx.resources as Map<string, types.fcc.Resource>;
     const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    // Same heuristic as injectRefLinks' red flag: a single PascalCase token (an
-    // uppercase start + a lowercase letter) — excludes prose, [1], [TODO], paths.
-    const isRefShaped = (l: string) => /^[A-Z][A-Za-z0-9]+$/.test(l) && /[a-z]/.test(l);
+    // Same heuristic as injectRefLinks' red flag: a compound PascalCase token —
+    // uppercase start + an internal camelCase hump ([a-z][A-Z0-9]) — so single
+    // capitalised words in prose ([Home], [Normative]) aren't flagged as broken.
+    const isRefShaped = (l: string) => /^[A-Z][A-Za-z0-9]+$/.test(l) && /[a-z][A-Z0-9]/.test(l);
 
     const hits = new Map<string, Set<string>>();
     const scan = (md: string | undefined, source: string): void => {
