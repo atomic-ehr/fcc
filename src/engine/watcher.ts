@@ -60,10 +60,11 @@ export function watchSources(opts: WatchOpts): WatcherHandle {
       });
       watchers.push(w);
     } catch (e) {
-      // Source dirs are often optional (e.g. no examples/) — stay quiet. But an
-      // explicitly-declared path (config, plugin watchPaths) failing is worth a
-      // heads-up so the developer knows it isn't being watched.
-      if (warnOnFail) console.warn(`fcc: not watching ${path} (${(e as Error)?.message ?? "unavailable"})`);
+      // Source dirs are often optional (e.g. no examples/) — stay quiet. An
+      // explicitly-declared path failing is worth a heads-up — UNLESS it just
+      // doesn't exist (an IG with no intro-notes/ dir): benign, not a problem.
+      const msg = (e as Error)?.message ?? "unavailable";
+      if (warnOnFail && !msg.includes("ENOENT")) console.warn(`fcc: not watching ${path} (${msg})`);
     }
   };
 

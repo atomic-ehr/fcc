@@ -45,22 +45,45 @@ export default async function writeBundle(
     // (id:null) are always (re)written.
     const changed = pctx.changedIds;
     let count = 0;
+    const hrefs = new Map<string, string>();                        // local href → first page using it (full builds)
     for (const [path, route] of routes) {
         if (route.id && changed && !changed.has(route.id)) continue;
-        await Bun.write(join(outDir, path), await route.render());  // Bun.write creates parent dirs
+        const body = await route.render();
+        await Bun.write(join(outDir, path), body);                  // Bun.write creates parent dirs
         count++;
+        if (!changed && typeof body === "string" && route.contentType.startsWith("text/html")) {
+            for (const m of body.matchAll(/href="([^"#?]+)/g)) {
+                const h = m[1]!;
+                if (h && !/^(https?:|mailto:|tel:|data:|\/)/.test(h) && !hrefs.has(h)) hrefs.set(h, path);
+            }
+        }
     }
 
     // Copy the IG's static images to the site root (IG-Publisher input/images/*
     // → <site>/*), so markdown `<img src="x.png">` resolves on the published site.
     let imgCount = 0;
+    const imgPaths = new Set<string>();
     if (imgDir) {
         try {
             for await (const rel of new Bun.Glob("**/*").scan({ cwd: imgDir, onlyFiles: true })) {
                 await Bun.write(join(outDir, rel), Bun.file(join(imgDir, rel)));
+                imgPaths.add(rel);
                 imgCount++;
             }
         } catch { /* no images dir */ }
+    }
+
+    // Broken-link check (IG-Publisher HTMLInspector): a relative href that is
+    // neither a generated route nor a copied image points at no page — a dangling
+    // link (e.g. an author link to a resource/example that doesn't exist).
+    // Reported, never fatal. Full builds only (incremental renders a subset).
+    if (!changed && hrefs.size) {
+        const valid = new Set<string>([...routes.keys(), ...imgPaths]);
+        const broken = [...hrefs].filter(([h]) => !valid.has(h));
+        if (broken.length) pctx.warn({
+            severity: "warning", source: "fcc/site",
+            message: `${broken.length} broken local link(s) → no such page: ${broken.slice(0, 6).map(([h, p]) => `${h} (on ${p})`).join(", ")}${broken.length > 6 ? `, +${broken.length - 6} more` : ""}`,
+        });
     }
 
     pctx.emitFile({ path: join(outDir, "index.html"), bytes: ctx.fns.site_core.bytes(ctx, { s: "" }) });
