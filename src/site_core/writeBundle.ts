@@ -17,14 +17,18 @@ export default async function writeBundle(
 
     const { routes, notesCount } = await ctx.fns.site_core.buildRoutes(ctx, { pluginCtx: pctx });
 
-    // Lazy renderer for the dev server (always fresh from the current graph). A
-    // path with no route falls back to the IG's static images dir, so <img> works.
+    // Lazy renderer for the dev server (always fresh from the current graph).
+    // Pages are published as `<name>.html` (the IG-Publisher URL — fcc's links
+    // use it), but we also serve the extensionless form (`/<name>` → `<name>.html`)
+    // so a hand-typed/clean URL resolves. A path with no route then falls back to
+    // the IG's static images dir, so <img> works.
     (pctx.shared as any).site = {
         render: async (path: string): Promise<{ contentType: string; body: string | Uint8Array } | null> => {
-            const route = routes.get(normalize(path));
+            const key = normalize(path);
+            const route = routes.get(key) ?? (key.includes(".") ? undefined : routes.get(`${key}.html`));
             if (route) return { contentType: route.contentType, body: await route.render() };
             if (imgDir) {
-                const f = Bun.file(join(imgDir, normalize(path)));
+                const f = Bun.file(join(imgDir, key));
                 if (await f.exists()) return { contentType: f.type || "application/octet-stream", body: new Uint8Array(await f.arrayBuffer()) };
             }
             return null;
